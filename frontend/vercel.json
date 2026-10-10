@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://everest-textile-api.onrender.com/api/:path*"
+      "destination": "https://everest-textile-api-s0s4.onrender.com/api/:path*"
     },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
