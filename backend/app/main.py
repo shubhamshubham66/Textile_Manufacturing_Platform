@@ -52,7 +52,17 @@ def prepare_database() -> None:
         from app.schema_sync import add_missing_columns
 
         add_missing_columns(engine, Base.metadata)
-    if settings.seed_if_empty:
+
+    # One-time RESET_DATA=empty|demo (destructive, logged). When it runs it also
+    # handles any reseeding itself, so skip the empty-DB seed below to avoid
+    # double-seeding (and to honour an intentional 'empty' wipe).
+    reset_requested = (settings.reset_data or "").strip().lower() in ("empty", "demo")
+    if reset_requested:
+        from app.reset import run_reset_if_requested
+
+        run_reset_if_requested()
+
+    if settings.seed_if_empty and not reset_requested:
         db = SessionLocal()
         try:
             empty = db.query(models.User).first() is None
