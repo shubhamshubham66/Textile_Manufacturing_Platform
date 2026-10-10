@@ -334,3 +334,4 @@ results, one completed dispatch + invoice + partial payment, employees + attenda
 ## Phase 12b — Landing hero with mill photo
 - Hero now: soft grid panel, "One system to run our whole mill" (single-company wording), Login + "See what it does" buttons, mill-floor photo on the right (`frontend/public/images/mill-floor.jpg`, 270 KB).
 - Rest of the landing (About, How it works, Features, AI, Footer) unchanged.
+- About section: weaving-floor photo (`frontend/public/images/weaving-floor.jpg`) on the left with a numbered list of 5 points on the right; old before/after list removed.
