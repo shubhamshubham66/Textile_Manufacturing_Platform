@@ -36,11 +36,12 @@ class Settings(BaseSettings):
     # CORS: comma-separated list of allowed frontend origins.
     cors_origins: str = "http://localhost:5173"
 
-    # Startup: create tables, and fill demo data when the database is empty.
-    # Lets a fresh Render/Postgres deploy work with no shell access. Set
-    # SEED_IF_EMPTY=false to start with an empty database instead.
+    # Startup: create tables. Demo data is loaded into an empty database ONLY
+    # when SEED_IF_EMPTY=true is set explicitly. Default off, so a database that
+    # was emptied for real data entry stays empty after a restart (only the
+    # owner login from OWNER_EMAIL / OWNER_PASSWORD is re-created).
     auto_create_tables: bool = True
-    seed_if_empty: bool = True
+    seed_if_empty: bool = False
 
     # One-time data reset, read ONCE on startup. Leave empty for normal runs.
     #   RESET_DATA=empty  -> wipe all business data, keep roles + the owner from
