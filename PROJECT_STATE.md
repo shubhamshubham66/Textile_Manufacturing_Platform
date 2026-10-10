@@ -710,3 +710,57 @@ Wages screens are the EXISTING Payments/Attendance/Wages pages via shared keys)
 - Backend byte-compiles; RBAC/department wiring verified by a standalone script;
   all JSX prettier-clean. Not runtime-tested in the sandbox (no PyPI/npm); run
   `pytest tests/test_accounts_manager.py` on a networked host.
+
+## Task — Worker dashboard
+
+New login role **`worker`** with a focused 9-screen panel, scoped to the
+worker's own Employee record (users.employee_id link, like buyer_id). No other
+dashboard/auth/stack changed beyond additive columns.
+
+**Backend**
+- `models.py` (additive, via schema_sync): `User.employee_id` (worker login →
+  Employee); `Attendance.check_in/check_out/overtime_hours/source/verified/
+  verified_by_user_id/verified_at`; `ProductionLog.worker_employee_id`.
+- `rbac.py`: `ROLE_WORKER` + 9 isolated `wk_*` menu items.
+- `deps.py`: `get_current_worker` (worker + linked employee_id, else 403) — every
+  worker endpoint scopes to `employee_id`, so a worker sees only their own data.
+- `routers/worker.py` (`/api/worker/*`): dashboard (6 cards); my tasks with
+  start/pause/resume/complete (`POST /tasks/{id}/action`, writes TaskUpdate,
+  notifies manager on start/complete); production updates (`POST /production` —
+  output + waste + defects + downtime, attributed to the worker, notifies
+  manager); machine status + `POST /report` (breakdown/material_shortage/problem
+  → notifies manager + Supermanager); attendance check-in/check-out (duplicate
+  guarded, computes hours, left UNVERIFIED); overtime submit (unverified); task
+  history with update trail; notifications + read; read-only profile.
+- Manager verification: `routers/tasks.py` gains `GET /api/tasks/attendance`
+  (manager's workers' attendance + pending-verification count) and
+  `POST /api/tasks/attendance/{id}/verify` (only the worker's own manager; marks
+  verified + notifies Accounts). `routers/wages.py` now counts an attendance row
+  for wages only if it's manager-entered OR verified — so worker self-reported
+  attendance must be verified before Accounts uses it (existing manager-entered
+  rows unaffected).
+- Worker login creation: `routers/super.py` `WorkerIn` gains optional
+  `login_email`/`login_password`; new `POST /api/super/workers/{id}/login`
+  creates/resets a worker login linked to the Employee; `_worker_out` returns
+  `has_login`/`login_email`.
+- `main.py`: registered `worker_router`. `seed.py`: `worker` role + demo login
+  `worker@everest.test` / `worker123` linked to the first production employee.
+
+**Frontend** (reuses the shared super kit)
+- `pages/app/worker/WorkerDashboard.jsx` — six cards (Today's Attendance,
+  Assigned/In-Progress/Completed/Pending Tasks, Production Target vs Actual).
+- `WorkerWork.jsx` — My Tasks (start/pause/complete buttons), Production Updates
+  (output/waste/defects/downtime), Machine Status + report problem.
+- `WorkerSelf.jsx` — Attendance (check-in/out), Overtime (submit), Task History,
+  Notifications, My Profile.
+- `AppShell.jsx` + `icons.jsx`: 9 `wk_*` pages/icons + role label wired.
+
+**Tests / verification**
+- `backend/tests/test_worker.py`: RBAC isolation (9 pages, 403 for others),
+  dashboard cards, task start/pause/resume/complete (+ 409 re-complete),
+  production update, breakdown report, check-in/out (+ duplicate 409), overtime
+  unverified, worker can't verify own attendance but the manager can (feeds
+  wages), restricted-area 403s, profile own-scope.
+- Backend byte-compiles; RBAC verified by a standalone script; JSX prettier-clean.
+  Not runtime-tested in the sandbox (no PyPI/npm); run `pytest tests/test_worker.py`
+  on a networked host.

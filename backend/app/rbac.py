@@ -30,6 +30,10 @@ ROLE_SALES_MANAGER = "sales_manager"
 # expenses and financial reports. Reuses the existing payments/attendance/wages
 # endpoints plus its own am_* screens. High-value approvals stay with the owner.
 ROLE_ACCOUNTS_MANAGER = "accounts_manager"
+# Shop-floor worker login: sees only their own tasks, attendance, overtime and
+# profile. Created by the Supermanager / department manager and linked to an
+# Employee record (users.employee_id).
+ROLE_WORKER = "worker"
 
 ALL_ROLES = [
     ROLE_OWNER,
@@ -42,6 +46,7 @@ ALL_ROLES = [
     ROLE_PRODUCTION_MANAGER,
     ROLE_SALES_MANAGER,
     ROLE_ACCOUNTS_MANAGER,
+    ROLE_WORKER,
 ]
 
 # One role -> menu config. `path` is the frontend route; `resource` ties the menu
@@ -126,6 +131,19 @@ MENU_CONFIG: dict[str, list[dict]] = {
         {"label": "Financial Reports", "path": "/app/am-reports", "resource": "am_reports"},
         {"label": "Notifications", "path": "/app/am-notifications", "resource": "am_notifications"},
         {"label": "Activity Logs", "path": "/app/am-activity", "resource": "am_activity"},
+    ],
+    # Shop-floor worker: a focused 9-screen panel scoped to the worker's own
+    # Employee record. All its own `wk_*` resources.
+    ROLE_WORKER: [
+        {"label": "Dashboard", "path": "/app/wk-dashboard", "resource": "wk_dashboard"},
+        {"label": "My Tasks", "path": "/app/wk-tasks", "resource": "wk_tasks"},
+        {"label": "Production Updates", "path": "/app/wk-production", "resource": "wk_production"},
+        {"label": "Machine Status", "path": "/app/wk-machines", "resource": "wk_machines"},
+        {"label": "Attendance", "path": "/app/wk-attendance", "resource": "wk_attendance"},
+        {"label": "Overtime Records", "path": "/app/wk-overtime", "resource": "wk_overtime"},
+        {"label": "Task History", "path": "/app/wk-history", "resource": "wk_history"},
+        {"label": "Notifications", "path": "/app/wk-notifications", "resource": "wk_notifications"},
+        {"label": "My Profile", "path": "/app/wk-profile", "resource": "wk_profile"},
     ],
     # Purchase & raw material desk (+ dispatch, which the store also runs).
     ROLE_STORE_MANAGER: [

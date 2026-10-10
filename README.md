@@ -154,6 +154,7 @@ real passwords. Set a strong `JWT_SECRET` in `.env` for any real deployment.
 | Production manager | `production@everest.test` | `production123` |
 | Sales & Dispatch manager | `sales@everest.test` | `sales123` |
 | Accounts & Finance manager | `accounts-manager@everest.test` | `accounts123` |
+| Worker            | `worker@everest.test`   | `worker123`   |
 | Buyer             | `buyer@everest.test`    | `buyer123`    |
 
 > Demo manager logins (`production@everest.test`, `sales@everest.test`,

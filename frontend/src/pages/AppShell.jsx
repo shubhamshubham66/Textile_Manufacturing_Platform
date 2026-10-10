@@ -99,6 +99,19 @@ import {
   AccountsNotifications,
   AccountsActivity,
 } from "./app/accounts/AccountsPages.jsx";
+import WorkerDashboard from "./app/worker/WorkerDashboard.jsx";
+import {
+  WorkerTasks,
+  WorkerProduction,
+  WorkerMachines,
+} from "./app/worker/WorkerWork.jsx";
+import {
+  WorkerAttendance,
+  WorkerOvertime,
+  WorkerHistory,
+  WorkerNotifications,
+  WorkerProfile,
+} from "./app/worker/WorkerSelf.jsx";
 import ChatBubble from "../components/ChatBubble.jsx";
 import { LiveProvider, useLiveStatus } from "../live/LiveContext.jsx";
 
@@ -182,6 +195,16 @@ const PAGES = {
   am_reports: AccountsReports,
   am_notifications: AccountsNotifications,
   am_activity: AccountsActivity,
+  // Worker screens.
+  wk_dashboard: WorkerDashboard,
+  wk_tasks: WorkerTasks,
+  wk_production: WorkerProduction,
+  wk_machines: WorkerMachines,
+  wk_attendance: WorkerAttendance,
+  wk_overtime: WorkerOvertime,
+  wk_history: WorkerHistory,
+  wk_notifications: WorkerNotifications,
+  wk_profile: WorkerProfile,
 };
 
 // Role label lookup for display (keys match backend role names).
@@ -196,6 +219,7 @@ const ROLE_LABELS = {
   production_manager: "Production manager",
   sales_manager: "Sales & Dispatch manager",
   accounts_manager: "Accounts & Finance manager",
+  worker: "Worker",
 };
 
 // The app shell after login. The sidebar is built from the `menu` returned by the

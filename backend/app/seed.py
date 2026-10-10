@@ -65,7 +65,7 @@ def seed() -> None:
         role_names = [
             "owner", "store_manager", "floor_supervisor",
             "quality_inspector", "accountant", "buyer", "manager",
-            "production_manager", "sales_manager", "accounts_manager",
+            "production_manager", "sales_manager", "accounts_manager", "worker",
         ]
         roles = {n: m.Role(name=n) for n in role_names}
         db.add_all(roles.values())
@@ -447,6 +447,12 @@ def seed() -> None:
             e.manager_user_id = staff[5].id if e.department == "production" else staff[3].id
         db.add_all(employees)
         db.flush()
+
+        # Give the first production worker a login so the Worker dashboard can be
+        # demoed. Linked to the Employee via users.employee_id.
+        db.add(m.User(role_id=roles["worker"].id, name=employees[0].name,
+                      email="worker@everest.test", password_hash=_hash("worker123"),
+                      department="production", employee_id=employees[0].id))
 
         for emp in employees:
             for day in (5, 6, 7, 8, 9):
