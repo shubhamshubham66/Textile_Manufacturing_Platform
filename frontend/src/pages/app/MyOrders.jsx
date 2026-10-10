@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api.js";
+import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 
 // Buyer: My orders (own only) + Track order (stage stepper, progress, ETA).
 export default function MyOrders() {
@@ -9,7 +10,7 @@ export default function MyOrders() {
   const [error, setError] = useState("");
 
   async function load() {
-    setLoading(true);
+    if (!isLiveRefresh()) setLoading(true);
     setError("");
     try {
       setOrders(await apiFetch("/api/buyer/orders"));
@@ -23,6 +24,9 @@ export default function MyOrders() {
   useEffect(() => {
     load();
   }, []);
+
+  // Reload quietly when something this page shows changes elsewhere.
+  useLive(["orders", "quality", "production", "payments"], load);
 
   async function track(id) {
     setError("");

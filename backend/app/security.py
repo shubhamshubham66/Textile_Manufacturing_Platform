@@ -65,3 +65,23 @@ def read_email_token(token: str) -> str | None:
     if not data or data.get("purpose") != SIGNUP_PURPOSE:
         return None
     return data.get("email")
+
+
+# One-minute ticket for opening the live event stream. EventSource cannot send
+# an Authorization header, and putting the login token in the URL would leak it
+# into access logs; this ticket is short-lived and has no "sub", so it can never
+# be used to log in or call any other API.
+LIVE_PURPOSE = "live_stream"
+
+
+def create_live_ticket(user_id: int, seconds: int = 60) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(seconds=seconds)
+    payload = {"uid": int(user_id), "purpose": LIVE_PURPOSE, "exp": expire}
+    return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)
+
+
+def read_live_ticket(ticket: str) -> int | None:
+    data = decode_access_token(ticket)
+    if not data or data.get("purpose") != LIVE_PURPOSE or "uid" not in data:
+        return None
+    return int(data["uid"])

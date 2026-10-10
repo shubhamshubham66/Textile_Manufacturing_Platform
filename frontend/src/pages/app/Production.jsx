@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api.js";
+import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 
 const SHIFTS = ["morning", "evening", "night"];
 
@@ -24,7 +25,7 @@ export default function Production() {
   const [saving, setSaving] = useState(false);
 
   async function load() {
-    setLoading(true);
+    if (!isLiveRefresh()) setLoading(true);
     setError("");
     try {
       const [m, o, t, il] = await Promise.all([
@@ -47,6 +48,9 @@ export default function Production() {
   useEffect(() => {
     load();
   }, []);
+
+  // Reload quietly when something this page shows changes elsewhere.
+  useLive(["machines", "production", "orders"], load);
 
   function validate() {
     const e = {};

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api.js";
+import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 
 const STATUS_LABELS = {
   running: "Running",
@@ -25,7 +26,7 @@ export default function Machines() {
   const [msg, setMsg] = useState("");
 
   async function load() {
-    setLoading(true);
+    if (!isLiveRefresh()) setLoading(true);
     setError("");
     try {
       const [m, o] = await Promise.all([
@@ -44,6 +45,9 @@ export default function Machines() {
   useEffect(() => {
     load();
   }, []);
+
+  // Reload quietly when something this page shows changes elsewhere.
+  useLive(["machines", "production"], load);
 
   async function submitStatus() {
     if (

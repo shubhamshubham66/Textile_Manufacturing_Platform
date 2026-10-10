@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api.js";
+import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 import {
   inr,
   statusLabel,
@@ -42,7 +43,7 @@ export default function Dashboard() {
   const [error, setError] = useState("");
 
   async function load(m) {
-    setLoading(true);
+    if (!isLiveRefresh()) setLoading(true);
     setError("");
     try {
       const { start, end } = monthRange(m);
@@ -61,6 +62,9 @@ export default function Dashboard() {
     load(month);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month]);
+
+  // Reload quietly when something this page shows changes elsewhere.
+  useLive(["machines", "production", "orders", "yarn", "quality", "payments", "wages"], () => load(month));
 
   function goToStage(stage) {
     // Hand the desired filter to the Orders page, then ask the shell to switch.

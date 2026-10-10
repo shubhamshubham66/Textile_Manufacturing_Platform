@@ -417,3 +417,15 @@ a title, units, tooltips and an aria-label text alternative.
 - Email via Brevo HTTP API (`backend/app/services/email.py`); needs `BREVO_API_KEY` + `MAIL_FROM_EMAIL` on Render. `SIGNUP_DEV_OTP=true` shows the code on screen for local dev only.
 - Tests: `backend/tests/test_signup.py` (8 cases).
 
+## Phase 13b — Fix: owner reports HTTP 500 on Render
+- Cause: PR #21 added `machines.power_overhead_cost`; the Render database was created earlier and `create_all` never adds columns to existing tables, so every query on machines failed ("column does not exist") — owner dashboard, reports, floor machines, quality rolls.
+- Fix: `backend/app/schema_sync.py` runs after `create_all` on startup and only ADDS missing model columns (with their default). No drops or changes. Test: `backend/tests/test_schema_sync.py`.
+- App pages now follow the URL (`/app/reports` etc.): refresh stays on the page, Back works, deep links open the right page.
+- Verified on a Postgres DB built with the old code: 0 errors across all 17 role pages.
+
+## Phase 14 — Real-time data workflow
+- Live updates over Server-Sent Events. `backend/app/live.py` turns committed changes (machine status, order stage, yarn stock + low-stock crossing, new rolls / inspections, production logs, payments, invoices/dispatch, attendance/wages) into events; a rolled-back change sends nothing. `backend/app/routers/live.py`: `POST /api/live/ticket` (60 s ticket, not a login token), `GET /api/live/stream?ticket=` (per-role filtered; buyers only see their own orders/payments; 15 s heartbeat), `GET /api/live/alerts` (what needs attention now).
+- Frontend `src/live/LiveContext.jsx`: one stream per tab, auto-reconnect with backoff + full reload after reconnect. `useLive(topics, load)` on all 14 data pages reloads quietly (no "Loading…" flash). Top bar: "● Live · updated Xs ago"; bell with unread count and list; short toasts for alerts.
+- In-process event bus: fine for the single Uvicorn worker on Render; several workers would need Redis pub/sub.
+- Tests: `backend/tests/test_live.py` (6). Verified with separate owner / floor / quality / buyer browsers on Postgres.
+
