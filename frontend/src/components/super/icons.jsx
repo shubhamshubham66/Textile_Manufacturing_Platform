@@ -53,6 +53,27 @@ const P = {
   pm_notifications:
     "M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
   pm_activity: "M12 8v4l3 2M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5",
+  // Sales & Dispatch manager screens.
+  sd_dashboard: "M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z",
+  sd_orders: "M9 3h6l1 2h3v16H5V5h3zM9 3v3h6V3M8 11h8M8 15h5",
+  sd_buyers:
+    "M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2 20c0-3 3-5 6-5s6 2 6 5M14 15c3 0 8 1 8 5",
+  sd_tracking: "M12 8v4l3 2M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5",
+  sd_stock: "M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8",
+  sd_planning:
+    "M4 5h16v16H4zM4 9h16M8 3v4M16 3v4M9 13h2M9 17h2M14 13h2M14 17h2",
+  sd_challan:
+    "M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M12 18v-6M9 15h6",
+  sd_history:
+    "M1 4h13v12H1zM14 8h4l3 4v4h-7M5.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM17.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z",
+  sd_invoices:
+    "M6 2l-2 4v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6l-2-4zM4 6h16M9 12h6M9 16h6",
+  sd_delivery:
+    "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9",
+  sd_notifications:
+    "M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
+  sd_reports: "M4 20V10M10 20V4M16 20v-7M22 20H2",
+  sd_activity: "M12 8v4l3 2M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5",
 };
 
 export function MenuIcon({ resource }) {

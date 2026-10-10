@@ -32,6 +32,35 @@ def ensure_roles(db: Session) -> list[str]:
     return added
 
 
+def ensure_demo_managers(db: Session) -> list[str]:
+    """Ensure the demo department-manager logins exist on ANY database.
+
+    The seed only runs on an empty DB, so on an already-populated (e.g. live)
+    database the production / sales manager demo logins would be missing and
+    sign-in fails with "Invalid email/ID or password". This adds them if absent
+    (idempotent) so those roles can always be demoed and the Supermanager has a
+    real department manager to assign work to. Passwords are bcrypt-hashed.
+    """
+    demos = [
+        ("production_manager", "Vikram Singh", "production@everest.test", "production123", "production"),
+        ("sales_manager", "Neha Kapoor", "sales@everest.test", "sales123", "dispatch"),
+    ]
+    added: list[str] = []
+    for role_name, name, email, password, department in demos:
+        if db.query(User).filter(User.email == email).first():
+            continue
+        role = db.query(Role).filter(Role.name == role_name).first()
+        if role is None:
+            continue  # ensure_roles runs first, but be safe
+        db.add(User(name=name, email=email, password_hash=hash_password(password),
+                    role=role, department=department, is_active=True))
+        added.append(email)
+    if added:
+        db.commit()
+        log.info("Added demo manager logins: %s", ", ".join(added))
+    return added
+
+
 def ensure_owner_account(db: Session) -> str | None:
     """Create or update the owner login from settings. Returns what happened."""
     s = get_settings()

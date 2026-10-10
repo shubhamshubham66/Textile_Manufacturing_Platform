@@ -584,3 +584,74 @@ activity log). No other dashboard, auth, DB schema or the tech stack changed.
   Backend byte-compiles; RBAC/department wiring verified by a standalone script;
   all JSX prettier-clean. Run `pytest tests/test_prod_manager.py` on a networked
   host.
+
+## Task — Sales & Dispatch Manager dashboard
+
+New role **`sales_manager`** ("Sales & Dispatch manager") with a 13-screen panel,
+built on the same RBAC-driven pattern as the Production Manager. Reuses the
+existing atomic dispatch engine; no other dashboard, auth, DB schema or stack
+changed beyond additive columns.
+
+**Backend**
+- `rbac.py`: `ROLE_SALES_MANAGER` + 13 isolated `sd_*` resources (Dashboard,
+  Buyer Orders, Buyer Management, Order Status Tracking, QC-Approved Stock,
+  Dispatch Planning, Create Delivery Challan, Dispatch History, Invoice Details,
+  Delivery Confirmation, Notifications, Reports, Activity Logs). Verified only
+  this role can reach them.
+- `departments.py`: dispatch department now run by `sales_manager`.
+- `models.py`: additive `Dispatch` columns — `challan_no`, `vehicle_no`,
+  `transporter`, `driver_phone`, `delivery_address`, `delivery_note`,
+  `delivered_at`, `dispatched_by_user_id`; new order status
+  `partially_dispatched`. `schema_sync` adds the columns to existing DBs.
+- `services/sales_manager.py`: read-only aggregations (dashboard cards, order
+  rows with ready/dispatched metres, QC-approved stock, buyer dues, dispatch
+  rows). All from live tables.
+- `routers/sales_manager.py` (`/api/sales/*`): dashboard; buyer orders & buyer
+  management (read-only); order tracking; QC-approved stock; dispatch planning
+  + `POST /dispatch` which **reuses the existing atomic `confirm_dispatch`**
+  (QC-'pass'-only, UNIQUE roll guard → no double dispatch, auto-invoice) then
+  attaches challan + logistics and sets `dispatched`/`partially_dispatched`;
+  dispatch history; read-only invoices; delivery confirmation
+  (`/dispatch/{id}/status`, `/dispatch/{id}/deliver` → order `closed`=Delivered);
+  notifications + read; reports; activity. Partial dispatch allowed only with an
+  explicit `partial` flag; selecting non-approved rolls is rejected (400).
+- Notifications wired to the required events: QC-pass now also notifies SALES +
+  Supermanager (`live.py`); dispatch created → Supermanager + Accounts; delivery
+  confirmed → Supermanager + Accounts (payment follow-up).
+- `live.py`: `sales_manager` added to orders/quality/payments/notifications/tasks
+  topics; Dispatch/Invoice events routed to it.
+- `main.py`: registered `sales_manager_router`.
+
+**Auth fix (also resolves the earlier "Not authenticated" / login failures)**
+- `render.yaml`: `JWT_SECRET` changed from `generateValue: true` to `sync: false`
+  — Render was regenerating the secret on every blueprint sync, invalidating all
+  logged-in tokens (that was the real cause of the 401s). Set it once in the
+  dashboard; sessions now survive deploys.
+- `bootstrap.ensure_demo_managers`: ensures `production@everest.test` and
+  `sales@everest.test` logins exist on ANY database (seed only runs on an empty
+  DB), so these roles can be demoed/logged-in after a deploy. Called from
+  `prepare_database` after `ensure_roles`.
+- `seed.py`: adds the `sales_manager` role + demo login for fresh DBs.
+
+**Frontend** (reuses the shared super kit + super.css)
+- `pages/app/sales/SalesDashboard.jsx` — the seven required cards (Total Buyer
+  Orders, Pending Dispatches, QC-Approved Stock, Orders Ready for Dispatch,
+  Dispatched Orders, Delayed Deliveries, Pending Buyer Payments) + lists.
+- `SalesOrders.jsx` — Buyer Orders, Buyer Management, Order Tracking, QC-Approved
+  Stock.
+- `SalesDispatch.jsx` — Dispatch Planning + Create Delivery Challan (roll picker
+  with partial-dispatch acknowledgement + logistics), Dispatch History, Delivery
+  Confirmation.
+- `SalesOps.jsx` — Invoice Details (read-only + PDF link), Notifications, Reports,
+  Activity Logs.
+- `AppShell.jsx` + `icons.jsx`: 13 `sd_*` pages/icons + role label wired.
+
+**Tests / verification**
+- `backend/tests/test_sales_manager.py`: RBAC isolation (13 pages, 403 for other
+  roles), dashboard cards, QC-only stock, full/partial dispatch + challan +
+  invoice, double-dispatch blocked, non-approved roll rejected, delivery
+  confirmation, read-only invoices, cannot-confirm-orders / cannot-edit-payments
+  / cannot-inspect-QC, reports.
+- Backend byte-compiles; RBAC/department wiring verified by a standalone script;
+  all JSX prettier-clean. Not runtime-tested in the sandbox (no PyPI/npm); run
+  `pytest tests/test_sales_manager.py` on a networked host.

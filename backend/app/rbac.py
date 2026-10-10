@@ -21,6 +21,11 @@ ROLE_MANAGER = "manager"
 # shortage requests, hands finished batches to QC, and reports to the
 # Supermanager. Cannot touch finance, stock levels or dispatch directly.
 ROLE_PRODUCTION_MANAGER = "production_manager"
+# Sales & Dispatch manager: receives QC-approved stock, matches it to confirmed
+# buyer orders, plans dispatches, generates delivery challans, confirms
+# deliveries and hands off to Accounts for payment. Cannot confirm orders,
+# approve QC, or edit financial records.
+ROLE_SALES_MANAGER = "sales_manager"
 
 ALL_ROLES = [
     ROLE_OWNER,
@@ -31,6 +36,7 @@ ALL_ROLES = [
     ROLE_BUYER,
     ROLE_MANAGER,
     ROLE_PRODUCTION_MANAGER,
+    ROLE_SALES_MANAGER,
 ]
 
 # One role -> menu config. `path` is the frontend route; `resource` ties the menu
@@ -80,6 +86,23 @@ MENU_CONFIG: dict[str, list[dict]] = {
         {"label": "Production Reports", "path": "/app/pm-reports", "resource": "pm_reports"},
         {"label": "Notifications", "path": "/app/pm-notifications", "resource": "pm_notifications"},
         {"label": "Activity Logs", "path": "/app/pm-activity", "resource": "pm_activity"},
+    ],
+    # Sales & Dispatch manager: 13-screen panel. Its own `sd_*` resources keep
+    # permissions isolated from the store's `dispatch` screens.
+    ROLE_SALES_MANAGER: [
+        {"label": "Dashboard", "path": "/app/sd-dashboard", "resource": "sd_dashboard"},
+        {"label": "Buyer Orders", "path": "/app/sd-orders", "resource": "sd_orders"},
+        {"label": "Buyer Management", "path": "/app/sd-buyers", "resource": "sd_buyers"},
+        {"label": "Order Status Tracking", "path": "/app/sd-tracking", "resource": "sd_tracking"},
+        {"label": "QC-Approved Stock", "path": "/app/sd-stock", "resource": "sd_stock"},
+        {"label": "Dispatch Planning", "path": "/app/sd-planning", "resource": "sd_planning"},
+        {"label": "Create Delivery Challan", "path": "/app/sd-challan", "resource": "sd_challan"},
+        {"label": "Dispatch History", "path": "/app/sd-history", "resource": "sd_history"},
+        {"label": "Invoice Details", "path": "/app/sd-invoices", "resource": "sd_invoices"},
+        {"label": "Delivery Confirmation", "path": "/app/sd-delivery", "resource": "sd_delivery"},
+        {"label": "Notifications", "path": "/app/sd-notifications", "resource": "sd_notifications"},
+        {"label": "Reports", "path": "/app/sd-reports", "resource": "sd_reports"},
+        {"label": "Activity Logs", "path": "/app/sd-activity", "resource": "sd_activity"},
     ],
     # Purchase & raw material desk (+ dispatch, which the store also runs).
     ROLE_STORE_MANAGER: [

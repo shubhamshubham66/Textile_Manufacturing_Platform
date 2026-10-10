@@ -70,6 +70,25 @@ import {
   ProdNotifications,
   ProdActivity,
 } from "./app/prod/ProdOps.jsx";
+import SalesDashboard from "./app/sales/SalesDashboard.jsx";
+import {
+  SalesBuyerOrders,
+  SalesBuyers,
+  SalesTracking,
+  SalesStock,
+} from "./app/sales/SalesOrders.jsx";
+import {
+  SalesPlanning,
+  SalesChallan,
+  SalesHistory,
+  SalesDelivery,
+} from "./app/sales/SalesDispatch.jsx";
+import {
+  SalesInvoices,
+  SalesNotifications,
+  SalesReports,
+  SalesActivity,
+} from "./app/sales/SalesOps.jsx";
 import ChatBubble from "../components/ChatBubble.jsx";
 import { LiveProvider, useLiveStatus } from "../live/LiveContext.jsx";
 
@@ -129,6 +148,20 @@ const PAGES = {
   pm_reports: ProdReports,
   pm_notifications: ProdNotifications,
   pm_activity: ProdActivity,
+  // Sales & Dispatch Manager screens.
+  sd_dashboard: SalesDashboard,
+  sd_orders: SalesBuyerOrders,
+  sd_buyers: SalesBuyers,
+  sd_tracking: SalesTracking,
+  sd_stock: SalesStock,
+  sd_planning: SalesPlanning,
+  sd_challan: SalesChallan,
+  sd_history: SalesHistory,
+  sd_invoices: SalesInvoices,
+  sd_delivery: SalesDelivery,
+  sd_notifications: SalesNotifications,
+  sd_reports: SalesReports,
+  sd_activity: SalesActivity,
 };
 
 // Role label lookup for display (keys match backend role names).
@@ -141,6 +174,7 @@ const ROLE_LABELS = {
   buyer: "Buyer",
   manager: "Supermanager",
   production_manager: "Production manager",
+  sales_manager: "Sales & Dispatch manager",
 };
 
 // The app shell after login. The sidebar is built from the `menu` returned by the

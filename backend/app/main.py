@@ -34,6 +34,7 @@ from app.routers import yarn as yarn_router
 from app.routers import super as super_router
 from app.routers import tasks as tasks_router
 from app.routers import prod_manager as prod_manager_router
+from app.routers import sales_manager as sales_manager_router
 from app.routers import purchase as purchase_router
 from app import activity as _activity  # noqa: F401  (registers the activity-log listener)
 from chatbot.router import router as chatbot_router
@@ -82,12 +83,13 @@ def prepare_database() -> None:
 
     # New roles (e.g. manager) and the real owner login from OWNER_EMAIL /
     # OWNER_PASSWORD. Both are no-ops when there is nothing to do.
-    from app.bootstrap import ensure_owner_account, ensure_roles
+    from app.bootstrap import ensure_demo_managers, ensure_owner_account, ensure_roles
 
     db = SessionLocal()
     try:
         ensure_roles(db)
         ensure_owner_account(db)
+        ensure_demo_managers(db)
     finally:
         db.close()
 
@@ -133,6 +135,7 @@ app.include_router(reports_router.router)
 app.include_router(super_router.router)
 app.include_router(tasks_router.router)
 app.include_router(prod_manager_router.router)
+app.include_router(sales_manager_router.router)
 app.include_router(purchase_router.router)
 app.include_router(buyer_router.router)
 app.include_router(chatbot_router)  # AI assistant proxy (backend/chatbot/)

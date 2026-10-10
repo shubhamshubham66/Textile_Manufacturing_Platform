@@ -311,8 +311,18 @@ class Dispatch(Base):
     dispatch_no: Mapped[str] = mapped_column(String(40), unique=True)
     total_rolls: Mapped[int] = mapped_column(default=0)
     total_meters: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
-    status: Mapped[str] = mapped_column(String(20), default="packed")  # packed|loaded|shipped
+    status: Mapped[str] = mapped_column(String(20), default="packed")  # packed|loaded|shipped|delivered
     dispatched_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    # Sales & Dispatch: delivery challan + logistics details. Added via
+    # schema_sync on existing databases (all nullable, so old rows are fine).
+    challan_no: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    vehicle_no: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    transporter: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    driver_phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    delivery_address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    delivery_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    dispatched_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     items: Mapped[list["DispatchItem"]] = relationship(back_populates="dispatch")
 

@@ -19,26 +19,29 @@ DEPARTMENTS: list[tuple[str, str]] = [
 DEPT_LABEL = dict(DEPARTMENTS)
 
 # Department -> role that MANAGES that work (gets its department instructions
-# and runs its workers). Production is run by the Production manager.
+# and runs its workers). Production is run by the Production manager; sales &
+# dispatch by the Sales & Dispatch manager.
 DEPT_ROLE = {
     "purchase": rbac.ROLE_STORE_MANAGER,
     "production": rbac.ROLE_PRODUCTION_MANAGER,
     "qc": rbac.ROLE_QUALITY_INSPECTOR,
     "store": rbac.ROLE_STORE_MANAGER,
-    "dispatch": rbac.ROLE_STORE_MANAGER,
+    "dispatch": rbac.ROLE_SALES_MANAGER,
     "accounts": rbac.ROLE_ACCOUNTANT,
 }
 
 # Role -> department used when a user has none set (e.g. seeded logins).
 # The floor supervisor also sits in production (shares machine screens); the
 # production manager is the department's manager, so it is listed as the owner
-# of the "production" default below.
+# of the "production" default below. The store manager keeps "store" as its
+# default even though it can still open the shared dispatch screens.
 ROLE_DEFAULT_DEPT = {
     rbac.ROLE_STORE_MANAGER: "store",
     rbac.ROLE_PRODUCTION_MANAGER: "production",
     rbac.ROLE_FLOOR_SUPERVISOR: "production",
     rbac.ROLE_QUALITY_INSPECTOR: "qc",
     rbac.ROLE_ACCOUNTANT: "accounts",
+    rbac.ROLE_SALES_MANAGER: "dispatch",
 }
 
 DEPT_MANAGER_ROLES = set(ROLE_DEFAULT_DEPT)
