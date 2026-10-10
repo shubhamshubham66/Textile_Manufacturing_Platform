@@ -19,8 +19,11 @@ from app.database import engine
 from app.routers import auth as auth_router
 from app.routers import dispatch as dispatch_router
 from app.routers import orders as orders_router
+from app.routers import payments as payments_router
 from app.routers import production as production_router
 from app.routers import quality as quality_router
+from app.routers import reports as reports_router
+from app.routers import wages as wages_router
 from app.routers import yarn as yarn_router
 
 settings = get_settings()
@@ -42,6 +45,9 @@ app.include_router(yarn_router.router)
 app.include_router(production_router.router)
 app.include_router(quality_router.router)
 app.include_router(dispatch_router.router)
+app.include_router(payments_router.router)
+app.include_router(wages_router.router)
+app.include_router(reports_router.router)
 
 
 # ---- Uniform error shape (matches API_CONTRACT.md) ----

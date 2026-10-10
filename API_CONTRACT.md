@@ -458,6 +458,82 @@ The invoice as a PDF (`application/pdf`, inline) listing the exact rolls.
 
 ---
 
+## Payments (roles: owner, accountant — resource `payments`)
+
+### GET /api/payments/_meta
+Invoices (with paid/balance/status) and suppliers for the forms.
+
+### POST /api/payments/buyer
+Record a buyer payment against an invoice; recomputes invoice status
+(unpaid → part_paid → paid). `400` if amount exceeds the balance, `409` if already
+fully paid.
+```json
+{ "invoice_id": 1, "amount": 10000, "method": "bank" }
+```
+
+### POST /api/payments/supplier
+Pay a supplier (yarn bills): `{ "supplier_id": 1, "amount": 50000, "method": "bank" }`.
+
+### GET /api/payments
+Payment history (incoming + outgoing).
+
+### GET /api/payments/dues
+Pending dues: `buyers_owe_us` (Σ invoice balances) and `we_owe_suppliers`
+(Σ PO value − outgoing payments), plus `total_receivable` / `total_payable`.
+
+---
+
+## Attendance & Wages (role: accountant — resources `attendance` / `wages`)
+
+### GET /api/wages/employees
+Employees + today's attendance status.
+
+### POST /api/attendance
+Mark attendance (upsert per employee+day):
+```json
+{ "employee_id": 1, "status": "present", "shift": "morning", "hours_worked": 8 }
+```
+`status` ∈ present|absent|half_day.
+
+### GET /api/attendance?date=YYYY-MM-DD
+Attendance rows (optional date filter).
+
+### POST /api/wages/calculate
+Compute a wage record per employee for a period:
+`amount = (present=1, half_day=0.5) × daily_wage + overtime(hours>8 × ₹80/hr)`.
+```json
+{ "period_start": "2026-10-04", "period_end": "2026-10-10" }
+```
+
+### GET /api/wages
+List wage records. ### POST /api/wages/{id}/pay — mark a wage paid (409 if already paid).
+
+---
+
+## Owner reports (role: owner — resources `reports` / `dashboard`)
+
+### GET /api/reports/cost-per-order
+Per order: `yarn_cost + wage_cost + machine_cost = total_cost`, plus `revenue_est`
+and `margin_est`. Wages and machine cost are allocated to orders in proportion to
+each order's production output (metres).
+
+### GET /api/reports/machines
+Per machine: total output metres, idle/breakdown hours, idle loss ₹.
+
+### GET /api/reports/profit-loss?start=&end=
+Month (or window) P&L:
+```json
+{ "buyer_payments_in": 26460, "supplier_payments_out": 180000, "wages": 10350,
+  "profit_or_loss": -163890, "is_profit": false }
+```
+`profit = payments_in − supplier_out − wages`.
+
+### GET /api/reports/dashboard
+Key cards: `orders_by_stage`, `low_stock_count` + `low_stock`, `idle_loss_rupees`,
+and `profit_loss`.
+
+---
+
 ### Role → menu / resource map (one config, enforced server-side)
 
 | Role              | Menu (resource)                                                     |
