@@ -6,21 +6,29 @@ from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
-from app.departments import DEPT_MANAGER_ROLES, dept_of
+from app.departments import DEPT_MANAGER_ROLES, DEPT_ROLE, dept_of
 from app.models import Role, Task, User
 
 
 def manager_for_department(db: Session, dept: str) -> User | None:
-    """First active department manager running `dept` (None if nobody)."""
+    """Active department manager running `dept` (None if nobody).
+
+    When more than one role defaults to the same department (e.g. the
+    production manager and the floor supervisor both sit in "production"), the
+    role named in DEPT_ROLE for that department owns it, so instructions go to
+    that role first. Within a role, the lowest id wins for determinism.
+    """
     users = (
         db.query(User).join(Role)
         .filter(Role.name.in_(DEPT_MANAGER_ROLES), User.is_active.is_(True))
         .order_by(User.id).all()
     )
-    for u in users:
-        if dept_of(u) == dept:
+    owner_role = DEPT_ROLE.get(dept)
+    candidates = [u for u in users if dept_of(u) == dept]
+    for u in candidates:
+        if u.role and u.role.name == owner_role:
             return u
-    return None
+    return candidates[0] if candidates else None
 
 
 def is_overdue(t: Task, today: date | None = None) -> bool:

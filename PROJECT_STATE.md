@@ -513,3 +513,74 @@ Audit of R1–R7 (owner scene) found four wrong/partial items; fixed:
   `pytest tests` on a networked host.
 - Render junk records (ORD-2007-type test rows, ₹20cr supplier payment) are
   removed via `RESET_DATA=empty` (PR #31) or by voiding (PR #30) — no new code.
+
+## Task — Production Manager dashboard
+
+New role **`production_manager`** (menu label "Production manager") with its own
+12-screen control panel for the production floor. Built by cloning the
+Supermanager pattern (RBAC-driven menu + `require_resource` guards + live SSE +
+activity log). No other dashboard, auth, DB schema or the tech stack changed.
+
+**Backend**
+- `rbac.py`: added `ROLE_PRODUCTION_MANAGER`, 12 menu items with their own
+  `pm_*` resources (Dashboard, Production Orders, Production Planning,
+  Production Stages, Machine Management, Worker & Task Assignment, Production
+  Monitoring, Material Requests, QC Handover, Production Reports, Notifications,
+  Activity Logs). `RESOURCE_ACCESS` is derived, so each `pm_*` resource is
+  reachable only by this role (verified: other roles get 403).
+- `departments.py`: production department is now run by the production manager
+  (`DEPT_ROLE["production"]`), so the auto "Produce …" instruction on order
+  confirmation routes to it; the floor supervisor still shares the machine
+  screens.
+- `services/prod_manager.py`: read-only aggregations (dashboard cards, order
+  rows, machine rows, material shortages vs confirmed-order needs, QC-pending
+  batches, rework/reject rolls, production tasks). Reuses the existing
+  production service for progress + idle-loss math. All figures from live
+  tables — no dummy values.
+- `routers/prod_manager.py` (`/api/prod/*`): dashboard; orders (read-only);
+  planning (`POST /plan` assigns machine+stage+target, moves confirmed→in
+  production); stages; machines (`POST /machines/{id}/status` with required
+  reason for idle/breakdown); workers + tasks (create / assign / status, writes
+  `TaskUpdate`); monitoring + `POST /output` (metres + waste); materials
+  (`POST /materials` raises a `PurchaseRequest` into the existing store/approval
+  workflow + notifies Supermanager/store); QC handover (`POST /qc/handover`
+  creates pending rolls and moves order→in_quality; `POST /qc/rework/{roll}`
+  creates a rework task, only for rolls QC marked rework); reports; notifications
+  + `POST /notify-delay` to the Supermanager; activity log. Every endpoint is
+  guarded by `require_resource("pm_*")`. **Permission boundaries enforced on the
+  backend:** this role has no endpoint to confirm orders, inspect/approve QC,
+  edit payments, change stock quantities or dispatch — those stay 403 (verified).
+- `live.py`: `production_manager` added to the machines/production/orders/yarn/
+  quality/wages/tasks/purchase/notifications topics and to Task/QC notify lists,
+  so its screens refresh and its bell fires on relevant commits. Writing
+  ProductionLog/MachineStatusLog/Task/Roll already emits events via the existing
+  flush hooks — no new topic needed.
+- `main.py`: registered `prod_manager_router`.
+- `bootstrap.ensure_roles` adds the role to existing/live DBs on restart (role
+  is in `ALL_ROLES`); `seed.py` adds a demo login `production@everest.test` /
+  `production123` (department=production), points production workers to it, and
+  seeds three production worker tasks.
+
+**Frontend** (reuses the shared `components/super/kit.jsx` and `super.css`)
+- `pages/app/prod/ProdDashboard.jsx` — the seven required cards (Active orders,
+  Today's target vs actual, Machine status, Worker tasks, Material shortages,
+  Delayed orders, Pending QC handover) + lists.
+- `pages/app/prod/ProdOrders.jsx` — Orders, Planning (plan dialog), Stages.
+- `pages/app/prod/ProdFloor.jsx` — Machine management, Worker & task assignment,
+  Monitoring (+ log-output dialog).
+- `pages/app/prod/ProdOps.jsx` — Material requests, QC handover (+ rework),
+  Reports, Notifications (+ report-a-delay), Activity logs.
+- `AppShell.jsx`: imported the pages, added the 12 `pm_*` entries to `PAGES` and
+  the role label. `components/super/icons.jsx`: added `pm_*` sidebar icons.
+
+**Tests / verification**
+- `backend/tests/test_prod_manager.py` (RBAC isolation across all 12 pages +
+  403 for other roles, dashboard cards, planning + wrong-machine 400, machine
+  status reason rule, worker task create/assign/status, output logging,
+  material request → shows in store queue, QC handover → rolls pending + order
+  in_quality, PM cannot inspect QC / see payments / dispatch, rework-only rule,
+  reports, notify-delay).
+- Not runtime-tested in this sandbox (no PyPI/npm to install FastAPI/Vite).
+  Backend byte-compiles; RBAC/department wiring verified by a standalone script;
+  all JSX prettier-clean. Run `pytest tests/test_prod_manager.py` on a networked
+  host.

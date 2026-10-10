@@ -65,6 +65,7 @@ def seed() -> None:
         role_names = [
             "owner", "store_manager", "floor_supervisor",
             "quality_inspector", "accountant", "buyer", "manager",
+            "production_manager",
         ]
         roles = {n: m.Role(name=n) for n in role_names}
         db.add_all(roles.values())
@@ -82,6 +83,12 @@ def seed() -> None:
                    email="quality@everest.test", password_hash=_hash("quality123")),
             m.User(role_id=roles["accountant"].id, name="Deepak Rao",
                    email="accounts@everest.test", password_hash=_hash("accounts123")),
+            # Production manager: runs the floor. department="production" makes
+            # it the owner of the production department (gets its instructions
+            # and workers).
+            m.User(role_id=roles["production_manager"].id, name="Vikram Singh",
+                   email="production@everest.test", password_hash=_hash("production123"),
+                   department="production"),
         ]
         db.add_all(staff)
 
@@ -424,10 +431,12 @@ def seed() -> None:
             m.Employee(name="Anita Kumari", role_on_floor="Quality helper",
                        daily_wage=500, phone="+91 90001 30004", department="qc"),
         ]
-        # Each worker reports to the manager of their department.
+        # Each worker reports to the manager of their department. Production
+        # workers report to the Production manager (staff[5]); the QC helper to
+        # the quality inspector (staff[3]).
         db.flush()
         for e in employees:
-            e.manager_user_id = staff[2].id if e.department == "production" else staff[3].id
+            e.manager_user_id = staff[5].id if e.department == "production" else staff[3].id
         db.add_all(employees)
         db.flush()
 
@@ -456,6 +465,34 @@ def seed() -> None:
                 paid_at=_dt(10, 9) if paid else None,
             ))
         db.add_all(wage_rows)
+
+        # ---- Production worker tasks (Production manager → floor workers) ----
+        # So the Production Manager dashboard and the Worker & Task Assignment
+        # screen show real assignments from the first load.
+        prod_mgr = staff[5]
+        db.add_all([
+            m.Task(title=f"Weaving — {orders[2].order_no}",
+                   details="Run the weaving stage; target 1,200 m this shift.",
+                   department="production", manager_user_id=prod_mgr.id,
+                   order_id=orders[2].id, worker_employee_id=employees[1].id,
+                   priority="high", deadline=_d(12), status="in_progress",
+                   created_by_user_id=prod_mgr.id, auto=False,
+                   created_at=_dt(10, 8), updated_at=_dt(10, 9)),
+            m.Task(title=f"Dyeing — {orders[2].order_no}",
+                   details="Dye the woven lot once weaving crosses 60%.",
+                   department="production", manager_user_id=prod_mgr.id,
+                   order_id=orders[2].id, worker_employee_id=employees[2].id,
+                   priority="medium", deadline=_d(12), status="pending",
+                   created_by_user_id=prod_mgr.id, auto=False,
+                   created_at=_dt(10, 8), updated_at=_dt(10, 8)),
+            m.Task(title=f"Spinning — {orders[3].order_no}",
+                   details="Spin yarn for the new weaving run.",
+                   department="production", manager_user_id=prod_mgr.id,
+                   order_id=orders[3].id, worker_employee_id=employees[0].id,
+                   priority="medium", deadline=_d(13), status="in_progress",
+                   created_by_user_id=prod_mgr.id, auto=False,
+                   created_at=_dt(10, 8), updated_at=_dt(10, 9)),
+        ])
 
         db.commit()
         print("Seed complete (October 2026).")

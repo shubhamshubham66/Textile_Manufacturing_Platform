@@ -32,22 +32,25 @@ FLOOR = rbac.ROLE_FLOOR_SUPERVISOR
 QUALITY = rbac.ROLE_QUALITY_INSPECTOR
 ACCOUNTS = rbac.ROLE_ACCOUNTANT
 MANAGER = rbac.ROLE_MANAGER
-STAFF = [OWNER, MANAGER, STORE, FLOOR, QUALITY, ACCOUNTS]
+PROD = rbac.ROLE_PRODUCTION_MANAGER
+STAFF = [OWNER, MANAGER, PROD, STORE, FLOOR, QUALITY, ACCOUNTS]
 
-# Topic -> roles whose screens should refresh for it.
+# Topic -> roles whose screens should refresh for it. The production manager
+# (PROD) watches everything that affects the floor: machines, production,
+# orders, quality (QC handover), yarn availability, instructions and the bell.
 TOPIC_ROLES = {
-    "machines": [OWNER, MANAGER, FLOOR],
-    "production": [OWNER, MANAGER, FLOOR, QUALITY],
+    "machines": [OWNER, MANAGER, PROD, FLOOR],
+    "production": [OWNER, MANAGER, PROD, FLOOR, QUALITY],
     "orders": STAFF,
-    "yarn": [OWNER, MANAGER, STORE],
-    "quality": [OWNER, MANAGER, QUALITY, STORE],
+    "yarn": [OWNER, MANAGER, PROD, STORE],
+    "quality": [OWNER, MANAGER, PROD, QUALITY, STORE],
     "payments": [OWNER, MANAGER, ACCOUNTS],
-    "wages": [OWNER, MANAGER, ACCOUNTS],
+    "wages": [OWNER, MANAGER, PROD, ACCOUNTS],
     # Supermanager instructions to department managers.
-    "tasks": [MANAGER, STORE, FLOOR, QUALITY, ACCOUNTS],
+    "tasks": [MANAGER, PROD, STORE, FLOOR, QUALITY, ACCOUNTS],
     # Purchase requests, purchase orders, receiving.
-    "purchase": [OWNER, MANAGER, STORE],
-    "notifications": [MANAGER, STORE, FLOOR, QUALITY, ACCOUNTS],
+    "purchase": [OWNER, MANAGER, PROD, STORE],
+    "notifications": [MANAGER, PROD, STORE, FLOOR, QUALITY, ACCOUNTS],
 }
 
 ORDER_STAGE_LABEL = {
@@ -250,7 +253,7 @@ def _collect(session: Session) -> list[LiveEvent]:
             elif isinstance(obj, m.Task):
                 if is_new:
                     out.append(LiveEvent("tasks", TOPIC_ROLES["tasks"], f"New instruction: {obj.title}", "info",
-                                         notify=True, notify_roles=[STORE, FLOOR, QUALITY, ACCOUNTS]))
+                                         notify=True, notify_roles=[PROD, STORE, FLOOR, QUALITY, ACCOUNTS]))
                 else:
                     out.append(LiveEvent("tasks", TOPIC_ROLES["tasks"], f"Task updated: {obj.title} ({obj.status.replace('_', ' ')})",
                                          "info", notify=True, notify_roles=[MANAGER]))
@@ -286,7 +289,7 @@ def _collect(session: Session) -> list[LiveEvent]:
                 name = roll.roll_no if roll else f"#{obj.roll_id}"
                 level = {"pass": "success", "rework": "warn", "reject": "alert"}.get(obj.result, "info")
                 out.append(LiveEvent("quality", TOPIC_ROLES["quality"], f"Roll {name}: {obj.result}", level, notify=True,
-                                     notify_roles=[OWNER, QUALITY] + ([STORE] if obj.result == "pass" else []),
+                                     notify_roles=[OWNER, QUALITY, PROD] + ([STORE] if obj.result == "pass" else []),
                                      buyer_id=roll.order.buyer_id if roll and roll.order else None))
 
             elif isinstance(obj, m.Roll):
