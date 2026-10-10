@@ -13,6 +13,9 @@ import Attendance from "./app/Attendance.jsx";
 import Wages from "./app/Wages.jsx";
 import Reports from "./app/Reports.jsx";
 import Dashboard from "./app/Dashboard.jsx";
+import MyOrders from "./app/MyOrders.jsx";
+import Invoices from "./app/Invoices.jsx";
+import ChatBubble from "../components/ChatBubble.jsx";
 
 // Resource key -> built module page. Resources not listed here fall back to a
 // clearly-labelled prototype placeholder (built in later phases).
@@ -31,6 +34,8 @@ const PAGES = {
   wages: Wages,
   reports: Reports,
   dashboard: Dashboard,
+  my_orders: MyOrders,
+  invoices: Invoices,
 };
 
 // Role label lookup for display (keys match backend role names).
@@ -154,6 +159,9 @@ export default function AppShell() {
       {sidebarOpen && (
         <div className="shell-overlay" onClick={() => setSidebarOpen(false)} />
       )}
+
+      {/* Floating chat bubble on every logged-in page too (mount point). */}
+      <ChatBubble />
     </div>
   );
 }
