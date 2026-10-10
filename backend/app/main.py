@@ -17,6 +17,7 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.database import engine
 from app.routers import auth as auth_router
+from app.routers import buyer as buyer_router
 from app.routers import dispatch as dispatch_router
 from app.routers import orders as orders_router
 from app.routers import payments as payments_router
@@ -48,6 +49,7 @@ app.include_router(dispatch_router.router)
 app.include_router(payments_router.router)
 app.include_router(wages_router.router)
 app.include_router(reports_router.router)
+app.include_router(buyer_router.router)
 
 
 # ---- Uniform error shape (matches API_CONTRACT.md) ----
