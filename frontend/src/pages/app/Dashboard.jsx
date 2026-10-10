@@ -12,7 +12,6 @@ import {
   monthLabel,
 } from "../../lib/format.js";
 import MonthPicker from "../../components/owner/MonthPicker.jsx";
-import { useVisiblePolling } from "../../components/owner/usePolling.js";
 import {
   Waterfall,
   HBars,
@@ -112,8 +111,9 @@ export default function Dashboard() {
     if (d) window.scrollTo(0, scrollRef.current);
   }, [d]);
 
-  // 30s visible polling + SSE live refresh (both quiet).
-  useVisiblePolling(() => load(month, { quiet: true }), 30000, [month]);
+  // SSE live refresh (quiet). No interval polling: the dashboard refreshes
+  // event-driven on the topics below, and the SSE client does a one-time
+  // catch-up reload whenever it (re)connects, so dropped streams self-heal.
   useLive(
     [
       "machines",

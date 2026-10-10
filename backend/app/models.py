@@ -20,6 +20,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -624,4 +625,34 @@ class OrderChangeRequest(Base):
     status: Mapped[str] = mapped_column(String(20), default="open")  # open|accepted|declined
     decision_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     decided_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, index=True)
+
+
+# --------------------------------------------------------------------------- #
+# Idempotency keys (duplicate-sensitive writes)
+# --------------------------------------------------------------------------- #
+class IdempotencyKey(Base):
+    """Records a client-supplied Idempotency-Key for a duplicate-sensitive
+    write (currently buyer/supplier payments) so a retried or double-clicked
+    request is executed only ONCE.
+
+    The first request stores the key with the resulting resource id; a repeat
+    of the same (key, scope) returns the stored result instead of creating a
+    second payment. The key is unique per scope, so a race on the second insert
+    fails the UNIQUE constraint and is treated as a duplicate.
+    """
+
+    __tablename__ = "idempotency_keys"
+    __table_args__ = (
+        UniqueConstraint("scope", "key", name="uq_idempotency_scope_key"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # What kind of action the key guards, e.g. "payment:buyer".
+    scope: Mapped[str] = mapped_column(String(60), index=True)
+    key: Mapped[str] = mapped_column(String(80), index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # The id of the resource created by the first successful request (e.g. the
+    # Payment id), so a replay can be answered without re-doing the work.
+    result_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, index=True)
