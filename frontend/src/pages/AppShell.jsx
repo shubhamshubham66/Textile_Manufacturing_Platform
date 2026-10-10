@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../auth/AuthContext.jsx";
 import Orders from "./app/Orders.jsx";
 import YarnStore from "./app/YarnStore.jsx";
@@ -56,6 +56,21 @@ export default function AppShell() {
   const [active, setActive] = useState(menu[0]?.path || "");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+
+  // Owner pages can request an in-app navigation (e.g. a dashboard chart bar
+  // linking to the filtered Orders list) via an `etm:navigate` event. Inert for
+  // every other role, which never dispatches it.
+  useEffect(() => {
+    function onNavigate(e) {
+      const path = e.detail?.path;
+      if (path && menu.some((m) => m.path === path)) {
+        setActive(path);
+        setSidebarOpen(false);
+      }
+    }
+    window.addEventListener("etm:navigate", onNavigate);
+    return () => window.removeEventListener("etm:navigate", onNavigate);
+  }, [menu]);
 
   if (!user) return null; // guarded by App, but be safe
 

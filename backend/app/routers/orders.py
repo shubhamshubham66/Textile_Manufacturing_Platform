@@ -23,7 +23,16 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.database import get_db
 from app.deps import require_resource
-from app.models import Buyer, Order, OrderItem, YarnStock
+from app.models import (
+    Buyer,
+    Machine,
+    Order,
+    OrderItem,
+    QualityInspection,
+    Roll,
+    YarnStock,
+)
+from app.services.production import order_display_progress
 
 settings = get_settings()
 router = APIRouter(prefix="/api/orders", tags=["orders"])
@@ -200,6 +209,82 @@ def get_order(
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
     return _order_out(order)
+
+
+STAGE_FLOW = [
+    "draft",
+    "confirmed",
+    "in_production",
+    "in_quality",
+    "ready_to_ship",
+    "dispatched",
+    "closed",
+]
+
+
+@router.get("/{order_id}/track")
+def track_order(
+    order_id: int,
+    _=Depends(require_resource("orders")),
+    db: Session = Depends(get_db),
+):
+    """Owner order tracker: stage, progress, late/on-track, and the order's rolls
+    with inspection result + the machine that made them (defect tracing)."""
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    progress = order_display_progress(db, order)
+    try:
+        stage_index = STAGE_FLOW.index(order.status)
+    except ValueError:
+        stage_index = 0
+
+    # Late = past deadline and not yet fully produced/dispatched.
+    late = False
+    if order.deadline and order.status not in ("dispatched", "closed"):
+        late = date.today() > order.deadline and progress < 100.0
+
+    rolls_out = []
+    rolls = db.query(Roll).filter(Roll.order_id == order.id).order_by(Roll.id).all()
+    for r in rolls:
+        insp = (
+            db.query(QualityInspection)
+            .filter(QualityInspection.roll_id == r.id)
+            .first()
+        )
+        machine = db.query(Machine).filter(Machine.id == r.machine_id).first()
+        # A dispatched roll was a pass; show that for clarity.
+        result = (
+            insp.result
+            if insp
+            else ("pass" if r.status == "dispatched" else "pending")
+        )
+        rolls_out.append(
+            {
+                "roll_no": r.roll_no,
+                "length_meters": float(r.length_meters),
+                "status": r.status,
+                "result": result,
+                "defect_type": insp.defect_type if insp else "none",
+                "machine": machine.name if machine else "—",
+            }
+        )
+
+    return {
+        "order_no": order.order_no,
+        "buyer_name": order.buyer.name if order.buyer else "",
+        "fabric_type": order.fabric_type,
+        "colour": order.colour,
+        "quantity_meters": float(order.quantity_meters),
+        "status": order.status,
+        "stage_index": stage_index,
+        "stage_flow": STAGE_FLOW,
+        "progress_percent": progress,
+        "deadline": order.deadline.isoformat() if order.deadline else None,
+        "late": late,
+        "rolls": rolls_out,
+    }
 
 
 @router.get("/{order_id}/check-yarn", response_model=CheckYarnOut)

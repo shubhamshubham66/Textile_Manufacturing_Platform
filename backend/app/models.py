@@ -184,7 +184,13 @@ class Machine(Base):
     name: Mapped[str] = mapped_column(String(80))
     type: Mapped[str] = mapped_column(String(30))  # spinning|weaving|dyeing
     current_status: Mapped[str] = mapped_column(String(20), default="idle")  # running|idle|breakdown
+    # Full machine-hour cost (power + overhead + the operator wage sitting on it).
+    # Used for idle-loss: when a machine is idle the WHOLE hour is wasted.
     hourly_cost: Mapped[float] = mapped_column(Numeric(10, 2), default=0)  # INR/hr
+    # Power + overhead ONLY (no operator wage). Used for cost-per-order so that
+    # operator wages are not double-counted (wages come from the wages module).
+    # Falls back to a share of hourly_cost when 0 (see services/reports.py).
+    power_overhead_cost: Mapped[float] = mapped_column(Numeric(10, 2), default=0)  # INR/hr
     status_since: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     # Currently assigned order + stage (null when the machine is unassigned).
     current_order_id: Mapped[int | None] = mapped_column(
