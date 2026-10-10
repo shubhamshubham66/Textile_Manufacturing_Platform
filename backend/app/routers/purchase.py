@@ -146,9 +146,12 @@ def _my_depts(user: User) -> set[str]:
 
 
 def _instructions(db: Session, user: User) -> list[Task]:
+    # See every instruction for the department(s) this login runs, plus anything
+    # assigned directly to this user — not only unassigned tasks, so a second
+    # manager in the same department sees the same list.
     depts = _my_depts(user)
     return (db.query(Task).filter(or_(Task.manager_user_id == user.id,
-                                      Task.department.in_(depts) & Task.manager_user_id.is_(None)))
+                                      Task.department.in_(depts)))
             .order_by(Task.id.desc()).all())
 
 
