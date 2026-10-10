@@ -370,3 +370,23 @@
   color: #166534;
   font-weight: 700;
 }
+
+/* Tables: header stays visible while scrolling long tables. */
+.owner-page .owner-table-wrap {
+  max-height: 560px;
+  overflow: auto;
+  border-radius: 10px;
+}
+.owner-page .owner-table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface, #fff);
+  box-shadow: inset 0 -1px 0 var(--line, #e5e7eb);
+}
+.owner-est {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted, #6b7280);
+  margin-left: 0.2rem;
+}

@@ -150,6 +150,7 @@ function CostTab({ cost, month }) {
 
   return (
     <>
+      <div className="owner-table-wrap">
       <table className="data-table">
         <thead>
           <tr>
@@ -170,7 +171,17 @@ function CostTab({ cost, month }) {
               <td className="num">{qty(r.output_meters, "m")}</td>
               <td className="num">
                 {r.yarn_cost > 0 ? (
-                  <span className="owner-num">{inr(r.yarn_cost)}</span>
+                  <span
+                    className="owner-num"
+                    title={
+                      r.yarn_basis === "estimate"
+                        ? "Estimate: no yarn receipt is linked to this order, so metres made × yarn per metre × average purchase rate"
+                        : "Yarn receipts linked to this order, received this month"
+                    }
+                  >
+                    {inr(r.yarn_cost)}
+                    {r.yarn_basis === "estimate" && <small className="owner-est"> est</small>}
+                  </span>
                 ) : (
                   <span
                     className="owner-zero"
@@ -205,9 +216,12 @@ function CostTab({ cost, month }) {
           </tr>
         </tbody>
       </table>
+      </div>
       <p className="muted">
-        Machine cost is power + overhead only; operator wages are the Wages
-        column (never double-counted). Revenue and margin are estimates.
+        Machine cost = running hours this month × power + overhead rate;
+        operator wages are only in the Wages column (never double-counted).
+        Revenue and margin are estimates. "est" marks yarn estimated from
+        metres made because no yarn receipt is linked to the order.
       </p>
       <StackedBars
         data={chartData}
@@ -231,9 +245,22 @@ function MachineTab({ machines, month }) {
     label: m.machine,
     value: m.total_output_meters,
   }));
+  const quiet =
+    totals &&
+    !totals.total_output_meters &&
+    !totals.running_hours &&
+    !totals.idle_hours &&
+    !totals.breakdown_hours;
 
   return (
     <>
+      {quiet && (
+        <p className="muted">
+          No machine activity recorded in {monthLabel(month)}: no output and no
+          running, idle or breakdown time.
+        </p>
+      )}
+      <div className="owner-table-wrap">
       <table className="data-table">
         <thead>
           <tr>
@@ -281,6 +308,7 @@ function MachineTab({ machines, month }) {
           )}
         </tbody>
       </table>
+      </div>
       <HBars title="Metres produced per machine" data={outputBars} unit="m" />
     </>
   );
@@ -296,6 +324,11 @@ function PlTab({ pl, wages, cost, dues, month }) {
   return (
     <div className="pl-box">
       <h3 style={{ marginTop: 0 }}>Month-end summary — {monthLabel(month)}</h3>
+      {!pl.buyer_payments_in && !pl.supplier_payments_out && !pl.wages && (
+        <p className="muted">
+          No payments received, bills paid or wages paid in {monthLabel(month)}.
+        </p>
+      )}
       <div className="pl-row">
         <span>Buyer payments received</span>
         <strong className="owner-pos owner-num">
@@ -327,6 +360,10 @@ function PlTab({ pl, wages, cost, dues, month }) {
         <li>
           Estimated order margin (invoiced − cost):{" "}
           <strong className="owner-num">{inr(estMargin)}</strong>
+        </li>
+        <li>
+          Wages due (worked this month, not yet paid):{" "}
+          <strong className="owner-num">{inr(pl.wages_due || 0)}</strong>
         </li>
         <li>
           Buyers still owe us:{" "}
@@ -372,6 +409,7 @@ function WagesTab({ wages, month }) {
       </div>
 
       <h3>Wages per employee</h3>
+      <div className="owner-table-wrap">
       <table className="data-table">
         <thead>
           <tr>
@@ -410,6 +448,7 @@ function WagesTab({ wages, month }) {
           </tr>
         </tbody>
       </table>
+      </div>
 
       <HBars title="Wages per employee — ₹" data={empBars} money />
 
@@ -417,7 +456,8 @@ function WagesTab({ wages, month }) {
       {(wages.per_order || []).length === 0 ? (
         <p className="muted">No production output to allocate wages against.</p>
       ) : (
-        <table className="data-table">
+        <div className="owner-table-wrap">
+      <table className="data-table">
           <thead>
             <tr>
               <th>Order</th>
@@ -435,6 +475,7 @@ function WagesTab({ wages, month }) {
             ))}
           </tbody>
         </table>
+      </div>
       )}
       <p className="muted">
         Per-order wages use each order's share of production output — the same
