@@ -240,6 +240,15 @@ def _collect(session: Session) -> list[LiveEvent]:
                 else:
                     out.append(LiveEvent("payments", TOPIC_ROLES["payments"], f"{_rupees(obj.amount)} paid to supplier", "info", notify=True))
 
+            elif isinstance(obj, m.Payment) and not is_new:
+                ch = _changed(obj, "voided_at", session)
+                if ch and ch[0] is None and ch[1] is not None:
+                    out.append(LiveEvent("payments", TOPIC_ROLES["payments"],
+                                         f"{_rupees(obj.amount)} payment voided", "warn", notify=True,
+                                         buyer_id=obj.buyer_id,
+                                         buyer_message=(f"A payment of {_rupees(obj.amount)} was voided"
+                                                        if obj.direction == "incoming" else None)))
+
             elif isinstance(obj, (m.Invoice, m.Dispatch)):
                 out.append(LiveEvent("payments" if isinstance(obj, m.Invoice) else "orders",
                                      TOPIC_ROLES["payments"] + [STORE], buyer_id=getattr(obj, "buyer_id", None)))

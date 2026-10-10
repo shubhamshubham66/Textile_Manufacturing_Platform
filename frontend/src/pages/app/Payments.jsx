@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api.js";
+import { useAuth } from "../../auth/AuthContext.jsx";
 import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 import { inr, ddmmyyyy, statusLabel } from "../../lib/format.js";
 import "../../owner.css";
 
+// Payments at/above this amount get an "Unusually large" badge (₹10,00,000).
+const LARGE_PAYMENT = 1000000;
+
 // Payments module (owner + accountant): record buyer payment, pay supplier,
 // due tracker (with ageing) and payment history.
 export default function Payments() {
+  const { user } = useAuth();
+  const isOwner = user?.role === "owner";
   const [meta, setMeta] = useState({ invoices: [], suppliers: [] });
   const [payments, setPayments] = useState([]);
   const [dues, setDues] = useState(null);
@@ -15,6 +21,11 @@ export default function Payments() {
   const [msg, setMsg] = useState("");
   const [msgKind, setMsgKind] = useState("ok");
   const [busy, setBusy] = useState(false);
+
+  // Void dialog state.
+  const [voidTarget, setVoidTarget] = useState(null); // the payment row
+  const [voidReason, setVoidReason] = useState("");
+  const [voiding, setVoiding] = useState(false);
 
   const [buyerForm, setBuyerForm] = useState({
     invoice_id: "",
@@ -122,6 +133,38 @@ export default function Payments() {
       flash("err", err.message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  function openVoid(p) {
+    setVoidReason("");
+    setMsg("");
+    setVoidTarget(p);
+  }
+
+  async function confirmVoid(ev) {
+    ev.preventDefault();
+    if (voidReason.trim().length < 3) {
+      flash("err", "Please give a reason of at least 3 characters.");
+      return;
+    }
+    setVoiding(true);
+    try {
+      await apiFetch(`/api/payments/${voidTarget.id}/void`, {
+        method: "POST",
+        body: { reason: voidReason.trim() },
+      });
+      flash(
+        "ok",
+        `Voided ${inr(voidTarget.amount)} payment to/from ${voidTarget.party || "—"}.`,
+      );
+      setVoidTarget(null);
+      setVoidReason("");
+      await loadAll();
+    } catch (err) {
+      flash("err", err.message);
+    } finally {
+      setVoiding(false);
     }
   }
 
@@ -352,28 +395,116 @@ export default function Payments() {
                 <th>Date</th>
                 <th className="num">Amount</th>
                 <th>Method</th>
+                {isOwner && <th>Action</th>}
               </tr>
             </thead>
             <tbody>
-              {payments.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <span
-                      className={`owner-chip ${p.direction === "incoming" ? "owner-chip-green" : "owner-chip-amber"}`}
-                    >
-                      {p.direction === "incoming" ? "In" : "Out"}
-                    </span>
-                  </td>
-                  <td>{p.party}</td>
-                  <td>{ddmmyyyy(p.paid_at)}</td>
-                  <td className="num owner-num">{inr(p.amount)}</td>
-                  <td>{p.method}</td>
-                </tr>
-              ))}
+              {payments.map((p) => {
+                const large = Math.abs(Number(p.amount)) >= LARGE_PAYMENT;
+                return (
+                  <tr key={p.id} className={p.voided ? "owner-voided" : ""}>
+                    <td>
+                      <span
+                        className={`owner-chip ${p.direction === "incoming" ? "owner-chip-green" : "owner-chip-amber"}`}
+                      >
+                        {p.direction === "incoming" ? "In" : "Out"}
+                      </span>
+                    </td>
+                    <td>{p.party}</td>
+                    <td>{ddmmyyyy(p.paid_at)}</td>
+                    <td className="num owner-num">
+                      {inr(p.amount)}
+                      {large && !p.voided && (
+                        <span
+                          className="owner-chip owner-chip-red"
+                          style={{ marginLeft: "0.4rem" }}
+                          title="This amount is unusually large — check before trusting it"
+                        >
+                          Unusually large
+                        </span>
+                      )}
+                      {p.voided && (
+                        <div className="owner-void-note">
+                          Voided: {p.void_reason} · {ddmmyyyy(p.voided_at)}
+                          {p.voided_by ? ` · ${p.voided_by}` : ""}
+                        </div>
+                      )}
+                    </td>
+                    <td>{p.method}</td>
+                    {isOwner && (
+                      <td className="row-actions">
+                        {p.voided ? (
+                          <span className="owner-chip owner-chip-grey">
+                            Voided
+                          </span>
+                        ) : (
+                          <button
+                            className="link-btn"
+                            onClick={() => openVoid(p)}
+                          >
+                            Void
+                          </button>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </section>
+
+      {/* Void dialog */}
+      {voidTarget && (
+        <div
+          className="owner-drawer-backdrop"
+          onClick={() => !voiding && setVoidTarget(null)}
+        >
+          <div
+            className="owner-dialog"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label="Void payment"
+          >
+            <h3>Void payment</h3>
+            <p className="muted">
+              {voidTarget.direction === "incoming" ? "Received" : "Paid"}{" "}
+              {inr(voidTarget.amount)}
+              {voidTarget.party ? ` · ${voidTarget.party}` : ""} ·{" "}
+              {ddmmyyyy(voidTarget.paid_at)}
+            </p>
+            <p className="muted">
+              Voiding keeps the record for the audit trail but removes it from
+              all totals. This cannot be undone.
+            </p>
+            <form onSubmit={confirmVoid}>
+              <label className="field">
+                <span>Reason (required)</span>
+                <input
+                  autoFocus
+                  value={voidReason}
+                  onChange={(e) => setVoidReason(e.target.value)}
+                  placeholder="e.g. duplicate test entry"
+                />
+              </label>
+              <div className="form-actions" style={{ gap: "0.5rem" }}>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setVoidTarget(null)}
+                  disabled={voiding}
+                >
+                  Cancel
+                </button>
+                <button className="btn btn-primary btn-sm" disabled={voiding}>
+                  {voiding ? "Voiding…" : "Void payment"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
