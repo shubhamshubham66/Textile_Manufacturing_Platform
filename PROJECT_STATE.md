@@ -584,3 +584,129 @@ activity log). No other dashboard, auth, DB schema or the tech stack changed.
   Backend byte-compiles; RBAC/department wiring verified by a standalone script;
   all JSX prettier-clean. Run `pytest tests/test_prod_manager.py` on a networked
   host.
+
+## Task — Sales & Dispatch Manager dashboard
+
+New role **`sales_manager`** ("Sales & Dispatch manager") with a 13-screen panel,
+built on the same RBAC-driven pattern as the Production Manager. Reuses the
+existing atomic dispatch engine; no other dashboard, auth, DB schema or stack
+changed beyond additive columns.
+
+**Backend**
+- `rbac.py`: `ROLE_SALES_MANAGER` + 13 isolated `sd_*` resources (Dashboard,
+  Buyer Orders, Buyer Management, Order Status Tracking, QC-Approved Stock,
+  Dispatch Planning, Create Delivery Challan, Dispatch History, Invoice Details,
+  Delivery Confirmation, Notifications, Reports, Activity Logs). Verified only
+  this role can reach them.
+- `departments.py`: dispatch department now run by `sales_manager`.
+- `models.py`: additive `Dispatch` columns — `challan_no`, `vehicle_no`,
+  `transporter`, `driver_phone`, `delivery_address`, `delivery_note`,
+  `delivered_at`, `dispatched_by_user_id`; new order status
+  `partially_dispatched`. `schema_sync` adds the columns to existing DBs.
+- `services/sales_manager.py`: read-only aggregations (dashboard cards, order
+  rows with ready/dispatched metres, QC-approved stock, buyer dues, dispatch
+  rows). All from live tables.
+- `routers/sales_manager.py` (`/api/sales/*`): dashboard; buyer orders & buyer
+  management (read-only); order tracking; QC-approved stock; dispatch planning
+  + `POST /dispatch` which **reuses the existing atomic `confirm_dispatch`**
+  (QC-'pass'-only, UNIQUE roll guard → no double dispatch, auto-invoice) then
+  attaches challan + logistics and sets `dispatched`/`partially_dispatched`;
+  dispatch history; read-only invoices; delivery confirmation
+  (`/dispatch/{id}/status`, `/dispatch/{id}/deliver` → order `closed`=Delivered);
+  notifications + read; reports; activity. Partial dispatch allowed only with an
+  explicit `partial` flag; selecting non-approved rolls is rejected (400).
+- Notifications wired to the required events: QC-pass now also notifies SALES +
+  Supermanager (`live.py`); dispatch created → Supermanager + Accounts; delivery
+  confirmed → Supermanager + Accounts (payment follow-up).
+- `live.py`: `sales_manager` added to orders/quality/payments/notifications/tasks
+  topics; Dispatch/Invoice events routed to it.
+- `main.py`: registered `sales_manager_router`.
+
+**Auth fix (also resolves the earlier "Not authenticated" / login failures)**
+- `render.yaml`: `JWT_SECRET` changed from `generateValue: true` to `sync: false`
+  — Render was regenerating the secret on every blueprint sync, invalidating all
+  logged-in tokens (that was the real cause of the 401s). Set it once in the
+  dashboard; sessions now survive deploys.
+- `bootstrap.ensure_demo_managers`: ensures `production@everest.test` and
+  `sales@everest.test` logins exist on ANY database (seed only runs on an empty
+  DB), so these roles can be demoed/logged-in after a deploy. Called from
+  `prepare_database` after `ensure_roles`.
+- `seed.py`: adds the `sales_manager` role + demo login for fresh DBs.
+
+**Frontend** (reuses the shared super kit + super.css)
+- `pages/app/sales/SalesDashboard.jsx` — the seven required cards (Total Buyer
+  Orders, Pending Dispatches, QC-Approved Stock, Orders Ready for Dispatch,
+  Dispatched Orders, Delayed Deliveries, Pending Buyer Payments) + lists.
+- `SalesOrders.jsx` — Buyer Orders, Buyer Management, Order Tracking, QC-Approved
+  Stock.
+- `SalesDispatch.jsx` — Dispatch Planning + Create Delivery Challan (roll picker
+  with partial-dispatch acknowledgement + logistics), Dispatch History, Delivery
+  Confirmation.
+- `SalesOps.jsx` — Invoice Details (read-only + PDF link), Notifications, Reports,
+  Activity Logs.
+- `AppShell.jsx` + `icons.jsx`: 13 `sd_*` pages/icons + role label wired.
+
+**Tests / verification**
+- `backend/tests/test_sales_manager.py`: RBAC isolation (13 pages, 403 for other
+  roles), dashboard cards, QC-only stock, full/partial dispatch + challan +
+  invoice, double-dispatch blocked, non-approved roll rejected, delivery
+  confirmation, read-only invoices, cannot-confirm-orders / cannot-edit-payments
+  / cannot-inspect-QC, reports.
+- Backend byte-compiles; RBAC/department wiring verified by a standalone script;
+  all JSX prettier-clean. Not runtime-tested in the sandbox (no PyPI/npm); run
+  `pytest tests/test_sales_manager.py` on a networked host.
+
+## Task — Accounts & Finance Manager dashboard
+
+New role **`accounts_manager`** ("Accounts & Finance manager") with a 12-screen
+panel. Reuses the existing, proven finance backend (payments/wages/attendance/
+reports) rather than duplicating it; adds its own `am_*` screens for the
+dashboard, invoices, overtime, expenses, reports, notifications and activity.
+No other dashboard/auth/stack changed beyond additive Payment columns.
+
+**Backend**
+- `rbac.py`: `ROLE_ACCOUNTS_MANAGER` + 12 menu items. Buyer Payments, Supplier
+  Bills & Payments → existing `payments` resource; Worker Attendance →
+  `attendance`; Salary & Wage Management → `wages` (so the existing endpoints
+  work unchanged, with their duplicate/overpayment guards). New isolated
+  `am_dashboard/am_invoices/am_overtime/am_prod_expenses/am_expenses/am_reports/
+  am_notifications/am_activity` resources.
+- `departments.py`: accounts department run by `accounts_manager`.
+- `models.py`: additive `Payment` columns `category`, `note`, `reference`,
+  `recorded_by_user_id` (schema_sync adds them to existing DBs) — used to record
+  "other expenses" as outgoing payments so the P&L stays consistent.
+- `services/accounts_manager.py`: dashboard cards (total sales, receivables,
+  payables, monthly expenses, wages, profit/loss) + ageing receivables/payables,
+  reusing `services/reports.py` so figures tie out with the owner's P&L.
+- `routers/accounts_manager.py` (`/api/accounts/*`): dashboard; sales invoices
+  (with dispatch link + PDF); overtime (derived from verified attendance >8h);
+  production expenses (cost per order, read-only from reports); other expenses
+  (`POST /expenses` records an outgoing payment in a txn + audit log +
+  duplicate-reference guard; >=₹50k notifies the Supermanager); financial
+  reports (`?period=day|month|year` → income/expense/cash-flow/P&L); notifications
+  + read; activity. All guarded by `require_resource("am_*")`.
+- `live.py`: `accounts_manager` added to payments/wages/notifications/tasks/orders
+  topics. `sales_manager.py`: dispatch-invoice and delivery notifications now
+  also go to the accounts_manager (payment follow-up).
+- `main.py`: registered `accounts_manager_router`. `bootstrap.ensure_demo_managers`
+  + `seed.py`: demo login `accounts-manager@everest.test` / `accounts123`.
+
+**Frontend** (reuses the shared super kit; Buyer/Supplier Payments, Attendance,
+Wages screens are the EXISTING Payments/Attendance/Wages pages via shared keys)
+- `pages/app/accounts/AccountsDashboard.jsx` — the six cards (Total Sales,
+  Pending Buyer Payments, Supplier Payments Due, Monthly Expenses, Worker Wages,
+  Monthly Profit/Loss) + ageing receivables/payables + month-net band.
+- `AccountsPages.jsx` — Sales Invoices, Overtime, Production Expenses, Other
+  Expenses (record form + duplicate guard), Financial Reports (day/month/year),
+  Notifications, Activity Logs.
+- `AppShell.jsx` + `icons.jsx`: 8 `am_*` pages/icons + role label wired.
+
+**Tests / verification**
+- `backend/tests/test_accounts_manager.py`: RBAC isolation (am_* 403 for others),
+  shared payment/wage endpoints usable, 12-item menu, six dashboard cards,
+  invoices, production-expense totals, expense record + duplicate-reference 409,
+  major-expense notification, day/month/year reports, cannot-confirm-orders /
+  cannot-dispatch / cannot-inspect-QC.
+- Backend byte-compiles; RBAC/department wiring verified by a standalone script;
+  all JSX prettier-clean. Not runtime-tested in the sandbox (no PyPI/npm); run
+  `pytest tests/test_accounts_manager.py` on a networked host.

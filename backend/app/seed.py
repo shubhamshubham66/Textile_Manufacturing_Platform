@@ -65,7 +65,7 @@ def seed() -> None:
         role_names = [
             "owner", "store_manager", "floor_supervisor",
             "quality_inspector", "accountant", "buyer", "manager",
-            "production_manager",
+            "production_manager", "sales_manager", "accounts_manager",
         ]
         roles = {n: m.Role(name=n) for n in role_names}
         db.add_all(roles.values())
@@ -89,6 +89,14 @@ def seed() -> None:
             m.User(role_id=roles["production_manager"].id, name="Vikram Singh",
                    email="production@everest.test", password_hash=_hash("production123"),
                    department="production"),
+            # Sales & Dispatch manager: runs the dispatch department.
+            m.User(role_id=roles["sales_manager"].id, name="Neha Kapoor",
+                   email="sales@everest.test", password_hash=_hash("sales123"),
+                   department="dispatch"),
+            # Accounts & Finance manager: runs the accounts department.
+            m.User(role_id=roles["accounts_manager"].id, name="Anjali Verma",
+                   email="accounts-manager@everest.test", password_hash=_hash("accounts123"),
+                   department="accounts"),
         ]
         db.add_all(staff)
 

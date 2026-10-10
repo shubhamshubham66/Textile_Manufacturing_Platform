@@ -152,7 +152,14 @@ real passwords. Set a strong `JWT_SECRET` in `.env` for any real deployment.
 | Quality inspector | `quality@everest.test`  | `quality123`  |
 | Accountant        | `accounts@everest.test` | `accounts123` |
 | Production manager | `production@everest.test` | `production123` |
+| Sales & Dispatch manager | `sales@everest.test` | `sales123` |
+| Accounts & Finance manager | `accounts-manager@everest.test` | `accounts123` |
 | Buyer             | `buyer@everest.test`    | `buyer123`    |
+
+> Demo manager logins (`production@everest.test`, `sales@everest.test`,
+> `accounts-manager@everest.test`) are also ensured on startup for an
+> already-populated database, so they work after a deploy even though the seed
+> only runs on an empty database.
 
 Each role sees only its own menu, and the backend enforces role access (forbidden
 requests return `403`), not just by hiding menus.

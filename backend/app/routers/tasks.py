@@ -23,11 +23,20 @@ router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
 
 def _mine(db: Session, user: User):
+    """Tasks this manager can see and work on.
+
+    A manager sees every task in the department(s) they run — not only the ones
+    directly assigned to them. This way a newly-created department manager (made
+    by the Supermanager) sees the same department instructions as the existing
+    manager, instead of an empty list because the auto-tasks were stamped with
+    another manager's id. Tasks explicitly assigned to this user are always
+    included too.
+    """
     from app.routers.purchase import _my_depts
 
     depts = _my_depts(user)
     return db.query(Task).filter(or_(Task.manager_user_id == user.id,
-                                     Task.department.in_(depts) & Task.manager_user_id.is_(None)))
+                                     Task.department.in_(depts)))
 
 
 @router.get("/mine")
