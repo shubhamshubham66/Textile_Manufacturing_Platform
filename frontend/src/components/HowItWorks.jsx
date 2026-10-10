@@ -1,52 +1,59 @@
-// How it works: 5 steps — Order, Yarn, Make, Check, Ship.
+import { IconOrder, IconSpool, IconLoom, IconCheck, IconTruck } from "./landing/Icons.jsx";
+
+// How it works: the five steps an order goes through, in order, with the role
+// that handles each step. A thread runs through them like warp through a loom.
 const STEPS = [
   {
-    n: 1,
     title: "Order",
-    icon: "📝",
-    text: "A buyer places an order with fabric type, colour, quantity and deadline.",
+    who: "Owner",
+    Icon: IconOrder,
+    text: "Enter fabric, colour, metres and deadline. The system says at once whether there's enough yarn.",
   },
   {
-    n: 2,
     title: "Yarn",
-    icon: "🧵",
-    text: "Yarn is received into the store; the system checks there's enough for the order.",
+    who: "Store manager",
+    Icon: IconSpool,
+    text: "Log yarn at the gate. Stock updates live and warns before it runs low.",
   },
   {
-    n: 3,
     title: "Make",
-    icon: "⚙️",
-    text: "Yarn runs through spinning, weaving and dyeing with live machine status.",
+    who: "Floor supervisor",
+    Icon: IconLoom,
+    text: "Assign machines for spinning, weaving and dyeing; log output and every stop with a reason.",
   },
   {
-    n: 4,
     title: "Check",
-    icon: "🔍",
-    text: "Each roll is inspected — pass, rework or reject — and traced to its order.",
+    who: "Quality inspector",
+    Icon: IconCheck,
+    text: "Inspect each roll: pass, rework or reject, with the defect noted.",
   },
   {
-    n: 5,
     title: "Ship",
-    icon: "🚚",
-    text: "Passed rolls are packed and dispatched with a matching invoice. No double dispatch.",
+    who: "Store manager",
+    Icon: IconTruck,
+    text: "Pick passed rolls, dispatch and print the invoice in one step. A roll can never ship twice.",
   },
 ];
 
 export default function HowItWorks() {
   return (
-    <section id="how" className="section section-alt">
-      <div className="section-inner">
-        <h2 className="section-title">How it works</h2>
-        <p className="section-sub">Five steps, from order to shipment.</p>
-        <ol className="steps">
-          {STEPS.map((s) => (
-            <li key={s.n} className="step">
-              <div className="step-icon" aria-hidden>
-                {s.icon}
-              </div>
-              <div className="step-no">Step {s.n}</div>
-              <h3>{s.title}</h3>
-              <p>{s.text}</p>
+    <section id="how" className="lp-section lp-section-tint">
+      <div className="lp-inner">
+        <div className="lp-head">
+          <h2>From order to truck in five steps</h2>
+          <p>Each person sees only their step. The owner sees all of it.</p>
+        </div>
+
+        <ol className="lp-steps">
+          {STEPS.map(({ title, who, Icon, text }, i) => (
+            <li key={title} className="lp-step">
+              <span className="lp-step-knot">
+                <Icon />
+              </span>
+              <span className="lp-step-no">{String(i + 1).padStart(2, "0")}</span>
+              <h3>{title}</h3>
+              <span className="lp-step-who">{who}</span>
+              <p>{text}</p>
             </li>
           ))}
         </ol>
