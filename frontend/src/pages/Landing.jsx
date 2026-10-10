@@ -4,6 +4,7 @@ import About from "../components/About.jsx";
 import HowItWorks from "../components/HowItWorks.jsx";
 import Features from "../components/Features.jsx";
 import AiSection from "../components/AiSection.jsx";
+import CtaStrip from "../components/CtaStrip.jsx";
 import Footer from "../components/Footer.jsx";
 import ChatBubble from "../components/ChatBubble.jsx";
 import "../landing.css";
@@ -20,6 +21,7 @@ export default function Landing() {
         <HowItWorks />
         <Features />
         <AiSection />
+        <CtaStrip />
       </main>
       <Footer />
       <ChatBubble />
