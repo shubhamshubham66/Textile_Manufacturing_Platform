@@ -410,3 +410,10 @@ a title, units, tooltips and an aria-label text alternative.
   machine if real power/overhead figures are available.
 - Photos: owner empty states use text only (no new images added); wire real mill
   photos into empty states when files are provided.
+
+## Phase 13 — Signup with email OTP
+- New page `/signup` (`frontend/src/pages/Signup.jsx`): Role (Admin = owner, Store manager, Floor supervisor, Quality inspector, Accountant, Buyer) → Name → Email → Send OTP → Verify → New + Confirm password → Create account. Stays on a success screen with a "Go to sign in" button (no auto-redirect). Login page links to it.
+- Backend `backend/app/routers/signup.py`: `POST /api/auth/signup/send-otp`, `/verify-otp`, `POST /api/auth/signup`. 6-digit code stored only as a bcrypt hash in new table `email_otps`; 10-min expiry, 5 wrong tries, 60 s resend wait, single use. Verify returns a short-lived email token that cannot be used as a login token. Buyer signups also create their buyer record.
+- Email via Brevo HTTP API (`backend/app/services/email.py`); needs `BREVO_API_KEY` + `MAIL_FROM_EMAIL` on Render. `SIGNUP_DEV_OTP=true` shows the code on screen for local dev only.
+- Tests: `backend/tests/test_signup.py` (8 cases).
+

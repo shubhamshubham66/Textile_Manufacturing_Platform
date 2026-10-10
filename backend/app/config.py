@@ -42,6 +42,18 @@ class Settings(BaseSettings):
     auto_create_tables: bool = True
     seed_if_empty: bool = True
 
+    # Signup email OTP. Emails go out through Brevo's HTTP API (works on Render,
+    # where SMTP ports are blocked). MAIL_FROM_EMAIL must be a sender verified
+    # in Brevo. Without BREVO_API_KEY, sending an OTP fails with a clear error,
+    # unless SIGNUP_DEV_OTP=true (local dev only) shows the code on screen.
+    brevo_api_key: str = ""
+    mail_from_email: str = ""
+    mail_from_name: str = "Everest Textile Mills"
+    signup_dev_otp: bool = False
+    otp_expire_minutes: int = 10
+    otp_resend_seconds: int = 60
+    otp_max_attempts: int = 5
+
     app_name: str = "Everest Textile Mills API"
     app_version: str = "0.1.0"
 
