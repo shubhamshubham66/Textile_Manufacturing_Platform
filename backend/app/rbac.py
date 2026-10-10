@@ -38,29 +38,46 @@ MENU_CONFIG: dict[str, list[dict]] = {
         {"label": "Master data", "path": "/app/master", "resource": "master_data"},
         {"label": "Team", "path": "/app/team", "resource": "team"},
     ],
+    # Shown as "Supermanager": the central control panel. Orders are written
+    # here (order_desk); the owner only views them (resource "orders").
     ROLE_MANAGER: [
-        # The manager creates, checks yarn for, confirms, edits and cancels
-        # orders. The owner only views them (resource "orders", read-only).
-        {"label": "Orders", "path": "/app/order-desk", "resource": "order_desk"},
+        {"label": "Dashboard", "path": "/app/super", "resource": "super_dashboard"},
+        {"label": "Order management", "path": "/app/order-desk", "resource": "order_desk"},
+        {"label": "Department managers", "path": "/app/super-managers", "resource": "super_managers"},
+        {"label": "Workers", "path": "/app/super-workers", "resource": "super_workers"},
+        {"label": "Assign instructions", "path": "/app/super-tasks", "resource": "super_tasks"},
+        {"label": "Production", "path": "/app/super-production", "resource": "super_production"},
+        {"label": "Inventory", "path": "/app/super-inventory", "resource": "super_inventory"},
+        {"label": "Quality control", "path": "/app/super-quality", "resource": "super_quality"},
+        {"label": "Dispatch", "path": "/app/super-dispatch", "resource": "super_dispatch"},
+        {"label": "Attendance", "path": "/app/super-attendance", "resource": "super_attendance"},
+        {"label": "Accounts & reports", "path": "/app/super-accounts", "resource": "super_accounts"},
+        {"label": "Alerts", "path": "/app/super-alerts", "resource": "super_alerts"},
+        {"label": "Activity log", "path": "/app/super-activity", "resource": "super_activity"},
+        {"label": "Settings", "path": "/app/super-settings", "resource": "super_settings"},
     ],
     ROLE_STORE_MANAGER: [
         {"label": "Yarn store", "path": "/app/yarn", "resource": "yarn"},
         {"label": "Stock", "path": "/app/stock", "resource": "stock"},
         {"label": "Purchase", "path": "/app/purchase", "resource": "purchase"},
         {"label": "Dispatch", "path": "/app/dispatch", "resource": "dispatch"},
+        {"label": "My tasks", "path": "/app/my-tasks", "resource": "my_tasks"},
     ],
     ROLE_FLOOR_SUPERVISOR: [
         {"label": "Production", "path": "/app/production", "resource": "production"},
         {"label": "Machines", "path": "/app/machines", "resource": "machines"},
+        {"label": "My tasks", "path": "/app/my-tasks", "resource": "my_tasks"},
     ],
     ROLE_QUALITY_INSPECTOR: [
         {"label": "Quality", "path": "/app/quality", "resource": "quality"},
         {"label": "Rolls", "path": "/app/rolls", "resource": "rolls"},
+        {"label": "My tasks", "path": "/app/my-tasks", "resource": "my_tasks"},
     ],
     ROLE_ACCOUNTANT: [
         {"label": "Payments", "path": "/app/payments", "resource": "payments"},
         {"label": "Attendance", "path": "/app/attendance", "resource": "attendance"},
         {"label": "Wages", "path": "/app/wages", "resource": "wages"},
+        {"label": "My tasks", "path": "/app/my-tasks", "resource": "my_tasks"},
     ],
     ROLE_BUYER: [
         {"label": "My orders", "path": "/app/my-orders", "resource": "my_orders"},

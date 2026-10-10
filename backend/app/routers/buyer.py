@@ -6,19 +6,24 @@ lookups that don't belong to the buyer return 404 (so existence isn't leaked).
 
   GET /api/buyer/orders              my orders with stage + progress + ETA
   GET /api/buyer/orders/{id}         track one of MY orders (404 if not mine)
+  POST /api/buyer/orders             request a new order (goes to the Supermanager)
+  PUT  /api/buyer/orders/{id}        answer a clarification and resubmit
   GET /api/buyer/invoices            my invoices
   GET /api/buyer/invoices/{id}/pdf   my invoice as PDF (404 if not mine)
 """
 
 from __future__ import annotations
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_buyer
-from app.models import Dispatch, Invoice, Order, User
+from app.models import Dispatch, Invoice, Order, OrderItem, User
 from app.services.production import order_display_progress
 
 router = APIRouter(prefix="/api/buyer", tags=["buyer"])
@@ -35,6 +40,15 @@ STATUS_TO_STAGE = {
     "ready_to_ship": "Ready to ship",
     "dispatched": "Shipped",
     "closed": "Shipped",
+}
+
+# Statuses before the mill has accepted the order, shown as a label not a stage.
+REVIEW_LABEL = {
+    "draft": "Under review",
+    "pending_review": "Under review",
+    "clarification": "Needs your reply",
+    "rejected": "Not accepted",
+    "cancelled": "Cancelled",
 }
 
 
@@ -71,9 +85,85 @@ def my_orders(
                 "stage_index": _stage_index(stage),
                 "progress_percent": order_display_progress(db, o),
                 "expected_delivery": o.deadline.isoformat() if o.deadline else None,
+                "review_label": REVIEW_LABEL.get(o.status),
+                "review_note": o.review_note if o.status in ("clarification", "rejected") else None,
+                "buyer_note": o.buyer_note,
             }
         )
     return out
+
+
+class OrderRequest(BaseModel):
+    fabric_type: str = Field(min_length=1, max_length=80)
+    colour: str = Field(min_length=1, max_length=60)
+    quantity_meters: float = Field(gt=0, le=1_000_000)
+    deadline: date
+    note: str | None = Field(default=None, max_length=500)
+
+    @field_validator("fabric_type", "colour")
+    @classmethod
+    def _strip(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("must not be blank")
+        return v
+
+    @field_validator("deadline")
+    @classmethod
+    def _future(cls, v: date) -> date:
+        if v <= date.today():
+            raise ValueError("deadline must be after today")
+        return v
+
+
+@router.post("/orders", status_code=201)
+def request_order(
+    body: OrderRequest,
+    buyer: User = Depends(get_current_buyer),
+    db: Session = Depends(get_db),
+):
+    """A buyer asks for an order. It waits as 'pending_review' until the
+    Supermanager sets the rate and confirms, rejects or asks a question."""
+    from app.routers.orders import _next_order_no, _required_kg
+
+    order = Order(order_no=_next_order_no(db), buyer_id=buyer.buyer_id,
+                  fabric_type=body.fabric_type, colour=body.colour,
+                  quantity_meters=body.quantity_meters, unit="meters", unit_price=0,
+                  deadline=body.deadline, status="pending_review",
+                  buyer_note=(body.note or "").strip() or None)
+    db.add(order)
+    db.flush()
+    db.add(OrderItem(order_id=order.id, yarn_type=f"{body.fabric_type} yarn", colour=body.colour,
+                     required_qty_kg=_required_kg(body.quantity_meters), allocated_qty_kg=0))
+    db.commit()
+    return {"id": order.id, "order_no": order.order_no, "status": order.status}
+
+
+@router.put("/orders/{order_id}")
+def resubmit_order(
+    order_id: int,
+    body: OrderRequest,
+    buyer: User = Depends(get_current_buyer),
+    db: Session = Depends(get_db),
+):
+    """Answer the Supermanager's question: update the request and send it back."""
+    from app.routers.orders import _required_kg
+
+    order = db.query(Order).filter(Order.id == order_id, Order.buyer_id == buyer.buyer_id).first()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status != "clarification":
+        raise HTTPException(status_code=409, detail="Only an order that needs your reply can be changed")
+    order.fabric_type, order.colour = body.fabric_type, body.colour
+    order.quantity_meters, order.deadline = body.quantity_meters, body.deadline
+    order.buyer_note = (body.note or "").strip() or None
+    order.status = "pending_review"
+    item = db.query(OrderItem).filter(OrderItem.order_id == order.id).first()
+    if item is not None:
+        item.colour = body.colour
+        item.required_qty_kg = _required_kg(body.quantity_meters)
+    db.commit()
+    return {"id": order.id, "order_no": order.order_no, "status": order.status}
 
 
 @router.get("/orders/{order_id}")

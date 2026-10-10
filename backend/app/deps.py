@@ -43,6 +43,8 @@ def get_current_user(
     user = db.query(User).filter(User.id == int(payload["sub"])).first()
     if user is None or not user.is_active:
         raise _unauthorized("User not found or inactive")
+    # Who is acting, for the automatic activity log (app/activity.py).
+    db.info["actor"] = {"id": user.id, "name": user.name, "role": user.role.name}
     return user
 
 

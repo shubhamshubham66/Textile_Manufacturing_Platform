@@ -8,6 +8,8 @@ export default function MyOrders() {
   const [tracked, setTracked] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [request, setRequest] = useState(null); // null | {} (new) | order (reply)
+  const [notice, setNotice] = useState("");
 
   async function load() {
     if (!isLiveRefresh()) setLoading(true);
@@ -46,11 +48,35 @@ export default function MyOrders() {
     <div className="module">
       <div className="toolbar">
         <h2>My orders</h2>
-        <button className="btn btn-ghost btn-sm" onClick={askAI}>
-          💬 Ask AI
-        </button>
+        <div className="row-actions">
+          <button className="btn btn-primary btn-sm" onClick={() => setRequest({})}>
+            ＋ Request an order
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={askAI}>
+            💬 Ask AI
+          </button>
+        </div>
       </div>
       {error && <div className="form-error">{error}</div>}
+      {notice && (
+        <div className="callout callout-ok">
+          {notice}{" "}
+          <button className="link-btn" onClick={() => setNotice("")}>
+            dismiss
+          </button>
+        </div>
+      )}
+      {request && (
+        <OrderRequest
+          order={request.id ? request : null}
+          onClose={() => setRequest(null)}
+          onSaved={(r) => {
+            setRequest(null);
+            setNotice(`${r.order_no} sent. The mill will review it and set the price.`);
+            load();
+          }}
+        />
+      )}
 
       {/* Track view */}
       {tracked && (
@@ -128,19 +154,40 @@ export default function MyOrders() {
                   <td>{o.colour}</td>
                   <td>{o.quantity_meters}</td>
                   <td>
-                    <span className="status status-in_production">
-                      {o.stage}
-                    </span>
+                    {o.review_label ? (
+                      <span className={`status ${o.status === "rejected" ? "status-reject" : "status-draft"}`}>
+                        {o.review_label}
+                      </span>
+                    ) : (
+                      <span className="status status-in_production">
+                        {o.stage}
+                      </span>
+                    )}
+                    {o.review_note && (
+                      <small className="buyer-review-note">
+                        {o.status === "rejected" ? "Reason: " : "Question: "}
+                        {o.review_note}
+                      </small>
+                    )}
                   </td>
                   <td>{o.progress_percent}%</td>
                   <td>{o.expected_delivery || "—"}</td>
                   <td>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => track(o.id)}
-                    >
-                      Track
-                    </button>
+                    {o.status === "clarification" ? (
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => setRequest(o)}
+                      >
+                        Reply
+                      </button>
+                    ) : o.review_label ? null : (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => track(o.id)}
+                      >
+                        Track
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -149,5 +196,85 @@ export default function MyOrders() {
         )}
       </section>
     </div>
+  );
+}
+
+// New order request (or a reply to the mill's question). The mill sets the
+// price and confirms; until then the order shows as "Under review".
+function OrderRequest({ order, onClose, onSaved }) {
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const [f, setF] = useState({
+    fabric_type: order?.fabric_type || "",
+    colour: order?.colour || "",
+    quantity_meters: order?.quantity_meters || "",
+    deadline: order?.expected_delivery || "",
+    note: order?.buyer_note || "",
+  });
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!f.fabric_type.trim() || !f.colour.trim()) return setErr("Enter the fabric and the colour.");
+    if (!(Number(f.quantity_meters) > 0)) return setErr("Enter how many metres you need.");
+    if (!f.deadline || f.deadline < tomorrow) return setErr("Choose a delivery date after today.");
+    setBusy(true);
+    setErr("");
+    const body = {
+      fabric_type: f.fabric_type.trim(),
+      colour: f.colour.trim(),
+      quantity_meters: Number(f.quantity_meters),
+      deadline: f.deadline,
+      note: f.note.trim() || null,
+    };
+    try {
+      const r = order
+        ? await apiFetch(`/api/buyer/orders/${order.id}`, { method: "PUT", body })
+        : await apiFetch("/api/buyer/orders", { method: "POST", body });
+      onSaved(r);
+    } catch (e2) {
+      setErr(e2.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="panel">
+      <h3>{order ? `Reply about ${order.order_no}` : "Request an order"}</h3>
+      {order?.review_note && <p className="callout callout-warn">The mill asks: {order.review_note}</p>}
+      {err && <div className="form-error">{err}</div>}
+      <form className="form-grid" onSubmit={submit} noValidate>
+        <label className="field">
+          <span>Fabric</span>
+          <input value={f.fabric_type} onChange={set("fabric_type")} placeholder="Cotton Shirting" />
+        </label>
+        <label className="field">
+          <span>Colour</span>
+          <input value={f.colour} onChange={set("colour")} placeholder="White" />
+        </label>
+        <label className="field">
+          <span>Quantity (metres)</span>
+          <input type="number" min="1" value={f.quantity_meters} onChange={set("quantity_meters")} />
+        </label>
+        <label className="field">
+          <span>Needed by</span>
+          <input type="date" min={tomorrow} value={f.deadline} onChange={set("deadline")} />
+        </label>
+        <label className="field" style={{ gridColumn: "1 / -1" }}>
+          <span>Note for the mill (optional)</span>
+          <input value={f.note} onChange={set("note")} placeholder="GSM, finish, packing…" />
+        </label>
+        <div className="row-actions">
+          <button className="btn btn-primary btn-sm" disabled={busy}>
+            {busy ? "Sending…" : order ? "Send reply" : "Send request"}
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
+            Cancel
+          </button>
+        </div>
+      </form>
+    </section>
   );
 }

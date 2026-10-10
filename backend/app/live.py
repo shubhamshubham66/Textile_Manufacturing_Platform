@@ -36,13 +36,15 @@ STAFF = [OWNER, MANAGER, STORE, FLOOR, QUALITY, ACCOUNTS]
 
 # Topic -> roles whose screens should refresh for it.
 TOPIC_ROLES = {
-    "machines": [OWNER, FLOOR],
-    "production": [OWNER, FLOOR, QUALITY],
+    "machines": [OWNER, MANAGER, FLOOR],
+    "production": [OWNER, MANAGER, FLOOR, QUALITY],
     "orders": STAFF,
     "yarn": [OWNER, MANAGER, STORE],
-    "quality": [OWNER, QUALITY, STORE],
-    "payments": [OWNER, ACCOUNTS],
-    "wages": [OWNER, ACCOUNTS],
+    "quality": [OWNER, MANAGER, QUALITY, STORE],
+    "payments": [OWNER, MANAGER, ACCOUNTS],
+    "wages": [OWNER, MANAGER, ACCOUNTS],
+    # Supermanager instructions to department managers.
+    "tasks": [MANAGER, STORE, FLOOR, QUALITY, ACCOUNTS],
 }
 
 ORDER_STAGE_LABEL = {
@@ -206,6 +208,14 @@ def _collect(session: Session) -> list[LiveEvent]:
 
             elif isinstance(obj, m.Employee):
                 out.append(LiveEvent("wages", TOPIC_ROLES["wages"]))
+
+            elif isinstance(obj, m.Task):
+                if is_new:
+                    out.append(LiveEvent("tasks", TOPIC_ROLES["tasks"], f"New instruction: {obj.title}", "info",
+                                         notify=True, notify_roles=[STORE, FLOOR, QUALITY, ACCOUNTS]))
+                else:
+                    out.append(LiveEvent("tasks", TOPIC_ROLES["tasks"], f"Task updated: {obj.title} ({obj.status.replace('_', ' ')})",
+                                         "info", notify=True, notify_roles=[MANAGER]))
 
             elif isinstance(obj, m.Order):
                 if is_new:

@@ -9,7 +9,17 @@ import Production from "./app/Production.jsx";
 import Quality from "./app/Quality.jsx";
 import Dispatch from "./app/Dispatch.jsx";
 import Payments from "./app/Payments.jsx";
-import OrderDesk from "./app/OrderDesk.jsx";
+import SuperOrders from "./app/super/SuperOrders.jsx";
+import SuperDashboard from "./app/super/SuperDashboard.jsx";
+import SuperManagers from "./app/super/SuperManagers.jsx";
+import SuperWorkers from "./app/super/SuperWorkers.jsx";
+import SuperTasks from "./app/super/SuperTasks.jsx";
+import { SuperProduction, SuperInventory, SuperQuality, SuperDispatch } from "./app/super/SuperMonitors.jsx";
+import { SuperAttendance, SuperAccounts, SuperAlerts, SuperActivity, SuperSettings } from "./app/super/SuperAdmin.jsx";
+import MyTasks from "./app/MyTasks.jsx";
+import { MenuIcon } from "../components/super/icons.jsx";
+import TopSearch from "../components/super/TopSearch.jsx";
+import "../super.css";
 import Attendance from "./app/Attendance.jsx";
 import Wages from "./app/Wages.jsx";
 import Reports from "./app/Reports.jsx";
@@ -25,7 +35,21 @@ import { LiveProvider, useLiveStatus } from "../live/LiveContext.jsx";
 // clearly-labelled prototype placeholder (built in later phases).
 const PAGES = {
   orders: Orders,
-  order_desk: OrderDesk,
+  order_desk: SuperOrders,
+  super_dashboard: SuperDashboard,
+  super_managers: SuperManagers,
+  super_workers: SuperWorkers,
+  super_tasks: SuperTasks,
+  super_production: SuperProduction,
+  super_inventory: SuperInventory,
+  super_quality: SuperQuality,
+  super_dispatch: SuperDispatch,
+  super_attendance: SuperAttendance,
+  super_accounts: SuperAccounts,
+  super_alerts: SuperAlerts,
+  super_activity: SuperActivity,
+  super_settings: SuperSettings,
+  my_tasks: MyTasks,
   yarn: YarnStore,
   stock: Stock,
   purchase: Purchase,
@@ -196,6 +220,7 @@ function Shell() {
                 setSidebarOpen(false);
               }}
             >
+              <MenuIcon resource={item.resource} />
               {item.label}
             </button>
           ))}
@@ -218,6 +243,14 @@ function Shell() {
           <div className="shell-top-title">
             {activeItem?.label || "Dashboard"}
           </div>
+
+          {user.role === "manager" && (
+            <TopSearch
+              onGo={(path) => {
+                if (menu.some((m) => m.path === path)) setActive(path);
+              }}
+            />
+          )}
 
           <div className="shell-top-actions">
             <LiveBadge />
