@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.deps import get_current_buyer
 from app.models import Dispatch, Invoice, Order, User
-from app.services.production import order_progress_percent
+from app.services.production import order_display_progress
 
 router = APIRouter(prefix="/api/buyer", tags=["buyer"])
 
@@ -69,7 +69,7 @@ def my_orders(
                 "status": o.status,
                 "stage": stage,
                 "stage_index": _stage_index(stage),
-                "progress_percent": order_progress_percent(db, o),
+                "progress_percent": order_display_progress(db, o),
                 "expected_delivery": o.deadline.isoformat() if o.deadline else None,
             }
         )
@@ -103,7 +103,7 @@ def track_order(
         "stage": stage,
         "stage_index": _stage_index(stage),
         "stage_flow": STAGE_FLOW,
-        "progress_percent": order_progress_percent(db, order),
+        "progress_percent": order_display_progress(db, order),
         "expected_delivery": order.deadline.isoformat() if order.deadline else None,
     }
 

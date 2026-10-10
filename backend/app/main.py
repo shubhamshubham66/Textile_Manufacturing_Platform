@@ -1,10 +1,11 @@
 """FastAPI application entrypoint.
 
-Phase 2 provides a health-check endpoint. Feature routers (orders, yarn,
-production, quality, dispatch, payments, wages, reports) and the chatbot router
-(owned by the mini developer under backend/chatbot/) are added in later phases.
+Health check, all feature routers, and the chatbot proxy router (owned by the
+mini developer under backend/chatbot/).
 """
 
+import logging
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, Request
@@ -26,10 +27,47 @@ from app.routers import quality as quality_router
 from app.routers import reports as reports_router
 from app.routers import wages as wages_router
 from app.routers import yarn as yarn_router
+from chatbot.router import router as chatbot_router
 
 settings = get_settings()
+log = logging.getLogger("uvicorn.error")
 
-app = FastAPI(title=settings.app_name, version=settings.app_version)
+
+def prepare_database() -> None:
+    """Create tables and, if there are no users yet, load the demo data.
+
+    Runs on every start but never touches a database that already has users,
+    so real data is safe. Lets a fresh Render + PostgreSQL deploy come up ready
+    for judging without needing a shell to run init_db / seed by hand.
+    """
+    from app import models  # noqa: F401 - registers all tables on Base.metadata
+    from app.database import Base, SessionLocal
+
+    if settings.auto_create_tables:
+        Base.metadata.create_all(bind=engine)
+    if settings.seed_if_empty:
+        db = SessionLocal()
+        try:
+            empty = db.query(models.User).first() is None
+        finally:
+            db.close()
+        if empty:
+            from app.seed import seed
+
+            log.info("Database is empty: loading demo data")
+            seed()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    try:
+        prepare_database()
+    except Exception:  # noqa: BLE001 - keep the API up; /api/health reports DB state
+        log.exception("Database preparation failed")
+    yield
+
+
+app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -50,6 +88,7 @@ app.include_router(payments_router.router)
 app.include_router(wages_router.router)
 app.include_router(reports_router.router)
 app.include_router(buyer_router.router)
+app.include_router(chatbot_router)  # AI assistant proxy (backend/chatbot/)
 
 
 # ---- Uniform error shape (matches API_CONTRACT.md) ----

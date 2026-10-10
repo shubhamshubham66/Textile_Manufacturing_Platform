@@ -54,6 +54,17 @@ def order_progress_percent(db: Session, order: Order) -> float:
     return round(min(100.0, float(produced) / ordered * 100.0), 1)
 
 
+# Once an order reaches quality or later its production is finished, so show
+# 100% instead of a figure computed from (possibly incomplete) production logs.
+ORDER_DONE_PRODUCING = {"in_quality", "ready_to_ship", "dispatched", "closed"}
+
+
+def order_display_progress(db: Session, order: Order) -> float:
+    if order.status in ORDER_DONE_PRODUCING:
+        return 100.0
+    return order_progress_percent(db, order)
+
+
 def idle_loss_for_machine(
     db: Session, machine_id: int, hourly_cost: float, now: datetime | None = None
 ) -> dict:

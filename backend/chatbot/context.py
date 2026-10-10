@@ -15,7 +15,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models import Invoice, Machine, Order, User, YarnStock
-from app.services.production import idle_loss_for_machine, order_progress_percent
+from app.services.production import idle_loss_for_machine, order_display_progress
 
 
 def build_context(db: Session, user: User | None) -> str:
@@ -49,7 +49,7 @@ def _buyer_context(db: Session, user: User) -> str:
         lines.append(
             f"Order {o.order_no}: {o.fabric_type} {o.colour}, "
             f"{float(o.quantity_meters)}m, status={o.status}, "
-            f"progress={order_progress_percent(db, o)}%."
+            f"progress={order_display_progress(db, o)}%."
         )
     invoices = db.query(Invoice).filter(Invoice.buyer_id == user.buyer_id).all()
     for inv in invoices:
