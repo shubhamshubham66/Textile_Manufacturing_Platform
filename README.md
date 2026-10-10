@@ -138,6 +138,26 @@ Environment variables live in `.env` (see `.env.example`). **Never commit secret
 
 ---
 
+## Demo logins
+
+Throwaway demo accounts created by the seed script (`python -m app.seed`). These
+are **demo-only credentials for judging**, hashed with bcrypt in the database — not
+real passwords. Set a strong `JWT_SECRET` in `.env` for any real deployment.
+
+| Role              | Email                   | Password      |
+| ----------------- | ----------------------- | ------------- |
+| Owner             | `owner@everest.test`    | `owner123`    |
+| Store manager     | `store@everest.test`    | `store123`    |
+| Floor supervisor  | `floor@everest.test`    | `floor123`    |
+| Quality inspector | `quality@everest.test`  | `quality123`  |
+| Accountant        | `accounts@everest.test` | `accounts123` |
+| Buyer             | `buyer@everest.test`    | `buyer123`    |
+
+Each role sees only its own menu, and the backend enforces role access (forbidden
+requests return `403`), not just by hiding menus.
+
+---
+
 ## Team Roles
 
 | Area                              | Owner                                        |
