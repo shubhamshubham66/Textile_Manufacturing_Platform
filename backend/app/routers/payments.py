@@ -44,6 +44,7 @@ class SupplierPaymentRequest(BaseModel):
     supplier_id: int
     amount: float = Field(gt=0)
     method: str = "bank"
+    is_advance: bool = False  # allow paying beyond the outstanding bill
 
     @field_validator("method")
     @classmethod
@@ -51,6 +52,30 @@ class SupplierPaymentRequest(BaseModel):
         if v not in VALID_METHODS:
             raise ValueError(f"method must be one of {VALID_METHODS}")
         return v
+
+
+def _supplier_outstanding(db: Session, supplier_id: int) -> float:
+    """Σ(raised/received PO value) − Σ(outgoing payments) for a supplier."""
+    billed = (
+        db.query(
+            func.coalesce(
+                func.sum(PurchaseOrder.quantity_kg * PurchaseOrder.unit_cost), 0
+            )
+        )
+        .filter(
+            PurchaseOrder.supplier_id == supplier_id,
+            PurchaseOrder.status.in_(("raised", "received")),
+        )
+        .scalar()
+        or 0
+    )
+    paid = (
+        db.query(func.coalesce(func.sum(Payment.amount), 0))
+        .filter(Payment.direction == "outgoing", Payment.supplier_id == supplier_id)
+        .scalar()
+        or 0
+    )
+    return float(billed) - float(paid)
 
 
 def _invoice_paid_total(db: Session, invoice_id: int) -> float:
@@ -182,6 +207,17 @@ def pay_supplier(
     supplier = db.query(Supplier).filter(Supplier.id == body.supplier_id).first()
     if supplier is None:
         raise HTTPException(status_code=404, detail="Supplier not found")
+
+    # Cap the payment at the supplier's outstanding bill, unless flagged advance.
+    outstanding = _supplier_outstanding(db, supplier.id)
+    if not body.is_advance and body.amount - 0.001 > outstanding:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Amount ₹{body.amount:,.2f} exceeds outstanding bill "
+                f"₹{round(outstanding, 2):,.2f}. Tick 'advance' to pay more."
+            ),
+        )
 
     payment = Payment(
         direction="outgoing",

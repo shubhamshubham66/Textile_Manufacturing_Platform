@@ -1,37 +1,46 @@
-"""Seed the database with realistic demo data for live judging.
+"""Seed the database with ONE realistic month of demo data — October 2026.
 
-Creates:
-  - 6 roles + demo users (one per role) + buyer-portal logins
-  - 5 buyers
-  - 3 suppliers + purchase orders
-  - Yarn stock (several types/colours, incl. one below reorder level)
-  - 8 machines (spinning / weaving / dyeing) with hourly costs
-  - 6 orders at different stages (draft -> closed)
-  - 30 rolls spread across orders/machines with mixed quality results
-  - Machine status logs incl. idle + breakdown windows (for the idle-loss USP)
-  - Production logs, a dispatch + invoice + payment, employees, attendance, wages
-
-Idempotent: running it clears existing rows first.
+Everything is dated inside Oct 2026 so the owner's month-end view is believable
+and hand-checkable. Running this DROPS and recreates all tables, so any stray
+records (e.g. a manually-created ORD-2007 or a bad ₹20cr payment) are removed.
 
 Usage:
     python -m app.seed
 
-Demo passwords are documented in README under "Demo logins". They are hashed with
-bcrypt before storage (no plaintext in the DB). These are throwaway demo accounts,
-not real secrets.
+Costing / month definitions (see docs/MONTH_END_HANDCHECK.md and PROJECT_STATE.md):
+  - Yarn cost per order  = Σ(receipt.quantity_kg × receipt.unit_cost) for receipts
+                           whose order_id = that order.  (receipts ARE linked here)
+  - Machine hourly_cost  = power + overhead ONLY (operator wages are NOT in it, so
+                           wages are never double-counted).
+  - Wages cost per order = total wages allocated by the order's output-metre share.
+  - Month net (cash)     = buyer payments received in month
+                           − supplier/raw-material bills paid in month
+                           − wages PAID in month.
+
+Demo passwords are documented in README under "Demo logins", bcrypt-hashed.
 """
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 
 from app.database import Base, SessionLocal, engine
 from app import models as m
 from app.security import hash_password
 
+# The demo month. Everything is dated inside this window.
+MONTH_YEAR, MONTH_NO = 2026, 10
+
+
+def _dt(day: int, hour: int = 10) -> datetime:
+    return datetime(MONTH_YEAR, MONTH_NO, day, hour, 0, 0, tzinfo=timezone.utc)
+
+
+def _d(day: int) -> date:
+    return date(MONTH_YEAR, MONTH_NO, day)
+
 
 def _hash(pw: str) -> str:
-    # Real bcrypt hashing (Phase 4). Demo passwords are listed in the README.
     return hash_password(pw)
 
 
@@ -43,24 +52,17 @@ def reset_tables() -> None:
 def seed() -> None:
     reset_tables()
     db = SessionLocal()
-    now = datetime.now(timezone.utc)
-    today = date.today()
-
     try:
         # ---- Roles ----
         role_names = [
-            "owner",
-            "store_manager",
-            "floor_supervisor",
-            "quality_inspector",
-            "accountant",
-            "buyer",
+            "owner", "store_manager", "floor_supervisor",
+            "quality_inspector", "accountant", "buyer",
         ]
         roles = {n: m.Role(name=n) for n in role_names}
         db.add_all(roles.values())
         db.flush()
 
-        # ---- Staff users (one per non-buyer role) ----
+        # ---- Staff users ----
         staff = [
             m.User(role_id=roles["owner"].id, name="Ramesh Shah",
                    email="owner@everest.test", password_hash=_hash("owner123")),
@@ -96,7 +98,6 @@ def seed() -> None:
         db.add_all(buyers)
         db.flush()
 
-        # One buyer-portal login for the first buyer.
         db.add(m.User(role_id=roles["buyer"].id, buyer_id=buyers[0].id,
                       name="Nikhil Jain", email="buyer@everest.test",
                       password_hash=_hash("buyer123")))
@@ -127,11 +128,11 @@ def seed() -> None:
         db.add_all(pos)
         db.flush()
 
-        # ---- Yarn stock (one deliberately below reorder level) ----
+        # ---- Yarn stock ----
         yarn = [
-            m.YarnStock(yarn_type="Cotton 30s", colour="White", quantity_kg=820,
+            m.YarnStock(yarn_type="Cotton 30s", colour="White", quantity_kg=620,
                         reorder_level_kg=200, unit_cost=180),
-            m.YarnStock(yarn_type="Polyester 150D", colour="Black", quantity_kg=480,
+            m.YarnStock(yarn_type="Polyester 150D", colour="Black", quantity_kg=360,
                         reorder_level_kg=150, unit_cost=140),
             m.YarnStock(yarn_type="Cotton 40s", colour="Blue", quantity_kg=90,
                         reorder_level_kg=150, unit_cost=200),  # LOW STOCK
@@ -141,200 +142,199 @@ def seed() -> None:
         db.add_all(yarn)
         db.flush()
 
-        # Yarn receipts (link one to an order later)
-        db.add_all([
-            m.YarnReceipt(yarn_stock_id=yarn[0].id, supplier_id=suppliers[0].id,
-                          purchase_order_id=pos[0].id, yarn_type="Cotton 30s",
-                          colour="White", quantity_kg=1000, unit_cost=180,
-                          received_at=now - timedelta(days=10)),
-            m.YarnReceipt(yarn_stock_id=yarn[1].id, supplier_id=suppliers[1].id,
-                          purchase_order_id=pos[1].id, yarn_type="Polyester 150D",
-                          colour="Black", quantity_kg=600, unit_cost=140,
-                          received_at=now - timedelta(days=7)),
-        ])
-
-        # ---- Machines (8): spinning x3, weaving x3, dyeing x2 ----
-        machines = [
-            m.Machine(name="Spin-01", type="spinning", current_status="running", hourly_cost=250),
-            m.Machine(name="Spin-02", type="spinning", current_status="idle", hourly_cost=250),
-            m.Machine(name="Spin-03", type="spinning", current_status="breakdown", hourly_cost=250),
-            m.Machine(name="Weave-01", type="weaving", current_status="running", hourly_cost=400),
-            m.Machine(name="Weave-02", type="weaving", current_status="running", hourly_cost=400),
-            m.Machine(name="Weave-03", type="weaving", current_status="idle", hourly_cost=400),
-            m.Machine(name="Dye-01", type="dyeing", current_status="running", hourly_cost=550),
-            m.Machine(name="Dye-02", type="dyeing", current_status="idle", hourly_cost=550),
-        ]
-        db.add_all(machines)
-        db.flush()
-
-        # ---- Machine status logs (idle + breakdown windows for idle-loss) ----
-        db.add_all([
-            # Spin-02 idle for 3h (closed window)
-            m.MachineStatusLog(machine_id=machines[1].id, status="idle",
-                               start_time=now - timedelta(hours=5),
-                               end_time=now - timedelta(hours=2),
-                               reason="No order assigned"),
-            # Spin-02 idle ongoing (open window)
-            m.MachineStatusLog(machine_id=machines[1].id, status="idle",
-                               start_time=now - timedelta(hours=2),
-                               end_time=None, reason="Waiting for yarn"),
-            # Spin-03 breakdown ongoing
-            m.MachineStatusLog(machine_id=machines[2].id, status="breakdown",
-                               start_time=now - timedelta(hours=4),
-                               end_time=None, reason="Motor fault"),
-            # Weave-03 idle ongoing
-            m.MachineStatusLog(machine_id=machines[5].id, status="idle",
-                               start_time=now - timedelta(hours=1, minutes=30),
-                               end_time=None, reason="Shift changeover"),
-            # Dye-02 idle ongoing
-            m.MachineStatusLog(machine_id=machines[7].id, status="idle",
-                               start_time=now - timedelta(hours=1),
-                               end_time=None, reason="Cleaning"),
-            # A running log for Weave-01 (context)
-            m.MachineStatusLog(machine_id=machines[3].id, status="running",
-                               start_time=now - timedelta(hours=6),
-                               end_time=None, reason="Order WO-003"),
-        ])
-
-        # ---- Orders (6) at different stages ----
-        stages = [
-            ("ORD-2001", buyers[0].id, "Cotton Shirting", "White", 2000, "closed", 95),
-            ("ORD-2002", buyers[1].id, "Silk Blend", "Black", 1200, "dispatched", 140),
-            ("ORD-2003", buyers[2].id, "Denim", "Blue", 3000, "in_quality", 120),
-            ("ORD-2004", buyers[3].id, "Cotton Poplin", "Red", 1500, "in_production", 110),
-            ("ORD-2005", buyers[4].id, "Polyester Lining", "Black", 1800, "confirmed", 80),
-            ("ORD-2006", buyers[0].id, "Viscose Crepe", "Red", 900, "draft", 130),
+        # ---- Orders (7) across stages — created through October ----
+        # (order_no, buyer_idx, fabric, colour, qty_m, status, rate, created_day,
+        #  deadline_day)
+        order_specs = [
+            ("ORD-2001", 0, "Cotton Shirting", "White", 2000, "closed", 95, 2, 16),
+            ("ORD-2002", 1, "Silk Blend", "Black", 1200, "dispatched", 140, 4, 20),
+            ("ORD-2003", 2, "Denim", "Blue", 3000, "in_quality", 120, 6, 24),
+            ("ORD-2004", 3, "Cotton Poplin", "Red", 1500, "in_production", 110, 8, 26),
+            ("ORD-2005", 4, "Polyester Lining", "Black", 1800, "confirmed", 80, 12, 28),
+            ("ORD-2006", 0, "Viscose Crepe", "Red", 900, "in_production", 130, 14, 30),
+            ("ORD-2007", 2, "Cotton Twill", "White", 2200, "dispatched", 100, 3, 18),
         ]
         orders = []
-        for order_no, buyer_id, fabric, colour, qty, status, price in stages:
-            o = m.Order(order_no=order_no, buyer_id=buyer_id, fabric_type=fabric,
-                        colour=colour, quantity_meters=qty, status=status,
-                        unit_price=price, deadline=today + timedelta(days=14),
-                        created_at=now - timedelta(days=12))
-            orders.append(o)
+        for (no, bi, fabric, colour, qty, status, rate, cday, dday) in order_specs:
+            orders.append(m.Order(
+                order_no=no, buyer_id=buyers[bi].id, fabric_type=fabric,
+                colour=colour, quantity_meters=qty, status=status, unit_price=rate,
+                deadline=_d(dday), created_at=_dt(cday)))
         db.add_all(orders)
         db.flush()
+        O = {o.order_no: o for o in orders}
+
+        # ---- Yarn receipts LINKED TO ORDERS (fixes Yarn ₹0) ----
+        # qty_kg ≈ 0.2 kg per metre of fabric. Each receipt carries its rate.
+        receipts = [
+            # order_no, supplier_idx, yarn_type, colour, qty_kg, rate, day
+            ("ORD-2001", 0, "Cotton 30s", "White", 400, 180, 2),
+            ("ORD-2002", 1, "Polyester 150D", "Black", 240, 140, 4),
+            ("ORD-2003", 2, "Cotton 40s", "Blue", 600, 205, 6),
+            ("ORD-2004", 0, "Cotton 30s", "Red", 300, 175, 8),
+            ("ORD-2006", 2, "Viscose 20s", "Red", 180, 160, 14),
+            ("ORD-2007", 0, "Cotton 30s", "White", 440, 182, 3),
+        ]
+        for (ono, si, yt, col, qkg, rate, day) in receipts:
+            db.add(m.YarnReceipt(
+                yarn_stock_id=None, supplier_id=suppliers[si].id,
+                purchase_order_id=None, order_id=O[ono].id,
+                yarn_type=yt, colour=col, quantity_kg=qkg, unit_cost=rate,
+                received_at=_dt(day)))
 
         # Order items (yarn requirement per order)
         db.add_all([
-            m.OrderItem(order_id=orders[0].id, yarn_stock_id=yarn[0].id,
+            m.OrderItem(order_id=O["ORD-2001"].id, yarn_stock_id=yarn[0].id,
                         yarn_type="Cotton 30s", colour="White",
                         required_qty_kg=400, allocated_qty_kg=400),
-            m.OrderItem(order_id=orders[2].id, yarn_stock_id=yarn[2].id,
+            m.OrderItem(order_id=O["ORD-2003"].id, yarn_stock_id=yarn[2].id,
                         yarn_type="Cotton 40s", colour="Blue",
-                        required_qty_kg=300, allocated_qty_kg=90),  # short -> reorder
-            m.OrderItem(order_id=orders[3].id, yarn_stock_id=yarn[3].id,
+                        required_qty_kg=600, allocated_qty_kg=90),
+            m.OrderItem(order_id=O["ORD-2004"].id, yarn_stock_id=yarn[3].id,
                         yarn_type="Viscose 20s", colour="Red",
-                        required_qty_kg=220, allocated_qty_kg=220),
+                        required_qty_kg=300, allocated_qty_kg=300),
         ])
 
-        # ---- Assign current orders + stage to running machines ----
-        # (so the floor view shows which order is on which machine + progress)
-        machines[0].current_order_id = orders[3].id  # Spin-01 -> ORD-2004
-        machines[0].current_stage = "spinning"
-        machines[3].current_order_id = orders[2].id  # Weave-01 -> ORD-2003
-        machines[3].current_stage = "weaving"
-        machines[4].current_order_id = orders[3].id  # Weave-02 -> ORD-2004
-        machines[4].current_stage = "weaving"
-        machines[6].current_order_id = orders[2].id  # Dye-01 -> ORD-2003
-        machines[6].current_stage = "dyeing"
-
-        # ---- Production logs ----
-        db.add_all([
-            m.ProductionLog(machine_id=machines[3].id, order_id=orders[2].id,
-                            stage="weaving", output_meters=600, log_date=today),
-            m.ProductionLog(machine_id=machines[4].id, order_id=orders[3].id,
-                            stage="weaving", output_meters=450, log_date=today),
-            m.ProductionLog(machine_id=machines[6].id, order_id=orders[2].id,
-                            stage="dyeing", output_meters=500, log_date=today),
-            m.ProductionLog(machine_id=machines[0].id, order_id=orders[3].id,
-                            stage="spinning", output_meters=380, log_date=today),
-        ])
-
-        # ---- Rolls (30) spread across orders/machines, mixed quality ----
-        # Distribution: order index -> number of rolls
-        plan = [
-            (orders[0], machines[3], 8),   # closed order, all pass+dispatched later
-            (orders[1], machines[4], 6),   # dispatched order
-            (orders[2], machines[6], 9),   # in_quality: mix pending/pass/rework/reject
-            (orders[3], machines[0], 7),   # in_production: mostly pending
+        # ---- Machines (8). hourly_cost = POWER + OVERHEAD ONLY (no wages) ----
+        machines = [
+            m.Machine(name="Spin-01", type="spinning", current_status="running", hourly_cost=120),
+            m.Machine(name="Spin-02", type="spinning", current_status="idle", hourly_cost=120),
+            m.Machine(name="Spin-03", type="spinning", current_status="breakdown", hourly_cost=120),
+            m.Machine(name="Weave-01", type="weaving", current_status="running", hourly_cost=180),
+            m.Machine(name="Weave-02", type="weaving", current_status="running", hourly_cost=180),
+            m.Machine(name="Weave-03", type="weaving", current_status="idle", hourly_cost=180),
+            m.Machine(name="Dye-01", type="dyeing", current_status="running", hourly_cost=240),
+            m.Machine(name="Dye-02", type="dyeing", current_status="idle", hourly_cost=240),
         ]
-        rolls: list[m.Roll] = []
-        counter = 1
-        for order, machine, n in plan:
-            for _ in range(n):
-                rolls.append(
-                    m.Roll(order_id=order.id, machine_id=machine.id,
-                           roll_no=f"R-{counter:04d}", length_meters=50,
-                           status="pending")
-                )
-                counter += 1
-        db.add_all(rolls)
+        db.add_all(machines)
+        db.flush()
+        M = {mc.name: mc for mc in machines}
+
+        # ---- Machine status logs (idle + breakdown windows, dated in-month) ----
+        db.add_all([
+            m.MachineStatusLog(machine_id=M["Spin-02"].id, status="idle",
+                               start_time=_dt(28, 6), end_time=_dt(28, 9),
+                               reason="No order assigned"),
+            m.MachineStatusLog(machine_id=M["Spin-02"].id, status="idle",
+                               start_time=_dt(28, 9), end_time=_dt(28, 11),
+                               reason="Waiting for yarn"),
+            m.MachineStatusLog(machine_id=M["Spin-03"].id, status="breakdown",
+                               start_time=_dt(28, 8), end_time=_dt(28, 12),
+                               reason="Motor fault"),
+            m.MachineStatusLog(machine_id=M["Weave-03"].id, status="idle",
+                               start_time=_dt(28, 10), end_time=_dt(28, 12),
+                               reason="Shift changeover"),
+            m.MachineStatusLog(machine_id=M["Dye-02"].id, status="idle",
+                               start_time=_dt(28, 13), end_time=_dt(28, 15),
+                               reason="Cleaning"),
+            m.MachineStatusLog(machine_id=M["Weave-01"].id, status="running",
+                               start_time=_dt(28, 6), end_time=_dt(28, 14),
+                               reason="Order ORD-2003"),
+        ])
+
+        # Assign current orders to running machines
+        M["Spin-01"].current_order_id = O["ORD-2004"].id
+        M["Spin-01"].current_stage = "spinning"
+        M["Weave-01"].current_order_id = O["ORD-2003"].id
+        M["Weave-01"].current_stage = "weaving"
+        M["Weave-02"].current_order_id = O["ORD-2004"].id
+        M["Weave-02"].current_stage = "weaving"
+        M["Dye-01"].current_order_id = O["ORD-2003"].id
+        M["Dye-01"].current_stage = "dyeing"
+
+        # ---- Production logs (metres produced per machine/order, in-month) ----
+        prod = [
+            ("Weave-01", "ORD-2001", "weaving", 2000, 15),
+            ("Dye-01", "ORD-2002", "dyeing", 1200, 18),
+            ("Weave-01", "ORD-2003", "weaving", 1800, 22),
+            ("Dye-01", "ORD-2003", "dyeing", 1500, 23),
+            ("Weave-02", "ORD-2004", "weaving", 700, 25),
+            ("Spin-01", "ORD-2004", "spinning", 500, 25),
+            ("Weave-02", "ORD-2006", "weaving", 300, 29),
+            ("Weave-01", "ORD-2007", "weaving", 2200, 17),
+        ]
+        for (mn, ono, stage, out, day) in prod:
+            db.add(m.ProductionLog(machine_id=M[mn].id, order_id=O[ono].id,
+                                   stage=stage, output_meters=out, log_date=_d(day)))
+
+        # ---- Rolls + quality for ORD-2001, 2002, 2003, 2007 ----
+        def add_rolls(order_no, machine_name, n, status, start):
+            out = []
+            for i in range(n):
+                out.append(m.Roll(order_id=O[order_no].id,
+                                  machine_id=M[machine_name].id,
+                                  roll_no=f"R-{start + i:04d}", length_meters=50,
+                                  status=status, created_at=_dt(16)))
+            db.add_all(out)
+            return out
+
+        add_rolls("ORD-2001", "Weave-01", 8, "pass", 1)
+        d2002 = add_rolls("ORD-2002", "Dye-01", 6, "dispatched", 9)
+        q2003 = add_rolls("ORD-2003", "Weave-01", 9, "pending", 15)
+        d2007 = add_rolls("ORD-2007", "Weave-01", 10, "dispatched", 24)
         db.flush()
 
-        # Assign quality results.
-        # Order 0 (closed) rolls 0-7: all pass (will be dispatched)
-        for r in rolls[0:8]:
-            r.status = "pass"
-        # Order 1 (dispatched) rolls 8-13: all pass + dispatched
-        for r in rolls[8:14]:
-            r.status = "dispatched"
-        # Order 2 (in_quality) rolls 14-22: mix
-        quality_mix = ["pass", "pass", "pass", "rework", "reject",
-                       "pass", "pending", "pending", "pass"]
-        for r, res in zip(rolls[14:23], quality_mix):
+        mix = ["pass", "pass", "pass", "rework", "reject",
+               "pass", "pending", "pending", "pass"]
+        for r, res in zip(q2003, mix):
             r.status = res
-        # Order 3 (in_production) rolls 23-29: pending
-        for r in rolls[23:30]:
-            r.status = "pending"
-
-        # Quality inspection records for inspected rolls (order 2 window)
-        inspector = staff[3]  # quality inspector
-        db.flush()
+        inspector = staff[3]
         defect_for = {"rework": "uneven_weaving", "reject": "hole"}
-        for r in rolls[14:23]:
+        for r in q2003:
             if r.status in ("pass", "rework", "reject"):
                 db.add(m.QualityInspection(
-                    roll_id=r.id, inspector_user_id=inspector.id,
-                    result=r.status,
+                    roll_id=r.id, inspector_user_id=inspector.id, result=r.status,
                     defect_type=defect_for.get(r.status, "none"),
-                    notes="Auto-seeded inspection",
-                    inspected_at=now - timedelta(hours=3),
-                ))
+                    notes="Seeded inspection", inspected_at=_dt(23)))
 
-        # ---- Dispatch + invoice + payment for the dispatched order (orders[1]) ----
-        dispatched_rolls = rolls[8:14]
-        total_m = sum(float(r.length_meters) for r in dispatched_rolls)
-        dispatch = m.Dispatch(order_id=orders[1].id, buyer_id=orders[1].buyer_id,
-                              dispatch_no="DSP-3001", total_rolls=len(dispatched_rolls),
-                              total_meters=total_m, status="shipped",
-                              dispatched_at=now - timedelta(days=2))
-        db.add(dispatch)
-        db.flush()
-        for r in dispatched_rolls:
-            db.add(m.DispatchItem(dispatch_id=dispatch.id, roll_id=r.id,
-                                  length_meters=r.length_meters))
+        # ---- Dispatches + invoices for ORD-2002 and ORD-2007 ----
+        def dispatch_order(order_no, rolls_list, dno, ino, day):
+            o = O[order_no]
+            total_m = sum(float(r.length_meters) for r in rolls_list)
+            disp = m.Dispatch(order_id=o.id, buyer_id=o.buyer_id, dispatch_no=dno,
+                              total_rolls=len(rolls_list), total_meters=total_m,
+                              status="shipped", dispatched_at=_dt(day))
+            db.add(disp)
+            db.flush()
+            for r in rolls_list:
+                db.add(m.DispatchItem(dispatch_id=disp.id, roll_id=r.id,
+                                      length_meters=r.length_meters))
+            subtotal = total_m * float(o.unit_price)
+            tax = round(subtotal * 0.05, 2)
+            inv = m.Invoice(order_id=o.id, dispatch_id=disp.id, buyer_id=o.buyer_id,
+                            invoice_no=ino, subtotal=subtotal, tax=tax,
+                            total=round(subtotal + tax, 2), status="unpaid",
+                            created_at=_dt(day))
+            db.add(inv)
+            db.flush()
+            return inv
 
-        subtotal = total_m * float(orders[1].unit_price)
-        tax = round(subtotal * 0.05, 2)  # 5% demo GST
-        invoice = m.Invoice(order_id=orders[1].id, dispatch_id=dispatch.id,
-                            buyer_id=orders[1].buyer_id, invoice_no="INV-4001",
-                            subtotal=subtotal, tax=tax, total=subtotal + tax,
-                            status="part_paid", created_at=now - timedelta(days=2))
-        db.add(invoice)
-        db.flush()
+        inv2002 = dispatch_order("ORD-2002", d2002, "DSP-3001", "INV-4001", 20)
+        inv2007 = dispatch_order("ORD-2007", d2007, "DSP-3002", "INV-4002", 18)
 
+        # ---- Payments (realistic, in-month) ----
+        # Buyer payments IN
+        db.add(m.Payment(direction="incoming", buyer_id=O["ORD-2002"].buyer_id,
+                         invoice_id=inv2002.id, amount=float(inv2002.total),
+                         method="bank", paid_at=_dt(22)))          # fully paid
+        db.add(m.Payment(direction="incoming", buyer_id=O["ORD-2007"].buyer_id,
+                         invoice_id=inv2007.id,
+                         amount=round(float(inv2007.total) * 0.5, 2),
+                         method="upi", paid_at=_dt(21)))           # part paid
+        inv2002.status = "paid"
+        inv2007.status = "part_paid"
+
+        # Supplier/raw-material bills paid OUT (sensible amounts)
         db.add_all([
-            # Incoming buyer payment (partial)
-            m.Payment(direction="incoming", buyer_id=orders[1].buyer_id,
-                      invoice_id=invoice.id, amount=round((subtotal + tax) * 0.6, 2),
-                      method="bank", paid_at=now - timedelta(days=1)),
-            # Outgoing supplier payment
             m.Payment(direction="outgoing", supplier_id=suppliers[0].id,
-                      amount=180000, method="bank", paid_at=now - timedelta(days=3)),
+                      amount=72000, method="bank", paid_at=_dt(5)),
+            m.Payment(direction="outgoing", supplier_id=suppliers[1].id,
+                      amount=33600, method="bank", paid_at=_dt(7)),
+            m.Payment(direction="outgoing", supplier_id=suppliers[0].id,
+                      amount=80080, method="bank", paid_at=_dt(9)),
         ])
 
-        # ---- Employees, attendance, wages ----
+        # ---- Employees + attendance + wages (PAID in month) ----
         employees = [
             m.Employee(name="Imran Shaikh", role_on_floor="Spinning operator",
                        daily_wage=550, phone="+91 90001 30001"),
@@ -348,27 +348,28 @@ def seed() -> None:
         db.add_all(employees)
         db.flush()
 
+        # Attendance for two weeks in October
         for emp in employees:
-            for d in range(5):  # last 5 days attendance
+            for day in range(1, 15):
                 db.add(m.Attendance(
-                    employee_id=emp.id, work_date=today - timedelta(days=d),
-                    shift="morning",
-                    status="present" if d != 2 else "half_day",
-                    hours_worked=8 if d != 2 else 4,
-                ))
+                    employee_id=emp.id, work_date=_d(day), shift="morning",
+                    status="present" if day % 7 != 0 else "half_day",
+                    hours_worked=8 if day % 7 != 0 else 4))
 
-        for emp in employees:
-            db.add(m.Wage(
-                employee_id=emp.id,
-                period_start=today - timedelta(days=6),
-                period_end=today,
-                days_present=4.5,
-                amount=round(float(emp.daily_wage) * 4.5, 2),
-                status="pending",
-            ))
+        # Two paid wage runs (week 1 and week 2) — PAID inside the month.
+        wage_runs = [
+            (_d(1), _d(7), 6.0, 7),    # week1 period, paid day 7
+            (_d(8), _d(14), 6.0, 15),  # week2 period, paid day 15
+        ]
+        for (ps, pe, days, pay_day) in wage_runs:
+            for emp in employees:
+                db.add(m.Wage(
+                    employee_id=emp.id, period_start=ps, period_end=pe,
+                    days_present=days, amount=round(float(emp.daily_wage) * days, 2),
+                    status="paid", paid_at=_dt(pay_day)))
 
         db.commit()
-        print("Seed complete.")
+        print("Seed complete (October 2026).")
         _print_summary(db)
     except Exception:
         db.rollback()
@@ -383,22 +384,19 @@ def _print_summary(db) -> None:
         "users": db.query(m.User).count(),
         "buyers": db.query(m.Buyer).count(),
         "suppliers": db.query(m.Supplier).count(),
-        "purchase_orders": db.query(m.PurchaseOrder).count(),
-        "yarn_stock": db.query(m.YarnStock).count(),
+        "yarn_receipts": db.query(m.YarnReceipt).count(),
         "machines": db.query(m.Machine).count(),
-        "machine_status_logs": db.query(m.MachineStatusLog).count(),
         "orders": db.query(m.Order).count(),
+        "production_logs": db.query(m.ProductionLog).count(),
         "rolls": db.query(m.Roll).count(),
-        "quality_inspections": db.query(m.QualityInspection).count(),
         "dispatches": db.query(m.Dispatch).count(),
         "invoices": db.query(m.Invoice).count(),
         "payments": db.query(m.Payment).count(),
         "employees": db.query(m.Employee).count(),
-        "attendance": db.query(m.Attendance).count(),
         "wages": db.query(m.Wage).count(),
     }
     for k, v in counts.items():
-        print(f"  {k:22} {v}")
+        print(f"  {k:18} {v}")
 
 
 if __name__ == "__main__":

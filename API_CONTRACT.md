@@ -491,25 +491,46 @@ List wage records. ### POST /api/wages/{id}/pay — mark a wage paid (409 if alr
 
 ## Owner reports (role: owner — resources `reports` / `dashboard`)
 
-### GET /api/reports/cost-per-order
-Per order: `yarn_cost + wage_cost + machine_cost = total_cost`, plus `revenue_est`
-and `margin_est`. Wages and machine cost are allocated to orders in proportion to
-each order's production output (metres).
+All owner report endpoints accept `?month=YYYY-MM` (defaults to the current month).
 
-### GET /api/reports/machines
-Per machine: total output metres, idle/breakdown hours, idle loss ₹.
+### GET /api/reports/cost-per-order?month=YYYY-MM
+`{ rows: [...], totals: {...}, month }`. Each row:
+`{ order_no, status, output_meters, yarn_cost, wage_cost, machine_cost,
+total_cost, revenue_est, margin_est }`.
+- **yarn_cost** = Σ(receipt.quantity_kg × receipt.unit_cost) for receipts linked
+  to the order (`yarn_receipts.order_id`).
+- **machine_cost** = power+overhead only (hourly_cost excludes operator wages),
+  allocated by the order's output-metre share.
+- **wage_cost** = wages paid in month × output-metre share.
+- **margin_est** = revenue_est − total_cost (labelled estimate).
 
-### GET /api/reports/profit-loss?start=&end=
-Month (or window) P&L:
+### GET /api/reports/machines?month=YYYY-MM
+`{ rows, totals, month }`. Row: `{ machine, type, current_status,
+total_output_meters, running_hours, idle_hours, breakdown_hours,
+idle_loss_rupees, top_reason }`.
+
+### GET /api/reports/profit-loss?month=YYYY-MM
+Month net on a **cash basis**:
 ```json
-{ "buyer_payments_in": 26460, "supplier_payments_out": 180000, "wages": 10350,
-  "profit_or_loss": -163890, "is_profit": false }
+{ "month": "2026-10", "buyer_payments_in": 291900, "raw_material_bills_out": 185680,
+  "wages_paid": 27600, "net": 78620, "is_profit": true }
 ```
-`profit = payments_in − supplier_out − wages`.
+`net = buyer_payments_in − raw_material_bills_out − wages_paid`.
 
-### GET /api/reports/dashboard
-Key cards: `orders_by_stage`, `low_stock_count` + `low_stock`, `idle_loss_rupees`,
-and `profit_loss`.
+### GET /api/reports/wages?month=YYYY-MM
+`{ month, total_wages_paid, per_employee: [{employee, days, rate, amount, status}],
+per_order: [{order_no, wage_cost}] }`.
+
+### GET /api/reports/dashboard?month=YYYY-MM
+`{ month, orders_by_stage, low_stock_count, low_stock, machine_count,
+idle_loss_rupees, idle_loss_by_reason: [{reason, rupees}],
+machine_strip: [{name, type, status, order_no, reason}], profit_loss }`.
+`profit_loss` is the same object as `/profit-loss` so Dashboard and Reports agree.
+
+### Payment validation (POST /api/payments/supplier)
+Adds `is_advance` (bool). A supplier payment exceeding the supplier's outstanding
+bill is rejected with **400** unless `is_advance` is true. Buyer payments already
+reject amounts over the invoice balance (400) and fully-paid invoices (409).
 
 ---
 

@@ -1517,3 +1517,255 @@ h4 {
   opacity: 0.6;
   cursor: default;
 }
+
+/* ============================================================
+   Owner month-end — additive classes (owner pages only)
+   ============================================================ */
+/* tabular digits + alignment for money/quantity tables */
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+.money-table th.r,
+.money-table td.r {
+  text-align: right;
+}
+.money-table th {
+  text-align: left;
+}
+.table-scroll {
+  overflow-x: auto;
+}
+.totals-row td {
+  border-top: 2px solid var(--ink, #0f172a);
+  font-weight: 700;
+  background: #f8fafc;
+}
+.small {
+  font-size: 0.82rem;
+}
+
+.owner-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.owner-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+@media (max-width: 860px) {
+  .owner-two {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Month picker */
+.month-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.month-picker select {
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--line, #dfe3ee);
+  border-radius: 9px;
+  background: #fff;
+  font-size: 0.95rem;
+}
+
+/* KPI colour-aware value + inline kpi */
+.kpi-inline {
+  display: inline-flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+
+/* Stage-specific bar colours */
+.bar-fill.stage-draft {
+  background: #94a3b8;
+}
+.bar-fill.stage-confirmed {
+  background: #6366f1;
+}
+.bar-fill.stage-in_production {
+  background: #0ea5e9;
+}
+.bar-fill.stage-in_quality {
+  background: #f59e0b;
+}
+.bar-fill.stage-ready_to_ship {
+  background: #14b8a6;
+}
+.bar-fill.stage-dispatched {
+  background: #0d9488;
+}
+.bar-fill.stage-closed {
+  background: #475569;
+}
+.bar-fill.stage-breakdown {
+  background: #ef4444;
+}
+
+/* Waterfall */
+.waterfall {
+  margin: 0 0 1rem;
+}
+.waterfall-svg {
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+}
+.waterfall rect.wf-in {
+  fill: #16a34a;
+}
+.waterfall rect.wf-out {
+  fill: #ef4444;
+}
+.waterfall rect.wf-net-pos {
+  fill: #0d9488;
+}
+.waterfall rect.wf-net-neg {
+  fill: #b91c1c;
+}
+.waterfall .wf-x {
+  font-size: 11px;
+  fill: #475569;
+}
+.waterfall .wf-v {
+  font-size: 10px;
+  fill: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Machine strip */
+.machine-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+.mstrip {
+  display: block;
+  border: 1px solid var(--line, #dfe3ee);
+  border-left: 4px solid #94a3b8;
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+}
+.mstrip-running {
+  border-left-color: #0d9488;
+}
+.mstrip-idle {
+  border-left-color: #f59e0b;
+}
+.mstrip-breakdown {
+  border-left-color: #ef4444;
+}
+.mstrip-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.mstrip-type {
+  font-size: 0.78rem;
+  text-transform: capitalize;
+}
+.mstrip-order {
+  font-weight: 600;
+  margin-top: 0.3rem;
+}
+.mstrip-reason {
+  font-size: 0.78rem;
+  color: #9a3412;
+  margin-top: 0.2rem;
+}
+
+/* Status chips (text always present; colour is secondary) */
+.chip {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #e2e8f0;
+  color: #334155;
+}
+.chip-running,
+.chip-paid {
+  background: #dcfce7;
+  color: #166534;
+}
+.chip-idle {
+  background: #fef3c7;
+  color: #92400e;
+}
+.chip-breakdown {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Cost-per-order stacked bars */
+.cost-bars {
+  margin-bottom: 1.25rem;
+}
+.cost-bar-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 120px;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+.cost-bar {
+  display: flex;
+  height: 16px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #eef2f7;
+}
+.cost-bar .seg {
+  height: 100%;
+}
+.seg-yarn,
+i.seg-yarn {
+  background: #0ea5e9;
+}
+.seg-wage,
+i.seg-wage {
+  background: #f59e0b;
+}
+.seg-machine,
+i.seg-machine {
+  background: #64748b;
+}
+.cost-bar-rev {
+  font-size: 0.8rem;
+  color: #475569;
+  text-align: right;
+}
+.cost-legend {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: #475569;
+  margin-top: 0.4rem;
+}
+.cost-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.pl-head {
+  margin-bottom: 0.75rem;
+}
+.wages-bars {
+  margin-bottom: 1.25rem;
+}

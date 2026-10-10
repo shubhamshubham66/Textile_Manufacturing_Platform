@@ -3,8 +3,35 @@
 Single source of truth for the current state of the project. Update this at the end
 of every phase. Keep it short and factual.
 
-**Last updated:** Phase 11 (Live run, fixes & deploy prep) — 10 Oct 2026
-**Current phase:** Phase 11 — Deploy (Render + Vercel)
+**Last updated:** Owner month-end workflow — 10 Oct 2026
+**Current phase:** Owner month-end (Dashboard, Orders, Reports, Payments)
+
+### Costing & month definitions (ONE definition, used everywhere)
+- Order cost = yarn + wages + machine.
+  - Yarn = Σ(yarn_receipt.quantity_kg × unit_cost) for receipts linked to the order.
+  - Machine = power + overhead only (machine.hourly_cost has NO operator wages),
+    allocated by the order's output-metre share × Σ(hourly_cost).
+  - Wages = wages PAID in month × output-metre share.
+- Margin (estimate) = invoiced revenue − order cost.
+- Month net (CASH) = buyer payments in − raw-material bills paid − wages paid, in month.
+- Idle loss = idle+breakdown hours × machine hourly_cost.
+
+### What changed (owner month-end)
+- Seed rebuilt for ONE month (October 2026): yarn receipts now linked to orders
+  (fixes Yarn ₹0); realistic amounts → month net = **+₹78,620 profit**. A full
+  re-seed drops/recreates tables, removing stray ORD-2007 / ₹20cr payment that
+  existed only in a local DB. Hand-check: `docs/MONTH_END_HANDCHECK.md`.
+- `services/reports.py`: month filtering + unified definitions + wages_report.
+- `routers/reports.py`: `?month=` on all endpoints; new `/wages`; dashboard adds
+  machine_strip + idle_loss_by_reason; Dashboard & Reports share ONE P&L object.
+- `routers/payments.py`: supplier payment capped at outstanding bill unless
+  `is_advance` (buyer cap already existed).
+- Frontend owner pages: month picker, waterfall P&L, machine strip, stage-colour
+  bars, idle-loss-by-reason, cost stacked bars + totals, machine running-hours +
+  top-reason + totals, new Wages tab. Additive helpers (`lib/format.js`) + additive
+  CSS only. Not runtime-tested in sandbox (no network) — hand-checked + compiled + linted.
+
+**Previous phase:** Phase 11 — Deploy (Render + Vercel)
 
 ---
 

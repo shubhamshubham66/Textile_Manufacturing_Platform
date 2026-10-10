@@ -73,26 +73,63 @@ def idle_loss_for_machine(
     loss = Σ(window hours) × hourly_cost over idle/breakdown logs.
     """
     now = now or _now()
-    logs = (
+    # All status logs (running + idle + breakdown) so we can report running hours.
+    all_logs = (
         db.query(MachineStatusLog)
-        .filter(
-            MachineStatusLog.machine_id == machine_id,
-            MachineStatusLog.status.in_(LOSS_STATUSES),
-        )
+        .filter(MachineStatusLog.machine_id == machine_id)
         .all()
     )
     idle_hours = 0.0
     breakdown_hours = 0.0
-    for log in logs:
+    running_hours = 0.0
+    reason_hours: dict[str, float] = {}
+    for log in all_logs:
         hrs = log_duration_hours(log, until=now)
         if log.status == "idle":
             idle_hours += hrs
-        else:
+            key = log.reason or "Unspecified"
+            reason_hours[key] = reason_hours.get(key, 0.0) + hrs
+        elif log.status == "breakdown":
             breakdown_hours += hrs
+            key = log.reason or "Unspecified"
+            reason_hours[key] = reason_hours.get(key, 0.0) + hrs
+        elif log.status == "running":
+            running_hours += hrs
     total_hours = idle_hours + breakdown_hours
+    top_reason = (
+        max(reason_hours.items(), key=lambda kv: kv[1])[0] if reason_hours else "—"
+    )
     return {
         "idle_hours": round(idle_hours, 2),
         "breakdown_hours": round(breakdown_hours, 2),
+        "running_hours": round(running_hours, 2),
         "lost_hours": round(total_hours, 2),
         "loss_rupees": round(total_hours * float(hourly_cost), 2),
+        "top_reason": top_reason,
     }
+
+
+def idle_loss_by_reason(db: Session, now: datetime | None = None) -> list[dict]:
+    """Total idle/breakdown rupee loss grouped by reason, across all machines.
+
+    Used by the dashboard idle-loss-by-reason chart.
+    """
+    from app.models import Machine
+
+    now = now or _now()
+    machines = {mc.id: float(mc.hourly_cost or 0) for mc in db.query(Machine).all()}
+    logs = (
+        db.query(MachineStatusLog)
+        .filter(MachineStatusLog.status.in_(LOSS_STATUSES))
+        .all()
+    )
+    by_reason: dict[str, float] = {}
+    for log in logs:
+        hrs = log_duration_hours(log, until=now)
+        rupees = hrs * machines.get(log.machine_id, 0.0)
+        key = log.reason or "Unspecified"
+        by_reason[key] = by_reason.get(key, 0.0) + rupees
+    return sorted(
+        [{"reason": r, "rupees": round(v, 2)} for r, v in by_reason.items()],
+        key=lambda x: x["rupees"], reverse=True,
+    )
