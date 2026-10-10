@@ -138,9 +138,13 @@ def _user_name(db: Session, uid: int | None) -> str | None:
 
 def _my_depts(user: User) -> set[str]:
     """Departments whose instructions this store-role login handles. A store
-    manager with no explicit department covers purchase, store and dispatch."""
+    manager with no explicit department covers purchase, store and dispatch.
+    The dedicated Purchase & Raw Material manager covers purchase + store (it
+    does not run dispatch)."""
     if user.role.name == rbac.ROLE_STORE_MANAGER and not user.department:
         return {"purchase", "store", "dispatch"}
+    if user.role.name == rbac.ROLE_PURCHASE_MANAGER:
+        return {"purchase", "store"}
     d = dept_of(user)
     return {d} if d else set()
 

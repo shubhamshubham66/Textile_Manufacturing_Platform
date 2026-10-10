@@ -22,7 +22,7 @@ def env(monkeypatch):
     Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     Base.metadata.create_all(bind=engine)
     db = Session()
-    roles = {n: m.Role(name=n) for n in ["owner", "store_manager", "floor_supervisor", "quality_inspector", "accountant", "buyer"]}
+    roles = {n: m.Role(name=n) for n in ["owner", "store_manager", "production_manager", "quality_inspector", "accountant", "buyer"]}
     db.add_all(roles.values())
     b1, b2 = m.Buyer(name="Asha Traders"), m.Buyer(name="Other Co")
     db.add_all([b1, b2])
@@ -59,7 +59,7 @@ def test_machine_breakdown_notifies_owner_and_floor_only(env):
     ev = [e for e in published if e.topic == "machines"][0]
     assert ev.for_user("owner", None)["message"] == "Spin-03 broke down"
     assert ev.for_user("owner", None)["notify"] is True and ev.level == "alert"
-    assert ev.for_user("floor_supervisor", None) is not None
+    assert ev.for_user("production_manager", None) is not None
     assert ev.for_user("accountant", None) is None
     assert ev.for_user("buyer", 1) is None
 
@@ -86,7 +86,7 @@ def test_low_stock_fires_once_when_crossing_the_line(env):
     yarn = [e for e in published if e.topic == "yarn"]
     assert yarn[0].notify and "Low stock: Cotton 40s (Blue)" in yarn[0].message
     assert not yarn[1].notify
-    assert yarn[0].for_user("store_manager", None) and yarn[0].for_user("floor_supervisor", None) is None
+    assert yarn[0].for_user("store_manager", None) and yarn[0].for_user("accountant", None) is None
 
 
 def test_rolled_back_change_sends_nothing(env):

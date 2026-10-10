@@ -64,7 +64,6 @@ def test_every_page_opens_for_production_manager_and_is_closed_to_others(c, pm):
     # Other roles get 403 on every production-manager page.
     for who, pw in [("owner@everest.test", "owner123"),
                     ("store@everest.test", "store123"),
-                    ("floor@everest.test", "floor123"),
                     ("quality@everest.test", "quality123"),
                     ("buyer@everest.test", "buyer123")]:
         h = login(c, who, pw)
@@ -72,12 +71,13 @@ def test_every_page_opens_for_production_manager_and_is_closed_to_others(c, pm):
             assert c.get(f"/api/prod/{p}", headers=h).status_code == 403, (who, p)
 
 
-def test_menu_from_me_lists_twelve_production_pages(c, pm):
+def test_menu_from_me_lists_production_pages(c, pm):
     me = c.get("/api/auth/me", headers=pm).json()
     assert me["user"]["role"] == "production_manager"
     labels = [i["label"] for i in me["menu"]]
-    assert len(labels) == 12
-    assert labels[0] == "Dashboard" and "QC Handover" in labels
+    # 12 production screens + the shared "My tasks" (worker attendance) screen.
+    assert len(labels) == 13
+    assert labels[0] == "Dashboard" and "QC Handover" in labels and "My tasks" in labels
 
 
 # ------------------------------ Dashboard ------------------------------ #

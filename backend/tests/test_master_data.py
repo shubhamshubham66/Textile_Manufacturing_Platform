@@ -82,7 +82,7 @@ def test_machine_power_cannot_exceed_hourly(c):
 
 def test_master_forbidden_for_non_owner(c):
     for email, pw in [("accounts@everest.test", "accounts123"), ("store@everest.test", "store123"),
-                      ("floor@everest.test", "floor123"), ("buyer@everest.test", "buyer123")]:
+                      ("quality@everest.test", "quality123"), ("buyer@everest.test", "buyer123")]:
         h = tok(c, email, pw)
         for path in ["buyers", "suppliers", "machines", "employees", "yarn-receipts"]:
             assert c.get(f"/api/master/{path}", headers=h).status_code == 403
