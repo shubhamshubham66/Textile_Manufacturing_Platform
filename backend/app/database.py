@@ -11,15 +11,21 @@ from app.config import get_settings
 
 settings = get_settings()
 
+DATABASE_URL = settings.sqlalchemy_database_url
+
 # SQLite requires check_same_thread=False when used with a web server.
-connect_args = (
-    {"check_same_thread": False}
-    if settings.database_url.startswith("sqlite")
-    else {}
-)
+# PostgreSQL: pin the session to UTC. Columns are `timestamp without time zone`
+# and the app writes UTC datetimes; without this, a server running in local time
+# (e.g. IST) silently shifts every timestamp and breaks idle-loss hours.
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+elif DATABASE_URL.startswith("postgresql"):
+    connect_args = {"options": "-c timezone=utc"}
+else:
+    connect_args = {}
 
 engine = create_engine(
-    settings.database_url,
+    DATABASE_URL,
     connect_args=connect_args,
     pool_pre_ping=True,
     future=True,
