@@ -42,6 +42,15 @@ class Settings(BaseSettings):
     auto_create_tables: bool = True
     seed_if_empty: bool = True
 
+    # One-time data reset, read ONCE on startup. Leave empty for normal runs.
+    #   RESET_DATA=empty  -> wipe all business data, keep roles + the owner from
+    #                        OWNER_EMAIL/OWNER_PASSWORD (a clean slate for live
+    #                        data entry by judges).
+    #   RESET_DATA=demo   -> wipe, then reload the clean October 2026 demo seed.
+    # Set it, deploy once, then REMOVE it (otherwise every restart wipes again).
+    # See DEPLOY.md.
+    reset_data: str = ""
+
     # Signup email OTP. Emails go out through Brevo's HTTP API (works on Render,
     # where SMTP ports are blocked). MAIL_FROM_EMAIL must be a sender verified
     # in Brevo. Without BREVO_API_KEY, sending an OTP fails with a clear error,
