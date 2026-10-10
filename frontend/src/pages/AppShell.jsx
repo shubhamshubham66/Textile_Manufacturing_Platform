@@ -8,6 +8,11 @@ import Machines from "./app/Machines.jsx";
 import Production from "./app/Production.jsx";
 import Quality from "./app/Quality.jsx";
 import Dispatch from "./app/Dispatch.jsx";
+import Payments from "./app/Payments.jsx";
+import Attendance from "./app/Attendance.jsx";
+import Wages from "./app/Wages.jsx";
+import Reports from "./app/Reports.jsx";
+import Dashboard from "./app/Dashboard.jsx";
 
 // Resource key -> built module page. Resources not listed here fall back to a
 // clearly-labelled prototype placeholder (built in later phases).
@@ -21,6 +26,11 @@ const PAGES = {
   quality: Quality,
   rolls: Quality,
   dispatch: Dispatch,
+  payments: Payments,
+  attendance: Attendance,
+  wages: Wages,
+  reports: Reports,
+  dashboard: Dashboard,
 };
 
 // Role label lookup for display (keys match backend role names).
