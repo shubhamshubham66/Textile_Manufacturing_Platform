@@ -71,23 +71,24 @@ dashboard.
 
 ## Tech Stack
 
-**To be decided.** Stack, database and whether Odoo is required are **not yet
-decided**. Do not assume these. This section will be updated once the team confirms
-the choice. See `PROJECT_STATE.md` for the current status.
+Decided in Phase 2 (Odoo is **not** required for this hackathon).
 
 | Layer     | Choice            |
 | --------- | ----------------- |
-| Frontend  | _to be decided_   |
-| Backend   | _to be decided_   |
-| Database  | _to be decided_   |
+| Frontend  | React + Vite      |
+| Backend   | FastAPI (Python)  |
+| ORM       | SQLAlchemy 2.x    |
+| Database  | SQLite (dev default) / PostgreSQL (demo/prod) — same models work on both |
 | AI        | Dify (backend-only, via `/api/chatbot/message`) |
-| Odoo      | _to be decided_   |
+| Odoo      | Not used          |
 
 ---
 
 ## Setup
 
-> _Placeholder — to be filled once the stack is decided._
+Prerequisites: Python 3.11+ and Node 18+. The first run needs internet access to
+install dependencies (PyPI + npm). By default the app uses a local **SQLite** file,
+so no database server is required to get started.
 
 ```bash
 # 1. Clone
@@ -96,11 +97,42 @@ cd Textile_Manufacturing_Platform
 
 # 2. Environment
 cp .env.example .env   # then fill in values (never commit .env)
-
-# 3. Backend  — commands TBD
-# 4. Frontend — commands TBD
-# 5. Chatbot  — commands TBD
 ```
+
+### Backend (one command)
+
+```bash
+cd backend
+./run.sh
+```
+
+`run.sh` creates a virtualenv, installs `requirements.txt`, and starts the API on
+<http://localhost:8000> (interactive docs at `/docs`, health at `/api/health`).
+
+First-time database setup (creates tables + loads demo data):
+
+```bash
+cd backend
+source .venv/bin/activate          # created by run.sh
+python -m app.init_db              # create all tables
+python -m app.seed                 # load demo data (5 buyers, 8 machines, 6 orders, 30 rolls, ...)
+```
+
+To use PostgreSQL instead of SQLite, set `DATABASE_URL` in `.env`, e.g.:
+
+```
+DATABASE_URL=postgresql+psycopg2://user:pass@localhost:5432/textile
+```
+
+### Frontend (one command)
+
+```bash
+cd frontend
+npm install && npm run dev
+```
+
+Starts Vite on <http://localhost:5173>. `/api/*` is proxied to the backend on 8000,
+and the home screen shows a live backend + database health check.
 
 Environment variables live in `.env` (see `.env.example`). **Never commit secrets.**
 
