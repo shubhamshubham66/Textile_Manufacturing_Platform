@@ -45,6 +45,9 @@ TOPIC_ROLES = {
     "wages": [OWNER, MANAGER, ACCOUNTS],
     # Supermanager instructions to department managers.
     "tasks": [MANAGER, STORE, FLOOR, QUALITY, ACCOUNTS],
+    # Purchase requests, purchase orders, receiving.
+    "purchase": [OWNER, MANAGER, STORE],
+    "notifications": [MANAGER, STORE, FLOOR, QUALITY, ACCOUNTS],
 }
 
 ORDER_STAGE_LABEL = {
@@ -205,9 +208,44 @@ def _collect(session: Session) -> list[LiveEvent]:
 
             elif isinstance(obj, m.Supplier):
                 out.append(LiveEvent("payments", TOPIC_ROLES["payments"] + [STORE]))
+                out.append(LiveEvent("purchase", TOPIC_ROLES["purchase"]))
 
             elif isinstance(obj, m.Employee):
                 out.append(LiveEvent("wages", TOPIC_ROLES["wages"]))
+
+            elif isinstance(obj, m.PurchaseRequest):
+                if is_new:
+                    need = obj.status == "pending"
+                    out.append(LiveEvent("purchase", TOPIC_ROLES["purchase"],
+                                         f"Purchase request {obj.pr_no}: {float(obj.quantity_kg):,.0f} kg {obj.colour}"
+                                         + (" needs approval" if need else " approved automatically"),
+                                         "info", notify=True, notify_roles=[MANAGER] if need else [STORE]))
+                else:
+                    ch = _changed(obj, "status", session)
+                    if ch and ch[0] != ch[1] and ch[1] in ("approved", "rejected"):
+                        out.append(LiveEvent("purchase", TOPIC_ROLES["purchase"],
+                                             f"Purchase request {obj.pr_no} {ch[1]}",
+                                             "success" if ch[1] == "approved" else "warn", notify=True, notify_roles=[STORE]))
+                    else:
+                        out.append(LiveEvent("purchase", TOPIC_ROLES["purchase"]))
+
+            elif isinstance(obj, m.PurchaseOrder):
+                out.append(LiveEvent("purchase", TOPIC_ROLES["purchase"]))
+
+            elif isinstance(obj, m.YarnReceipt):
+                if is_new and obj.status == "recorded":
+                    out.append(LiveEvent("purchase", TOPIC_ROLES["purchase"],
+                                         f"Delivery recorded: {float(obj.quantity_kg):,.0f} kg {obj.yarn_type} {obj.colour}"
+                                         + (f" — flagged {obj.discrepancy.replace(',', ', ')}" if obj.discrepancy else ""),
+                                         "warn" if obj.discrepancy else "info", notify=True, notify_roles=[STORE]))
+                else:
+                    out.append(LiveEvent("purchase", TOPIC_ROLES["purchase"]))
+
+            elif isinstance(obj, m.Notification) and is_new:
+                roles = [obj.to_role] if obj.to_role else TOPIC_ROLES["notifications"]
+                # Approvals already announce themselves; shared availability is news.
+                out.append(LiveEvent("notifications", roles, obj.title, "info",
+                                     notify=bool(obj.to_role) and obj.kind == "availability"))
 
             elif isinstance(obj, m.Task):
                 if is_new:

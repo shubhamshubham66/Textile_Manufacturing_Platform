@@ -272,6 +272,12 @@ def alerts(db: Session, respect_settings: bool = True) -> list[dict]:
         if is_overdue(t, today):
             add("overdue_tasks", "warning", f"Overdue: {t.title}",
                 f"{DEPT_LABEL.get(t.department, t.department)} · due {t.deadline.strftime('%d/%m/%Y')}", "/app/super-tasks")
+    from app.models import PurchaseRequest
+
+    for r in db.query(PurchaseRequest).filter(PurchaseRequest.status == "pending").order_by(PurchaseRequest.id).all():
+        add("purchase_approvals", "warning", f"Purchase request {r.pr_no} needs approval",
+            f"{float(r.quantity_kg):,.0f} kg {r.yarn_type} {r.colour}" + (f" · needed by {r.required_date.strftime('%d/%m/%Y')}" if r.required_date else ""),
+            "/app/super-inventory")
     rank = {"critical": 0, "warning": 1, "info": 2}
     out.sort(key=lambda a: rank.get(a["severity"], 3))
     return out

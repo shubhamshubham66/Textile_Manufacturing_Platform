@@ -43,7 +43,7 @@ def _st(v):
 def _entries(session):  # noqa: C901 - one flat list of cases reads best here
     out = []
     for obj in list(session.new) + list(session.dirty):
-        if isinstance(obj, m.ActivityLog):
+        if isinstance(obj, (m.ActivityLog, m.StockMovement, m.Notification)):
             continue
         is_new = obj in session.new
         if isinstance(obj, m.Order):
@@ -106,6 +106,38 @@ def _entries(session):  # noqa: C901 - one flat list of cases reads best here
                 old, new, ch = _hist(obj, "status")
                 if ch:
                     out.append(("task", f"status_{new}", f"{obj.title}: {_arrow(_st(old), _st(new))}"))
+        elif isinstance(obj, m.PurchaseRequest):
+            if is_new:
+                out.append(("purchase", "request_created", f"{obj.pr_no}: {_fmt(obj.quantity_kg)} kg {obj.yarn_type} {obj.colour} · {_st(obj.status)}"))
+            else:
+                old, new, ch = _hist(obj, "status")
+                if ch:
+                    note = f" · {obj.decision_note}" if new == "rejected" and obj.decision_note else ""
+                    out.append(("purchase", f"request_{new}", f"{obj.pr_no}: {_arrow(_st(old), _st(new))}{note}"))
+        elif isinstance(obj, m.PurchaseOrder):
+            if is_new:
+                out.append(("purchase", "po_created", f"{obj.po_no}: {_fmt(obj.quantity_kg)} kg {obj.yarn_type} {obj.colour}"))
+            else:
+                old, new, ch = _hist(obj, "status")
+                if ch:
+                    out.append(("purchase", f"po_{new}", f"{obj.po_no}: {_arrow(_st(old), _st(new))}"))
+        elif isinstance(obj, m.YarnReceipt):
+            label = f"{_fmt(obj.quantity_kg)} kg {obj.yarn_type} {obj.colour}" + (f" · batch {obj.batch_no}" if obj.batch_no else "")
+            if is_new:
+                out.append(("receiving", "recorded", f"Receipt #{obj.id or 'new'}: {label} · {_st(obj.status)}"
+                            + (f" · flagged {obj.discrepancy}" if obj.discrepancy else "")))
+            else:
+                old, new, ch = _hist(obj, "status")
+                if ch:
+                    out.append(("receiving", new, f"Receipt #{obj.id}: {label} · {_arrow(_st(old), _st(new))}"))
+        elif isinstance(obj, m.Supplier):
+            if is_new:
+                out.append(("supplier", "added", obj.name))
+            else:
+                for attr in ("is_active", "name", "phone", "email", "yarn_types"):
+                    old, new, ch = _hist(obj, attr)
+                    if ch:
+                        out.append(("supplier", attr, f"{obj.name}: {attr.replace('_', ' ')} {_arrow(old, new)}"))
         elif isinstance(obj, m.Payment):
             if is_new:
                 out.append(("payment", obj.direction, f"{obj.direction} ₹{_fmt(obj.amount)}"))
@@ -114,12 +146,41 @@ def _entries(session):  # noqa: C901 - one flat list of cases reads best here
     return out
 
 
+def _stock_movements(session, actor):
+    """One StockMovement row for every change to a yarn stock quantity."""
+    ref = session.info.get("stock_ref") or {}
+    for obj in list(session.new) + list(session.dirty):
+        if not isinstance(obj, m.YarnStock):
+            continue
+        new = float(obj.quantity_kg or 0)
+        if obj in session.new:
+            change, kind = new, ref.get("kind", "opening")
+        else:
+            old, _, ch = _hist(obj, "quantity_kg")
+            if not ch:
+                continue
+            if old is None:  # expired after an earlier commit: read it back
+                row = session.execute(
+                    m.YarnStock.__table__.select().where(m.YarnStock.id == obj.id)).first()
+                old = row.quantity_kg if row is not None else 0
+            change = new - float(old or 0)
+            if abs(change) < 1e-9:
+                continue
+            kind = ref.get("kind") or ("receipt" if change > 0 else "issue")
+        session.add(m.StockMovement(
+            yarn_stock_id=obj.id or 0, yarn_type=obj.yarn_type, colour=obj.colour,
+            change_kg=round(change, 2), balance_kg=round(new, 2), kind=kind,
+            reference=ref.get("reference"), user_id=actor.get("id"), user_name=actor.get("name"),
+        ))
+
+
 @event.listens_for(Session, "before_flush")
 def _log_activity(session, flush_context, instances):  # noqa: ARG001
+    actor = session.info.get("actor") or {}
+    _stock_movements(session, actor)
     entries = _entries(session)
     if not entries:
         return
-    actor = session.info.get("actor") or {}
     for cat, action, details in entries:
         session.add(m.ActivityLog(
             user_id=actor.get("id"), user_name=actor.get("name"), user_role=actor.get("role"),

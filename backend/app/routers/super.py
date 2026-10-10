@@ -568,6 +568,60 @@ def inventory(_=Depends(require_resource("super_inventory")), db: Session = Depe
 
 
 # --------------------------------------------------------------------------- #
+# Purchase request approvals (the purchase desk cannot commit without these)
+# --------------------------------------------------------------------------- #
+@router.get("/purchase-requests")
+def purchase_requests(_=Depends(require_resource("super_inventory")), db: Session = Depends(get_db)):
+    from app.models import PurchaseRequest
+    from app.routers.purchase import low_stock_rows, pr_out, requirements
+
+    pending = db.query(PurchaseRequest).filter(PurchaseRequest.status == "pending").order_by(PurchaseRequest.id).all()
+    recent = (db.query(PurchaseRequest).filter(PurchaseRequest.status != "pending")
+              .order_by(PurchaseRequest.id.desc()).limit(15).all())
+    short = [r for r in requirements(db) if r["confirmed"] and r["short_kg"] > 0]
+    return {"pending": [pr_out(db, r) for r in pending], "recent": [pr_out(db, r) for r in recent],
+            "short_orders": short, "low_stock": low_stock_rows(db)}
+
+
+class DecisionIn(BaseModel):
+    note: str | None = Field(default=None, max_length=500)
+
+
+def _decide(db: Session, me: User, rid: int, approve: bool, note: str | None):
+    from app.models import Notification, PurchaseRequest
+    from app.routers.purchase import pr_out
+
+    r = db.get(PurchaseRequest, rid)
+    if r is None:
+        raise HTTPException(404, "Purchase request not found")
+    if r.status != "pending":
+        raise HTTPException(409, f"{r.pr_no} is already {r.status}")
+    if not approve and len((note or "").strip()) < 3:
+        raise HTTPException(400, "Give a reason for rejecting (at least 3 characters)")
+    r.status = "approved" if approve else "rejected"
+    r.decided_by_user_id, r.decided_at = me.id, datetime.utcnow()
+    r.decision_note = (note or "").strip() or None
+    what = f"{float(r.quantity_kg):,.0f} kg {r.yarn_type} {r.colour}"
+    db.add(Notification(to_user_id=r.requested_by_user_id, kind="approval" if approve else "rejection",
+                        title=f"{r.pr_no} {'approved' if approve else 'rejected'}",
+                        body=what + (f" · {r.decision_note}" if r.decision_note else ""), from_user_name=me.name))
+    db.commit()
+    return pr_out(db, r)
+
+
+@router.post("/purchase-requests/{rid}/approve")
+def approve_purchase_request(rid: int, body: DecisionIn, me: User = Depends(get_current_user),
+                             _=Depends(require_resource("super_inventory")), db: Session = Depends(get_db)):
+    return _decide(db, me, rid, True, body.note)
+
+
+@router.post("/purchase-requests/{rid}/reject")
+def reject_purchase_request(rid: int, body: DecisionIn, me: User = Depends(get_current_user),
+                            _=Depends(require_resource("super_inventory")), db: Session = Depends(get_db)):
+    return _decide(db, me, rid, False, body.note)
+
+
+# --------------------------------------------------------------------------- #
 # Quality
 # --------------------------------------------------------------------------- #
 @router.get("/quality")
@@ -830,6 +884,7 @@ def get_settings_(_=Depends(require_resource("super_settings")), db: Session = D
     perms = [{"role": r, "pages": [i["label"] for i in items]} for r, items in rbac.MENU_CONFIG.items()]
     return {
         "capacity_m_per_machine_day": get_setting(db, "capacity_m_per_machine_day"),
+        "purchase_auto_approve_kg": get_setting(db, "purchase_auto_approve_kg"),
         "alerts": get_setting(db, "alerts"),
         "alert_kinds": [{"key": k, "label": v} for k, v in ALERT_KINDS],
         "departments": depts,
@@ -839,6 +894,7 @@ def get_settings_(_=Depends(require_resource("super_settings")), db: Session = D
 
 class SettingsIn(BaseModel):
     capacity_m_per_machine_day: float | None = Field(default=None, gt=0, le=100000)
+    purchase_auto_approve_kg: float | None = Field(default=None, ge=0, le=1_000_000)
     alerts: dict[str, bool] | None = None
 
 
@@ -849,6 +905,10 @@ def put_settings(body: SettingsIn, me: User = Depends(get_current_user),
     if body.capacity_m_per_machine_day is not None:
         set_setting(db, "capacity_m_per_machine_day", body.capacity_m_per_machine_day)
         changed.append(f"capacity {body.capacity_m_per_machine_day:,.0f} m/loom/day")
+    if body.purchase_auto_approve_kg is not None:
+        set_setting(db, "purchase_auto_approve_kg", body.purchase_auto_approve_kg)
+        changed.append("purchase auto-approve " + (f"up to {body.purchase_auto_approve_kg:,.0f} kg"
+                                                    if body.purchase_auto_approve_kg else "off"))
     if body.alerts is not None:
         valid = {k for k, _ in ALERT_KINDS}
         cur = get_setting(db, "alerts")

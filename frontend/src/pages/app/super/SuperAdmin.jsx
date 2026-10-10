@@ -469,12 +469,14 @@ export function SuperActivity() {
 export function SuperSettings() {
   const { data, error, loading, reload, setData } = useApi("/api/super/settings");
   const [cap, setCap] = useState("");
+  const [auto, setAuto] = useState("0");
   const [alerts, setAlerts] = useState({});
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (data) {
       setCap(String(data.capacity_m_per_machine_day));
+      setAuto(String(data.purchase_auto_approve_kg ?? 0));
       setAlerts(data.alerts);
     }
   }, [data]);
@@ -483,9 +485,10 @@ export function SuperSettings() {
 
   async function save() {
     if (!(Number(cap) > 0)) return setMsg({ kind: "err", text: "Capacity must be more than 0." });
+    if (!(Number(auto) >= 0)) return setMsg({ kind: "err", text: "Auto-approve limit must be 0 or more." });
     setBusy(true);
     try {
-      const d = await apiFetch("/api/super/settings", { method: "PUT", body: { capacity_m_per_machine_day: Number(cap), alerts } });
+      const d = await apiFetch("/api/super/settings", { method: "PUT", body: { capacity_m_per_machine_day: Number(cap), purchase_auto_approve_kg: Number(auto), alerts } });
       setData(d);
       setMsg({ kind: "ok", text: "Settings saved." });
     } catch (e) {
@@ -512,6 +515,11 @@ export function SuperSettings() {
           <p className="muted sm-small">Used by the order review to check whether an order can be made by its deadline.</p>
           <Field label="Metres one weaving machine makes per day">
             <input type="number" min="1" value={cap} onChange={(e) => setCap(e.target.value)} />
+          </Field>
+          <h3 className="sm-mt">Purchase approval</h3>
+          <p className="muted sm-small">Purchase requests up to this many kg are approved automatically. 0 = you approve every request.</p>
+          <Field label="Auto-approve purchase requests up to (kg)">
+            <input type="number" min="0" value={auto} onChange={(e) => setAuto(e.target.value)} />
           </Field>
         </section>
         <section className="panel">

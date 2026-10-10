@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../auth/AuthContext.jsx";
 import Orders from "./app/Orders.jsx";
-import YarnStore from "./app/YarnStore.jsx";
-import Stock from "./app/Stock.jsx";
-import Purchase from "./app/Purchase.jsx";
+import { PurchaseDashboard, SuppliersDesk, RawInventory } from "./app/purchase/PurchaseMain.jsx";
+import { PurchaseRequests, PurchaseOrders, MaterialReceiving } from "./app/purchase/PurchaseFlow.jsx";
+import { LowStockAlerts, MaterialRequirements, PurchaseReports, PurchaseNotifications } from "./app/purchase/PurchaseInsight.jsx";
 import Machines from "./app/Machines.jsx";
 import Production from "./app/Production.jsx";
 import Quality from "./app/Quality.jsx";
@@ -50,9 +50,16 @@ const PAGES = {
   super_activity: SuperActivity,
   super_settings: SuperSettings,
   my_tasks: MyTasks,
-  yarn: YarnStore,
-  stock: Stock,
-  purchase: Purchase,
+  yarn: MaterialReceiving,
+  stock: RawInventory,
+  purchase: PurchaseOrders,
+  purchase_dashboard: PurchaseDashboard,
+  suppliers_desk: SuppliersDesk,
+  purchase_requests: PurchaseRequests,
+  low_stock: LowStockAlerts,
+  material_requirements: MaterialRequirements,
+  purchase_reports: PurchaseReports,
+  purchase_notifications: PurchaseNotifications,
   machines: Machines,
   production: Production,
   quality: Quality,

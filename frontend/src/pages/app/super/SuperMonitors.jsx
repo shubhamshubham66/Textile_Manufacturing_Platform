@@ -2,7 +2,8 @@
 // quality control and dispatch. Data is live; changes are made by the
 // department screens.
 import { useState } from "react";
-import { Badge, Empty, ErrorBox, Loading, PageHead, Stat, day, when, useApi } from "../../../components/super/kit.jsx";
+import { apiFetch } from "../../../lib/api.js";
+import { Badge, Dialog, Empty, ErrorBox, Field, Loading, Notice, PageHead, Stat, day, when, useApi } from "../../../components/super/kit.jsx";
 import "../../../owner.css";
 
 const n = (v) => Number(v || 0).toLocaleString("en-IN");
@@ -146,6 +147,8 @@ export function SuperInventory() {
         <Stat label="Finished rolls ready" value={data.totals.rolls_ready} hint={`${n(data.finished_meters)} m passed QC`} />
         <Stat label="Stock exceptions" value={data.exceptions.length} tone={data.exceptions.length ? "amber" : undefined} />
       </div>
+
+      <PurchaseApprovals />
 
       {data.low_stock.length > 0 && (
         <div className="callout callout-warn">
@@ -499,5 +502,137 @@ export function SuperDispatch() {
         )}
       </section>
     </div>
+  );
+}
+
+// --------------------------------------------------------------------------- //
+// Purchase requests from the store waiting for the Supermanager's decision.
+function PurchaseApprovals() {
+  const { data, error, reload } = useApi("/api/super/purchase-requests", ["purchase", "yarn", "orders"]);
+  const [pick, setPick] = useState(null); // {r, approve}
+  const [msg, setMsg] = useState("");
+  if (!data) return error ? <ErrorBox error={error} onRetry={reload} /> : null;
+  return (
+    <section className={`panel ${data.pending.length ? "sm-attention" : ""}`}>
+      <div className="sm-panel-head">
+        <h3>Purchase requests to approve</h3>
+        <span className="muted sm-small">The store cannot raise a purchase order until you approve.</span>
+      </div>
+      <Notice onClose={() => setMsg("")}>{msg}</Notice>
+      {data.pending.length === 0 ? (
+        <Empty>No purchase requests are waiting.</Empty>
+      ) : (
+        <div className="owner-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Request</th>
+                <th>Yarn</th>
+                <th className="num">Quantity</th>
+                <th>Needed by</th>
+                <th>Why</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.pending.map((r) => {
+                const stock = data.low_stock.find((s) => s.yarn_type.toLowerCase() === r.yarn_type.toLowerCase() && s.colour.toLowerCase() === r.colour.toLowerCase());
+                return (
+                  <tr key={r.id}>
+                    <td className="sm-nowrap">
+                      <strong>{r.pr_no}</strong>
+                      <small className="sm-sub">{r.requested_by} · {when(r.created_at)}</small>
+                    </td>
+                    <td>
+                      {r.yarn_type} · {r.colour}
+                      {stock && <small className="sm-sub">Low: {n(stock.available_kg)} kg available</small>}
+                    </td>
+                    <td className="num">{n(r.quantity_kg)} kg</td>
+                    <td>{day(r.required_date)}</td>
+                    <td>
+                      {r.reason || "—"}
+                      {r.order_no && <small className="sm-sub">{r.order_no}</small>}
+                    </td>
+                    <td>
+                      <div className="sm-actions">
+                        <button className="btn btn-primary btn-sm" onClick={() => setPick({ r, approve: true })}>
+                          Approve
+                        </button>
+                        <button className="btn btn-ghost btn-sm sm-danger-text" onClick={() => setPick({ r, approve: false })}>
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {data.recent.length > 0 && (
+        <details className="sm-details">
+          <summary>Recent decisions ({data.recent.length})</summary>
+          <ul className="sm-exceptions is-plain">
+            {data.recent.map((r) => (
+              <li key={r.id}>
+                {r.pr_no} · {n(r.quantity_kg)} kg {r.yarn_type} {r.colour} — <Badge value={r.status === "rejected" ? "critical" : "ok"} label={r.status} />
+                {r.decision_note ? ` · ${r.decision_note}` : ""} {r.decided_by ? <small className="muted">— {r.decided_by}</small> : null}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {pick && (
+        <Decide
+          {...pick}
+          onClose={() => setPick(null)}
+          onDone={(t) => {
+            setPick(null);
+            setMsg(t);
+            reload();
+          }}
+        />
+      )}
+    </section>
+  );
+}
+
+function Decide({ r, approve, onClose, onDone }) {
+  const [note, setNote] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function go() {
+    if (!approve && note.trim().length < 3) return setErr("Give a reason for rejecting.");
+    setBusy(true);
+    setErr("");
+    try {
+      await apiFetch(`/api/super/purchase-requests/${r.id}/${approve ? "approve" : "reject"}`, { method: "POST", body: { note: note.trim() || null } });
+      onDone(`${r.pr_no} ${approve ? "approved — the store can now raise the purchase order" : "rejected"}.`);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Dialog title={`${approve ? "Approve" : "Reject"} ${r.pr_no}`} onClose={onClose}>
+      <p>
+        {n(r.quantity_kg)} kg {r.yarn_type} {r.colour}
+        {r.required_date ? `, needed by ${day(r.required_date)}` : ""}.
+      </p>
+      <ErrorBox error={err} />
+      <Field label={approve ? "Note for the store (optional)" : "Reason (the store sees this)"}>
+        <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} autoFocus />
+      </Field>
+      <div className="sm-row-end">
+        <button className="btn btn-ghost btn-sm" onClick={onClose}>
+          Cancel
+        </button>
+        <button className={`btn btn-sm ${approve ? "btn-primary" : "btn-danger"}`} onClick={go} disabled={busy}>
+          {busy ? "Saving…" : approve ? "Approve" : "Reject"}
+        </button>
+      </div>
+    </Dialog>
   );
 }

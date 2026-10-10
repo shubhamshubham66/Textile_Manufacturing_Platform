@@ -139,6 +139,7 @@ class YarnStock(Base):
     reorder_level_kg: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     unit_cost: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    location: Mapped[str | None] = mapped_column(String(80), nullable=True)  # rack / bay in the store
 
 
 class Supplier(Base):
@@ -149,6 +150,9 @@ class Supplier(Base):
     phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
     email: Mapped[str | None] = mapped_column(String(180), nullable=True)
     address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    contact_person: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    yarn_types: Mapped[str | None] = mapped_column(Text, nullable=True)  # comma-separated
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 class PurchaseOrder(Base):
@@ -161,8 +165,12 @@ class PurchaseOrder(Base):
     colour: Mapped[str] = mapped_column(String(60))
     quantity_kg: Mapped[float] = mapped_column(Numeric(12, 2))
     unit_cost: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
-    status: Mapped[str] = mapped_column(String(20), default="raised")  # raised|received|cancelled
+    status: Mapped[str] = mapped_column(String(20), default="raised")  # raised|partial|received|cancelled
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    purchase_request_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tax_percent: Mapped[float] = mapped_column(Numeric(5, 2), default=0)
+    expected_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    created_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class YarnReceipt(Base):
@@ -184,6 +192,16 @@ class YarnReceipt(Base):
     quantity_kg: Mapped[float] = mapped_column(Numeric(12, 2))
     unit_cost: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     received_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    # Receiving workflow: recorded -> validated (stock goes up) or rejected.
+    # Older receipts updated stock immediately, so they default to validated.
+    status: Mapped[str] = mapped_column(String(20), default="validated")
+    batch_no: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    damaged_kg: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    discrepancy: Mapped[str | None] = mapped_column(String(80), nullable=True)  # shortage,excess,damaged
+    discrepancy_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recorded_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    validated_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    validated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 # --------------------------------------------------------------------------- #
@@ -472,3 +490,64 @@ class AppSetting(Base):
 
     key: Mapped[str] = mapped_column(String(60), primary_key=True)
     value: Mapped[str] = mapped_column(Text, default="")
+
+
+# --------------------------------------------------------------------------- #
+# Purchase & raw material: requests, stock movements, notifications
+# --------------------------------------------------------------------------- #
+class PurchaseRequest(Base):
+    """A request to buy yarn. Needs Supermanager approval (unless under the
+    configured auto-approve limit) before a purchase order can be raised."""
+
+    __tablename__ = "purchase_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    pr_no: Mapped[str] = mapped_column(String(40), unique=True)
+    yarn_type: Mapped[str] = mapped_column(String(80))
+    colour: Mapped[str] = mapped_column(String(60))
+    quantity_kg: Mapped[float] = mapped_column(Numeric(12, 2))
+    required_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str] = mapped_column(String(20), default="manual")  # manual|low_stock|instruction|order
+    task_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    order_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending|approved|rejected|ordered|received
+    requested_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    decided_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    decision_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+
+class StockMovement(Base):
+    """Every change to a yarn stock quantity (written automatically)."""
+
+    __tablename__ = "stock_movements"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    yarn_stock_id: Mapped[int] = mapped_column(Integer, index=True)
+    yarn_type: Mapped[str] = mapped_column(String(80))
+    colour: Mapped[str] = mapped_column(String(60))
+    change_kg: Mapped[float] = mapped_column(Numeric(12, 2))
+    balance_kg: Mapped[float] = mapped_column(Numeric(12, 2))
+    kind: Mapped[str] = mapped_column(String(20))  # receipt|issue|adjustment|correction|opening
+    reference: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    user_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, index=True)
+
+
+class Notification(Base):
+    """A message to a role (or one user): approvals, shared availability…"""
+
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    to_role: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    to_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    kind: Mapped[str] = mapped_column(String(30))  # approval|rejection|availability|info
+    title: Mapped[str] = mapped_column(String(200))
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    from_user_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, index=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
