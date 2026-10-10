@@ -1465,3 +1465,55 @@ h4 {
   opacity: 0.65;
   cursor: default;
 }
+
+/* ============================================================
+   Phase 10 — polish (notifications popover, demo login)
+   ============================================================ */
+.notif-wrap {
+  position: relative;
+}
+.notif-popover {
+  position: absolute;
+  top: 46px;
+  right: 0;
+  width: 260px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  z-index: 70;
+  overflow: hidden;
+}
+.notif-head {
+  padding: 0.6rem 0.9rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--line);
+}
+.notif-empty {
+  padding: 1rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+/* One-click demo login buttons */
+.demo-quick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.demo-quick button {
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #f8fafc;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+.demo-quick button:hover {
+  background: #eef2f7;
+}
+.demo-quick button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
