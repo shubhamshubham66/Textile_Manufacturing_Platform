@@ -1,50 +1,47 @@
-// About: what the mill runs on today, and what replaces each piece.
-const SWAPS = [
+import { Icon } from "./landing/Icons.jsx";
+
+// "Keys" section: three bordered boxes, each with its icon sitting in a notch
+// cut out of the top border.
+const KEYS = [
   {
-    before: "Yarn stock in a notebook",
-    after: "Live yarn stock with a low-stock warning, and a yarn check on every new order",
+    icon: "eye",
+    title: "Live floor visibility",
+    text: "Every spinning, weaving and dyeing machine on one board: which order it runs, how far along it is, and what's idle or broken. No more walking the floor to find an order.",
   },
   {
-    before: "Walking the floor to find an order",
-    after: "A floor board: which order is on which machine, how far along, what's idle or broken",
+    icon: "rupee",
+    title: "Zero idle-loss blindness",
+    text: "Each stop is logged with a reason (no yarn, motor fault, changeover) and turned into rupees, so the owner sees what idle machines really cost every single day.",
   },
   {
-    before: "Quality on paper slips",
-    after: "Each roll inspected as pass, rework or reject, traced to its order and machine",
-  },
-  {
-    before: "Buyers phoning for updates",
-    after: "A buyer portal showing whether the order is being woven, checked or ready to ship",
-  },
-  {
-    before: "Wages in a register",
-    after: "Attendance, wages, yarn bills and buyer payments in one monthly profit-or-loss",
+    icon: "puzzle",
+    title: "Integrated modules",
+    text: "Yarn store, production, quality, dispatch, wages and accounts share one database. An order flows from gate to invoice without being typed twice.",
   },
 ];
 
 export default function About() {
   return (
-    <section id="about" className="lp-section">
+    <section id="about" className="lp-section lp-section-tint">
       <div className="lp-inner">
         <div className="lp-head">
-          <h2>The mill&apos;s memory lives in people. We put it in one system.</h2>
-          <p>
-            Orders get delayed, machines sit idle, and nobody knows what a single
-            roll really cost. Here is what changes.
-          </p>
+          <h2 className="lp-title">
+            Keys to a smoother <span className="lp-outline">mill floor</span>
+          </h2>
+          <p>What changes when the mill stops running on notebooks and phone calls.</p>
         </div>
 
-        <ul className="lp-swaps">
-          {SWAPS.map((s) => (
-            <li key={s.before}>
-              <span className="lp-before">{s.before}</span>
-              <span className="lp-swap-arrow" aria-hidden>
-                →
+        <div className="lp-keys">
+          {KEYS.map((k) => (
+            <article key={k.title} className="lp-key">
+              <span className="lp-key-icon">
+                <Icon name={k.icon} size={52} strokeWidth={1.4} />
               </span>
-              <span className="lp-after">{s.after}</span>
-            </li>
+              <h3>{k.title}</h3>
+              <p>{k.text}</p>
+            </article>
           ))}
-        </ul>
+        </div>
       </div>
     </section>
   );

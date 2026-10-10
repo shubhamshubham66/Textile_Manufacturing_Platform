@@ -24,7 +24,7 @@ export default function Footer() {
             </span>
           </a>
           <p>Yarn, floor, quality, dispatch and the books, in one place.</p>
-          <a href="/login" className="lp-btn lp-btn-haldi">
+          <a href="/login" className="lp-btn lp-btn-gold">
             Open the demo
           </a>
         </div>

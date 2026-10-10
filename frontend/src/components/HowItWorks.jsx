@@ -1,62 +1,98 @@
-import { IconOrder, IconSpool, IconLoom, IconCheck, IconTruck } from "./landing/Icons.jsx";
+import { Icon } from "./landing/Icons.jsx";
 
-// How it works: the five steps an order goes through, in order, with the role
-// that handles each step. A thread runs through them like warp through a loom.
-const STEPS = [
+// Key benefits around a process diagram of our own mill: three benefits on
+// each side, the six production stages in the middle joined by a thread.
+const LEFT = [
   {
-    title: "Order",
-    who: "Owner",
-    Icon: IconOrder,
-    text: "Enter fabric, colour, metres and deadline. The system says at once whether there's enough yarn.",
+    title: "Less idle time",
+    text: "Stops are logged with a reason the moment they happen, so the same fault doesn't eat a shift twice.",
   },
   {
-    title: "Yarn",
-    who: "Store manager",
-    Icon: IconSpool,
-    text: "Log yarn at the gate. Stock updates live and warns before it runs low.",
+    title: "Fewer bad rolls",
+    text: "Every roll is inspected and graded; rework and reject reasons show which machine needs attention.",
   },
   {
-    title: "Make",
-    who: "Floor supervisor",
-    Icon: IconLoom,
-    text: "Assign machines for spinning, weaving and dyeing; log output and every stop with a reason.",
-  },
-  {
-    title: "Check",
-    who: "Quality inspector",
-    Icon: IconCheck,
-    text: "Inspect each roll: pass, rework or reject, with the defect noted.",
-  },
-  {
-    title: "Ship",
-    who: "Store manager",
-    Icon: IconTruck,
-    text: "Pick passed rolls, dispatch and print the invoice in one step. A roll can never ship twice.",
+    title: "Yarn never runs out",
+    text: "Stock warns before it runs low, and orders are checked against yarn before they're promised.",
   },
 ];
+
+const RIGHT = [
+  {
+    title: "Buyers stop calling",
+    text: "Buyers see their own orders move from weaving to quality to ready-to-ship, and nothing else.",
+  },
+  {
+    title: "Dispatch without mistakes",
+    text: "Only passed rolls can ship, a roll can never ship twice, and the invoice prints with the dispatch.",
+  },
+  {
+    title: "The real monthly profit",
+    text: "Yarn bills, wages and buyer payments meet in one profit-or-loss the owner can trust.",
+  },
+];
+
+const STAGES = [
+  { icon: "cotton", label: "Yarn inward", who: "Store" },
+  { icon: "spool", label: "Spinning", who: "Floor" },
+  { icon: "loom", label: "Weaving", who: "Floor" },
+  { icon: "dye", label: "Dyeing", who: "Floor" },
+  { icon: "qc", label: "Quality check", who: "Inspector" },
+  { icon: "truck", label: "Dispatch & invoice", who: "Store + Accounts" },
+];
+
+function Benefit({ title, text }) {
+  return (
+    <li>
+      <h3>{title}</h3>
+      <p>
+        <span className="lp-tick">
+          <Icon name="check" size={12} strokeWidth={3} />
+        </span>
+        {text}
+      </p>
+    </li>
+  );
+}
 
 export default function HowItWorks() {
   return (
     <section id="how" className="lp-section lp-section-tint">
       <div className="lp-inner">
         <div className="lp-head">
-          <h2>From order to truck in five steps</h2>
-          <p>Each person sees only their step. The owner sees all of it.</p>
+          <h2 className="lp-title">
+            Key <span className="lp-outline">benefits</span> for the mill
+          </h2>
+          <p>Yarn in, fabric out: six stages, each handled by the right person.</p>
         </div>
 
-        <ol className="lp-steps">
-          {STEPS.map(({ title, who, Icon, text }, i) => (
-            <li key={title} className="lp-step">
-              <span className="lp-step-knot">
-                <Icon />
-              </span>
-              <span className="lp-step-no">{String(i + 1).padStart(2, "0")}</span>
-              <h3>{title}</h3>
-              <span className="lp-step-who">{who}</span>
-              <p>{text}</p>
-            </li>
-          ))}
-        </ol>
+        <div className="lp-benefits">
+          <ul className="lp-benefit-list">
+            {LEFT.map((b) => (
+              <Benefit key={b.title} {...b} />
+            ))}
+          </ul>
+
+          <ol className="lp-process">
+            {STAGES.map((s, i) => (
+              <li key={s.label}>
+                <span className="lp-process-icon">
+                  <Icon name={s.icon} size={34} strokeWidth={1.5} />
+                </span>
+                <b>
+                  {i + 1}. {s.label}
+                </b>
+                <small>{s.who}</small>
+              </li>
+            ))}
+          </ol>
+
+          <ul className="lp-benefit-list">
+            {RIGHT.map((b) => (
+              <Benefit key={b.title} {...b} />
+            ))}
+          </ul>
+        </div>
       </div>
     </section>
   );
