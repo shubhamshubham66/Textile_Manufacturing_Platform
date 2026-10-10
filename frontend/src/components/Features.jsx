@@ -4,6 +4,7 @@ import {
   IconRoll,
   IconChart,
   IconOrder,
+  IconCalendar,
 } from "./landing/Icons.jsx";
 
 // Features: the idle-loss USP gets the big panel; the rest sit beside it.
@@ -29,6 +30,11 @@ const FEATURES = [
     text: "Their own orders and invoices only, never anyone else's.",
   },
   {
+    Icon: IconCalendar,
+    title: "Attendance, no register",
+    text: "Mark who's in once; wages are worked out and added to each order's cost.",
+  },
+  {
     Icon: IconChart,
     title: "The month's real profit",
     text: "Yarn bills, wages and buyer payments meet in one profit-or-loss.",
@@ -44,8 +50,13 @@ export default function Features() {
         </div>
 
         <div className="lp-features">
-          {/* Left: factory photo with the idle-loss card overlaid at the bottom */}
+          {/* Left: photo of two people going over the numbers, idle-loss card below */}
           <div className="lp-photo">
+            <img
+              src="/images/owners-review.jpg"
+              alt="Two managers going over the day's numbers together"
+              loading="lazy"
+            />
             <article className="lp-usp">
               <span className="lp-usp-tag">Only in Everest</span>
               <h3>Idle machine loss, in rupees</h3>

@@ -497,24 +497,21 @@
   gap: 28px;
   align-items: start;
 }
-/* Left: factory photo card with the idle-loss card overlaid near the bottom */
+/* Left: photo shown in full, the idle-loss card overlapping its lower edge */
 .lp-photo {
   position: relative;
+}
+.lp-photo img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 464 / 290;
+  object-fit: cover;
+  object-position: center bottom;
   border-radius: 20px;
-  overflow: hidden;
-  min-height: 520px;
-  display: flex;
-  align-items: flex-end;
-  padding: 18px;
-  background-image:
-    linear-gradient(
-      180deg,
-      rgba(27, 42, 107, 0.1) 0%,
-      rgba(27, 42, 107, 0.35) 100%
-    ),
-    url("/images/mill-floor.jpg");
-  background-size: cover;
-  background-position: center;
+}
+.lp-photo .lp-usp {
+  width: auto;
+  margin: -22px 18px 0;
 }
 
 /* The idle-loss card now sits on the photo as a light (white) card */
@@ -589,7 +586,8 @@
   color: var(--lp-indigo);
 }
 .lp-formula-total small {
-  opacity: 0.85;
+  color: var(--lp-indigo);
+  opacity: 1;
 }
 .lp-usp-foot {
   font-size: 13px;
@@ -820,9 +818,6 @@
   }
   .lp-hero-inner {
     gap: 40px;
-  }
-  .lp-photo {
-    min-height: 360px;
   }
   .lp-board {
     max-width: 620px;
