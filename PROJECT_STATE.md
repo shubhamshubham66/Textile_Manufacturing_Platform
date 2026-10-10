@@ -474,3 +474,42 @@ Audit of R1–R7 (owner scene) found four wrong/partial items; fixed:
   stock adjust).
 - Not runtime-tested in this sandbox (no PyPI/npm); byte-compiles + prettier
   clean; run `pytest tests` on a networked host.
+
+## Task — Owner dashboard as one read-only "closing the books" screen
+
+- The owner **Dashboard** is now a single read-only screen (sections A–G):
+  month selector + "Updated hh:mm:ss" + Refresh + **30s visible polling** (plus
+  the existing SSE live refresh); Month summary band (buyer in − bills − wages
+  paid = net) with a plain **verdict sentence** and a waterfall; **order history**
+  with group chips (Awaiting/Confirmed/Ongoing/Completed/Cancelled) + counts,
+  search, progress %, late flag, row→**order slip** side panel; **cost per order**
+  (+ Margin %); **machine production** (+ totals + chart); **money in one place**
+  (wages / raw-material bills / buyer payments) whose totals **equal the band
+  exactly**.
+- Owner **Orders page is now READ-ONLY**: no New-order form, Check yarn, Confirm,
+  Edit or Cancel — only list + Track. (Backend order endpoints are untouched, so
+  nothing breaks; they are just not surfaced to the owner.)
+- New owner-only (resource "reports") read-only endpoints in
+  `routers/reports.py` + `services/owner_closing.py`:
+  `/api/reports/orders`, `/orders/{id}/slip`, `/orders/{id}/slip/pdf` (reportlab,
+  no new dependency), `/bills`, `/buyer-payments`. All month-windowed, 403 for
+  non-owner.
+- Seed: added **ORD-2008 (cancelled)** so the Cancelled group has real data;
+  net stays +₹17,860. Hand-check table extended in
+  `docs/OWNER_MONTH_END_HANDCHECK.md`.
+- Frontend new files: `components/owner/usePolling.js`,
+  updated `pages/app/Dashboard.jsx`, `pages/app/Orders.jsx`, `owner.css`
+  (band/chips/verdict/slip + a **print stylesheet** so the slip prints cleanly).
+- Tests: `backend/tests/test_owner_closing.py` (history groups+counts, slip ==
+  cost, band == section G, empty month zeros, slip PDF is a PDF, non-owner 403).
+
+### Known limits (this task)
+- **No order-level "Rejected" status / reject reason / created_by / confirmed_by**
+  yet — the owner history shows a "Cancelled" group, not "Rejected". A reject
+  flow + store-manager order create/confirm/reject + owner 403 on write is a
+  separate change (not done here, per the read-only-only scope agreed).
+- Not runtime-tested in this sandbox (no PyPI/npm). Byte-compiles, prettier
+  clean, band↔section-G tie-out verified by a standalone script. Run
+  `pytest tests` on a networked host.
+- Render junk records (ORD-2007-type test rows, ₹20cr supplier payment) are
+  removed via `RESET_DATA=empty` (PR #31) or by voiding (PR #30) — no new code.

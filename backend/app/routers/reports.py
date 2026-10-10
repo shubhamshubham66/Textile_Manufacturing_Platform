@@ -17,7 +17,8 @@ from __future__ import annotations
 import calendar
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -25,6 +26,12 @@ from app.config import get_settings
 from app.database import get_db
 from app.deps import require_resource
 from app.models import Machine, Order, YarnStock
+from app.services.owner_closing import (
+    buyer_payments_list,
+    order_history,
+    order_slip,
+    raw_material_bills,
+)
 from app.services.reports import (
     cost_per_order,
     idle_loss_by_reason,
@@ -150,3 +157,170 @@ def dashboard(
         "idle_loss_by_reason": idle_loss_by_reason(db, s, e),
         "profit_loss": pl,
     }
+
+
+# --------------------------------------------------------------------------- #
+# Owner "closing the books" — read-only order history, slip, and the money
+# tables that must tie out to the Month summary band. Owner only (403 else).
+# --------------------------------------------------------------------------- #
+@router.get("/orders")
+def orders_history(
+    start: date | None = Query(None),
+    end: date | None = Query(None),
+    _=Depends(require_resource("reports")),
+    db: Session = Depends(get_db),
+):
+    s, e = _month_window(start, end)
+    data = order_history(db, s, e)
+    return {"start": s.isoformat(), "end": e.isoformat(), **data}
+
+
+@router.get("/orders/{order_id}/slip")
+def order_slip_json(
+    order_id: int,
+    start: date | None = Query(None),
+    end: date | None = Query(None),
+    _=Depends(require_resource("reports")),
+    db: Session = Depends(get_db),
+):
+    s, e = _month_window(start, end)
+    slip = order_slip(db, order_id, s, e)
+    if slip is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return {"start": s.isoformat(), "end": e.isoformat(), **slip}
+
+
+@router.get("/orders/{order_id}/slip/pdf")
+def order_slip_pdf(
+    order_id: int,
+    start: date | None = Query(None),
+    end: date | None = Query(None),
+    _=Depends(require_resource("reports")),
+    db: Session = Depends(get_db),
+):
+    s, e = _month_window(start, end)
+    slip = order_slip(db, order_id, s, e)
+    if slip is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    pdf = _render_order_slip_pdf(slip)
+    return StreamingResponse(
+        pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{slip["order_no"]}-slip.pdf"'},
+    )
+
+
+@router.get("/bills")
+def raw_material_bills_report(
+    start: date | None = Query(None),
+    end: date | None = Query(None),
+    _=Depends(require_resource("reports")),
+    db: Session = Depends(get_db),
+):
+    s, e = _month_window(start, end)
+    return {"start": s.isoformat(), "end": e.isoformat(), **raw_material_bills(db, s, e)}
+
+
+@router.get("/buyer-payments")
+def buyer_payments_report(
+    start: date | None = Query(None),
+    end: date | None = Query(None),
+    _=Depends(require_resource("reports")),
+    db: Session = Depends(get_db),
+):
+    s, e = _month_window(start, end)
+    return {"start": s.isoformat(), "end": e.isoformat(), **buyer_payments_list(db, s, e)}
+
+
+def _render_order_slip_pdf(slip: dict):
+    """One-page order slip PDF. Mirrors the invoice PDF approach (lazy reportlab
+    import + BytesIO canvas), so there is no new dependency."""
+    from io import BytesIO
+
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import mm
+        from reportlab.pdfgen import canvas
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(
+            status_code=500,
+            detail="PDF export needs reportlab, which is not installed.",
+        ) from exc
+
+    def rupees(v: float) -> str:
+        return f"Rs {float(v or 0):,.2f}"
+
+    buf = BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    w, h = A4
+    y = h - 25 * mm
+
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(20 * mm, y, "Everest Textile Mills")
+    c.setFont("Helvetica", 11)
+    y -= 7 * mm
+    c.drawString(20 * mm, y, f"Order slip — {slip['order_no']}")
+    y -= 10 * mm
+
+    c.setFont("Helvetica", 10)
+    created = (slip.get("created_at") or "")[:10]
+    lines = [
+        f"Buyer: {slip['buyer_name']}",
+        f"Fabric: {slip['fabric_type']}   Colour: {slip['colour']}",
+        f"Quantity: {slip['quantity_meters']:,.2f} m   Rate: {rupees(slip['unit_price'])}/m",
+        f"Deadline: {slip.get('deadline') or '-'}   Status: {slip['status']}",
+        f"Progress: {slip['progress_percent']}%   Created: {created}",
+    ]
+    if slip.get("dispatch_no") or slip.get("invoice_no"):
+        lines.append(
+            f"Dispatch: {slip.get('dispatch_no') or '-'}   Invoice: {slip.get('invoice_no') or '-'}"
+        )
+    for ln in lines:
+        c.drawString(20 * mm, y, ln)
+        y -= 6 * mm
+
+    # Rolls
+    y -= 4 * mm
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(20 * mm, y, f"Rolls ({len(slip['rolls'])})")
+    y -= 6 * mm
+    c.setFont("Helvetica", 9)
+    c.drawString(20 * mm, y, "Roll")
+    c.drawString(55 * mm, y, "Length (m)")
+    c.drawString(90 * mm, y, "Machine")
+    c.drawString(130 * mm, y, "Result")
+    y -= 5 * mm
+    for r in slip["rolls"]:
+        if y < 50 * mm:
+            c.showPage()
+            y = h - 25 * mm
+            c.setFont("Helvetica", 9)
+        c.drawString(20 * mm, y, str(r["roll_no"]))
+        c.drawRightString(80 * mm, y, f"{r['length_meters']:,.2f}")
+        c.drawString(90 * mm, y, str(r["machine"]))
+        c.drawString(130 * mm, y, str(r["result"]))
+        y -= 5 * mm
+
+    # Cost summary
+    cost = slip["cost"]
+    y -= 6 * mm
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(20 * mm, y, "Cost summary (estimate)")
+    y -= 6 * mm
+    c.setFont("Helvetica", 10)
+    for label, val in [
+        ("Yarn", cost["yarn"]),
+        ("Wages", cost["wages"]),
+        ("Machine", cost["machine"]),
+        ("Total cost", cost["total"]),
+        ("Revenue (est)", cost["revenue_est"]),
+        ("Margin (est)", cost["margin_est"]),
+    ]:
+        c.drawString(20 * mm, y, label)
+        c.drawRightString(90 * mm, y, rupees(val))
+        y -= 6 * mm
+
+    c.showPage()
+    c.save()
+    buf.seek(0)
+    return buf
