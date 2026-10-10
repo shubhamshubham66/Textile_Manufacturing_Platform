@@ -807,10 +807,10 @@ def share_requirements(body: ShareIn, user: User = Depends(get_current_user),
             "Short: " + "; ".join(f"{r['order_no']} {r['colour']} {r['short_kg']:,.0f} kg" for r in short))
     if body.note:
         text += f" · Note: {body.note.strip()}"
-    for role in (rbac.ROLE_MANAGER, rbac.ROLE_FLOOR_SUPERVISOR):
+    for role in (rbac.ROLE_MANAGER, rbac.ROLE_PRODUCTION_MANAGER):
         _notify(db, "Material availability update", text, "availability", user, to_role=role)
     db.commit()
-    return {"sent_to": ["Supermanager", "Production (floor supervisor)"], "message": text}
+    return {"sent_to": ["Supermanager", "Production manager"], "message": text}
 
 
 # --------------------------------------------------------------------------- #

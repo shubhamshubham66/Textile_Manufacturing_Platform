@@ -10,7 +10,6 @@ from __future__ import annotations
 # Canonical role keys (match the `roles.name` values seeded in the DB).
 ROLE_OWNER = "owner"
 ROLE_STORE_MANAGER = "store_manager"
-ROLE_FLOOR_SUPERVISOR = "floor_supervisor"
 ROLE_QUALITY_INSPECTOR = "quality_inspector"
 ROLE_ACCOUNTANT = "accountant"
 ROLE_BUYER = "buyer"
@@ -38,7 +37,6 @@ ROLE_WORKER = "worker"
 ALL_ROLES = [
     ROLE_OWNER,
     ROLE_STORE_MANAGER,
-    ROLE_FLOOR_SUPERVISOR,
     ROLE_QUALITY_INSPECTOR,
     ROLE_ACCOUNTANT,
     ROLE_BUYER,
@@ -159,11 +157,6 @@ MENU_CONFIG: dict[str, list[dict]] = {
         {"label": "Notifications", "path": "/app/purchase-notifications", "resource": "purchase_notifications"},
         {"label": "My tasks", "path": "/app/my-tasks", "resource": "my_tasks"},
         {"label": "Dispatch", "path": "/app/dispatch", "resource": "dispatch"},
-    ],
-    ROLE_FLOOR_SUPERVISOR: [
-        {"label": "Production", "path": "/app/production", "resource": "production"},
-        {"label": "Machines", "path": "/app/machines", "resource": "machines"},
-        {"label": "My tasks", "path": "/app/my-tasks", "resource": "my_tasks"},
     ],
     ROLE_QUALITY_INSPECTOR: [
         {"label": "Quality", "path": "/app/quality", "resource": "quality"},
