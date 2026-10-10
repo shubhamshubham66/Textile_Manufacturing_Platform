@@ -125,6 +125,30 @@ def seed() -> None:
                       name="Nikhil Jain", email="buyer@everest.test",
                       password_hash=_hash("buyer123")))
 
+        # ---- Product catalogue (what buyers can browse) ----
+        db.add_all([
+            m.Product(name="Cotton Shirting", fabric_type="Cotton Shirting", colour="White",
+                      gsm=120, width_inch=58, composition="100% Cotton", finish="Mercerised",
+                      description="Soft, breathable shirting for formal and casual wear.",
+                      price_per_meter=95, min_order_meters=500, lead_time_days=12),
+            m.Product(name="Poplin", fabric_type="Poplin", colour="Sky Blue",
+                      gsm=110, width_inch=58, composition="Cotton/Poly 60:40", finish="Calendered",
+                      description="Crisp poplin with a smooth finish, ideal for uniforms.",
+                      price_per_meter=110, min_order_meters=300, lead_time_days=14),
+            m.Product(name="Twill", fabric_type="Twill", colour="Khaki",
+                      gsm=240, width_inch=60, composition="100% Cotton", finish="Enzyme washed",
+                      description="Durable twill weave for trousers and workwear.",
+                      price_per_meter=140, min_order_meters=400, lead_time_days=18),
+            m.Product(name="Rayon Challis", fabric_type="Rayon", colour="Maroon",
+                      gsm=130, width_inch=56, composition="100% Viscose", finish="Soft touch",
+                      description="Flowy rayon for dresses and ethnic wear.",
+                      price_per_meter=125, min_order_meters=300, lead_time_days=15),
+            m.Product(name="Denim 10oz", fabric_type="Denim", colour="Indigo",
+                      gsm=340, width_inch=62, composition="98% Cotton 2% Elastane", finish="Stonewash",
+                      description="Mid-weight stretch denim for jeans.",
+                      price_per_meter=210, min_order_meters=600, lead_time_days=21),
+        ])
+
         # ---- Suppliers (3) + purchase orders ----
         suppliers = [
             m.Supplier(name="Gujarat Yarn Supply", phone="+91 90000 20001",

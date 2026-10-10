@@ -582,3 +582,45 @@ class Notification(Base):
     from_user_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, index=True)
     read_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+# --------------------------------------------------------------------------- #
+# Buyer-facing product catalogue + order change requests
+# --------------------------------------------------------------------------- #
+class Product(Base):
+    """A fabric the mill offers to buyers (browsable catalogue). Managed by the
+    business; buyers only read it. New table, so create_all makes it."""
+
+    __tablename__ = "products"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120))
+    fabric_type: Mapped[str] = mapped_column(String(80))
+    colour: Mapped[str] = mapped_column(String(60))
+    gsm: Mapped[int | None] = mapped_column(Integer, nullable=True)  # grams/sq.m
+    width_inch: Mapped[float | None] = mapped_column(Numeric(6, 2), nullable=True)
+    composition: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    finish: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    price_per_meter: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    min_order_meters: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    lead_time_days: Mapped[int] = mapped_column(Integer, default=14)
+    is_available: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+
+class OrderChangeRequest(Base):
+    """A buyer's request to cancel or modify an order. It NEVER changes the order
+    itself — a manager acts on it. Kept for the audit trail."""
+
+    __tablename__ = "order_change_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"))
+    buyer_id: Mapped[int] = mapped_column(ForeignKey("buyers.id"))
+    kind: Mapped[str] = mapped_column(String(20))  # cancel|modify
+    message: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="open")  # open|accepted|declined
+    decision_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    decided_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, index=True)

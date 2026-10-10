@@ -49,8 +49,6 @@ import Wages from "./app/Wages.jsx";
 import Reports from "./app/Reports.jsx";
 import Dashboard from "./app/Dashboard.jsx";
 import MasterData from "./app/MasterData.jsx";
-import MyOrders from "./app/MyOrders.jsx";
-import Invoices from "./app/Invoices.jsx";
 import Team from "./app/Team.jsx";
 import ProdDashboard from "./app/prod/ProdDashboard.jsx";
 import {
@@ -112,6 +110,20 @@ import {
   WorkerNotifications,
   WorkerProfile,
 } from "./app/worker/WorkerSelf.jsx";
+import BuyerDashboard from "./app/buyer/BuyerDashboard.jsx";
+import {
+  BuyerProducts,
+  BuyerSpecs,
+  BuyerNewOrder,
+} from "./app/buyer/BuyerProducts.jsx";
+import {
+  BuyerOrders,
+  BuyerTrack,
+  BuyerInvoices,
+  BuyerDelivery,
+  BuyerNotifications,
+  BuyerProfile,
+} from "./app/buyer/BuyerOrders.jsx";
 import ChatBubble from "../components/ChatBubble.jsx";
 import { LiveProvider, useLiveStatus } from "../live/LiveContext.jsx";
 
@@ -154,8 +166,8 @@ const PAGES = {
   wages: Wages,
   reports: Reports,
   dashboard: Dashboard,
-  my_orders: MyOrders,
-  invoices: Invoices,
+  my_orders: BuyerOrders,
+  invoices: BuyerInvoices,
   team: Team,
   master_data: MasterData,
   // Production Manager screens.
@@ -205,6 +217,15 @@ const PAGES = {
   wk_history: WorkerHistory,
   wk_notifications: WorkerNotifications,
   wk_profile: WorkerProfile,
+  // Buyer dashboard screens (my_orders/invoices above map to the buyer pages).
+  by_dashboard: BuyerDashboard,
+  by_products: BuyerProducts,
+  by_new_order: BuyerNewOrder,
+  by_track: BuyerTrack,
+  by_specs: BuyerSpecs,
+  by_delivery: BuyerDelivery,
+  by_notifications: BuyerNotifications,
+  by_profile: BuyerProfile,
 };
 
 // Role label lookup for display (keys match backend role names).

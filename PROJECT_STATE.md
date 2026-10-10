@@ -764,3 +764,51 @@ dashboard/auth/stack changed beyond additive columns.
 - Backend byte-compiles; RBAC verified by a standalone script; JSX prettier-clean.
   Not runtime-tested in the sandbox (no PyPI/npm); run `pytest tests/test_worker.py`
   on a networked host.
+
+## Task — Buyer dashboard (expanded to 10 screens)
+
+Expanded the existing buyer portal (2 prototype screens) into a proper 10-screen
+Buyer Dashboard. Reuses the existing `/api/buyer/*` endpoints and `get_current_buyer`
+scoping; adds a product catalogue, dashboard, delivery history, change requests
+and inquiries. No other dashboard changed.
+
+**Backend**
+- `models.py` (new tables, created by create_all): `Product` (fabric catalogue —
+  specs, price_per_meter, min_order_meters, lead_time, availability) and
+  `OrderChangeRequest` (buyer cancel/modify request — never auto-changes the
+  order; a manager acts on it).
+- `rbac.py`: buyer menu is now 10 items — Dashboard, Browse Products, Place New
+  Order, My Orders, Track Order, Product Specifications, Invoices & Payments,
+  Delivery History, Notifications, My Profile. New `by_*` resources + the kept
+  `my_orders`/`invoices` keys.
+- `routers/buyer.py` (all scoped to the buyer's buyer_id): `GET /dashboard`
+  (six cards + recent + outstanding payment); `GET /products` + `/products/{id}`;
+  `GET /deliveries`; `POST /orders/{id}/request-change` + list (cancel/modify,
+  duplicate-open guard, blocked once dispatched/closed); `POST /inquiries`
+  (contact Sales); `GET /notifications` + read; `GET /profile`. Order placement
+  now enforces the product's minimum order quantity, blocks a rapid duplicate
+  (same fabric/colour/qty within a minute), and notifies the Supermanager +
+  Sales & Dispatch manager. Buyers still cannot confirm/approve/dispatch
+  (no such endpoint; 403).
+- `seed.py`: 5 catalogue products.
+
+**Frontend** (reuses the shared super kit)
+- `pages/app/buyer/BuyerDashboard.jsx` — the six cards (My Orders, Pending,
+  In Production, QC Status, Ready for Dispatch, Dispatched) + recent + outstanding.
+- `BuyerProducts.jsx` — Browse Products (cards + Order), Product Specifications
+  (table), Place New Order (product or custom) with a shared order dialog.
+- `BuyerOrders.jsx` — My Orders (reply to clarification, cancel/modify request),
+  Track Order (stepper + progress), Invoices & Payments (+ PDF), Delivery
+  History, Notifications, My Profile (+ Contact Sales).
+- `AppShell.jsx`: `my_orders`/`invoices` now map to the new buyer pages; added
+  `by_*` entries; removed the orphaned prototype `MyOrders.jsx`/`Invoices.jsx`.
+  `icons.jsx`: `by_*` icons.
+
+**Tests / verification**
+- `backend/tests/test_buyer_dashboard.py`: RBAC/scope (10 pages, staff 403),
+  dashboard cards, products + min-order enforcement, place order + duplicate 409,
+  change request (no auto-change + duplicate 409), inquiry, deliveries, profile,
+  staff-area 403s, cross-buyer 404.
+- Backend byte-compiles; RBAC verified by a standalone script; JSX prettier-clean.
+  Not runtime-tested in the sandbox (no PyPI/npm); run
+  `pytest tests/test_buyer_dashboard.py` on a networked host.
