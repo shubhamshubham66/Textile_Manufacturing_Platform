@@ -1,0 +1,37 @@
+# Render Blueprint: FastAPI backend + free PostgreSQL.
+# Render dashboard -> New -> Blueprint -> pick this repo. See DEPLOY.md.
+
+databases:
+  - name: everest-textile-db
+    plan: free
+    databaseName: textile
+    user: textile
+
+services:
+  - type: web
+    name: everest-textile-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # On start the API creates tables and loads demo data if the DB is empty.
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: DATABASE_URL
+        fromDatabase:
+          name: everest-textile-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      # Your Vercel URL(s), comma-separated. Only needed if the browser calls the
+      # API directly; the default setup proxies /api through Vercel instead.
+      - key: CORS_ORIGINS
+        sync: false
+      # AI assistant (server-side only). Leave empty until the Dify app is ready.
+      - key: DIFY_API_KEY
+        sync: false
+      - key: DIFY_BASE_URL
+        value: https://api.dify.ai/v1
