@@ -1,94 +1,102 @@
 # Owner month-end — hand-check (October 2026 seed)
 
-This document lets you verify the owner numbers **by hand** against the seed
-(`backend/app/seed.py`). Re-run `python -m app.seed` to load exactly this data,
-then open the owner screens with the month set to **October 2026**.
+Verify the owner numbers **by hand** against the seed (`backend/app/seed.py`).
+Load exactly this data with `python -m app.seed` (fresh database), then open the
+owner screens with the month set to **October 2026**.
 
-A pure-arithmetic check (no server needed) is in
-`backend/tests/verify_month_math.py` — run `python backend/tests/verify_month_math.py`.
+- Plain arithmetic, no server: `python backend/tests/verify_month_math.py`
+- Same numbers asserted against the real API: `pytest backend/tests/test_owner_reports.py`
+
+All seeded records are dated 1–10 October 2026 and every machine status window
+is closed, so the figures do not drift with the time of day.
 
 ---
 
 ## Definitions used everywhere (one set)
 
+Every figure is for the selected month only.
+
 - **Order cost = yarn + wages + machine.**
-  - Yarn = Σ(receipt kg × rate) for receipts **linked to the order**; if none are
-    linked, required-kg × average purchase rate for that yarn.
-  - Wages = total wages in the month × the order's share of production output (m).
-  - Machine = Σ machines' **power+overhead** ₹/hr × the order's output share.
-    Operator wages are **not** in machine cost (they are the Wages term), so
-    wages are never double-counted. Seed `power_overhead_cost` ≈ 60% of
-    `hourly_cost`.
-- **Order margin (estimate) = revenue (invoiced, else output×rate) − cost.**
-- **Month net (cash basis) = buyer payments received − supplier bills paid −
-  wages, within the month.**
-- **Idle loss = idle+breakdown hours × full `hourly_cost`** (an idle machine
-  wastes the whole machine-hour, operator included).
+  - **Yarn** = yarn receipts linked to the order and received in the month,
+    Σ kg × ₹/kg. An order with **no** linked receipt gets an **estimate**
+    (marked "est" in the table): required yarn × share of the order made this
+    month × average purchase rate, or, with no order items, metres made ×
+    `YARN_KG_PER_METER` (0.2) × the average rate for its colour.
+  - **Wages** = wages accrued in the month, split across orders by metres
+    made. The paise left over from rounding go to the largest share, so the
+    split always adds up to the total.
+  - **Machine** = for each machine, running hours in the month ×
+    power+overhead ₹/hr (`power_overhead_cost`), split across the orders it
+    made metres for. Operator wages are not in it (they are the wages term), so
+    wages are never counted twice.
+- **Order margin (estimate)** = revenue − cost; revenue = invoiced in the month,
+  else metres made × unit price.
+- **Month net (cash basis)** = buyer payments received − raw material bills
+  paid − **wages paid**, all inside the month. Wages worked but not yet paid
+  are shown separately as **wages due** and are not in the net.
+- **Idle loss** = idle + breakdown hours in the month × the machine's full
+  `hourly_cost` (an idle machine wastes the whole machine-hour).
 
 ---
 
-## Shared bases for October 2026
+## Inputs for October 2026
 
-| Quantity | Value |
+| Input | Value |
 | --- | --- |
-| Total production output (all orders) | **5,430 m** |
-| Total wages accrued in the month | **₹10,350.00** |
-| Machine power+overhead basis (Σ power_overhead_cost) | **₹1,830.00 /hr** |
-
-Output per order (from production logs): ORD-2001 2000 m, ORD-2002 1200 m,
-ORD-2003 1100 m, ORD-2004 830 m, ORD-2007 300 m, ORD-2005/2006 0 m.
+| Metres made (production logs) | ORD-2001 2,000 · ORD-2002 1,200 · ORD-2003 1,100 · ORD-2004 830 · ORD-2007 300 · **total 5,430** |
+| Wages accrued (05–09 Oct, 4.5 days each) | Imran 2,475 · Kavita 2,700 · Suresh 2,925 · Anita 2,250 = **₹10,350** |
+| Wages paid on 10 Oct | Imran, Kavita, Suresh = **₹8,100** (Anita ₹2,250 due) |
+| Weave-01 | running 10 h (5 Oct) + 6 h (9 Oct) = 16 h × ₹240 = **₹3,840**; made ORD-2001 2,000 m, ORD-2003 600 m |
+| Weave-02 | running 8 h (6 Oct) + 4 h (9 Oct) = 12 h × ₹240 = **₹2,880**; made ORD-2002 1,200 m, ORD-2004 450 m |
+| Buyer payments received | INV-4001 1,99,500 + INV-4002 26,460 = **₹2,25,960** |
+| Raw material bills paid | Gujarat 1,80,000 + South India 20,000 = **₹2,00,000** |
 
 ---
 
-## Hand-check: 2 orders
-
-### ORD-2001 (closed, invoiced ₹1,99,500)
+## Order ORD-2001 (closed, invoiced ₹1,99,500)
 
 | Component | Working | Value |
 | --- | --- | --- |
 | Yarn | linked receipt 400 kg × ₹180 | **₹72,000.00** |
-| Wages | 10,350 × (2000 / 5430) | **₹3,812.15** |
-| Machine | 1,830 × (2000 / 5430) | **₹674.03** |
-| **Total cost** | 72,000 + 3,812.15 + 674.03 | **₹76,486.18** |
-| Revenue (est) | invoiced total | **₹1,99,500.00** |
-| **Margin (est)** | 199,500 − 76,486.18 | **₹1,23,013.82** |
+| Wages | 10,350 × 2,000 / 5,430 = 3,812.15, + ₹0.01 rounding remainder (largest share) | **₹3,812.16** |
+| Machine | Weave-01 3,840 × 2,000 / 2,600 | **₹2,953.85** |
+| **Total cost** | | **₹78,766.01** |
+| Revenue (est) | invoiced | **₹1,99,500.00** |
+| **Margin (est)** | 1,99,500 − 78,766.01 | **₹1,20,733.99** |
 
-### ORD-2002 (dispatched, invoiced ₹44,100)
+## Order ORD-2002 (dispatched, invoiced ₹44,100)
 
 | Component | Working | Value |
 | --- | --- | --- |
 | Yarn | linked receipt 240 kg × ₹140 | **₹33,600.00** |
-| Wages | 10,350 × (1200 / 5430) | **₹2,287.29** |
-| Machine | 1,830 × (1200 / 5430) | **₹404.42** |
-| **Total cost** | 33,600 + 2,287.29 + 404.42 | **₹36,291.71** |
-| Revenue (est) | invoiced total (300 m × 140 + 5%) | **₹44,100.00** |
-| **Margin (est)** | 44,100 − 36,291.71 | **₹7,808.29** |
+| Wages | 10,350 × 1,200 / 5,430 | **₹2,287.29** |
+| Machine | Weave-02 2,880 × 1,200 / 1,650 | **₹2,094.55** |
+| **Total cost** | | **₹37,981.84** |
+| Revenue (est) | invoiced | **₹44,100.00** |
+| **Margin (est)** | 44,100 − 37,981.84 | **₹6,118.16** |
 
-> Note: ORD-2003 shows yarn ₹18,000 (only 90 kg linked, the rest was short and
-> re-ordered). ORD-2007 shows yarn as "—" (no linked receipt / order item) — this
-> is correct, not the old ₹0 bug: orders **with** linked yarn now show real cost.
+ORD-2007 has no linked yarn receipt, so its yarn is an estimate (shown with
+"est"): 300 m × 0.2 kg/m × average purchase rate.
 
 ---
 
-## Hand-check: the month total
+## The month
 
 | Line | Working | Value |
 | --- | --- | --- |
-| Buyer payments received | 1,99,500 (INV-4001 full) + 26,460 (INV-4002 60%) | **+₹2,25,960.00** |
-| Raw material bills paid | 1,80,000 (Gujarat) + 20,000 (South India) | **−₹2,00,000.00** |
-| Wages (month) | 2,475 + 2,700 + 2,925 + 2,250 | **−₹10,350.00** |
-| **Month net (cash basis)** | 225,960 − 200,000 − 10,350 | **+₹15,610.00 (profit)** |
+| Buyer payments received | | **+₹2,25,960.00** |
+| Raw material bills paid | | **−₹2,00,000.00** |
+| Wages paid | | **−₹8,100.00** |
+| **Month net (cash basis)** | 2,25,960 − 2,00,000 − 8,100 | **+₹17,860.00 (profit)** |
+| Wages due (context, not in net) | Anita | ₹2,250.00 |
 
-**Acceptance:** the Dashboard "Profit or loss (this month)" card and
-Reports › Profit / loss must both show **+₹15,610.00** for October 2026, and
-they use the same definition so they match exactly.
+**Acceptance:** Dashboard "Profit or loss (this month)" and Reports › Profit /
+loss both show **₹17,860.00** for October 2026 (same function), and **₹0.00**
+for September 2026.
 
----
+## Machines (October)
 
-## Idle loss (unchanged logic, dated into October)
-
-Idle/breakdown windows (×8 h total mix) × each machine's full hourly cost. The
-Machine report shows per-machine idle loss and a totals row; the Dashboard shows
-idle loss grouped by reason (No order assigned, Waiting for yarn, Motor fault,
-Shift changeover, Cleaning). Figures depend on "now vs window end"; all seeded
-windows here are **closed**, so the number is stable regardless of when you run it.
+Output 5,430 m (= production logs), running 40 h, idle 7.5 h, breakdown 4 h,
+idle loss ₹3,400.00 (Spin-02 5 h × 250, Spin-03 4 h × 250, Weave-03 1.5 h × 400,
+Dye-02 1 h × 550). The totals row equals the sum of the rows, and the Dashboard
+idle-loss card shows the same ₹3,400.00.
