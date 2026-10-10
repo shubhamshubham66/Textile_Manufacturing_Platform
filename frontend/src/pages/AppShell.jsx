@@ -219,7 +219,7 @@ const ROLE_LABELS = {
   production_manager: "Production manager",
   sales_manager: "Sales & Dispatch manager",
   accounts_manager: "Accounts & Finance manager",
-  worker: "Worker",
+  worker: "Employee",
 };
 
 // The app shell after login. The sidebar is built from the `menu` returned by the

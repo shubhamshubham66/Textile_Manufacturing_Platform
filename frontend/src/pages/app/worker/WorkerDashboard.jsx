@@ -34,7 +34,7 @@ export default function WorkerDashboard() {
     <div className="module sm-page">
       <PageHead
         title={`Hello, ${data.worker.name}`}
-        sub={`${data.worker.role_on_floor || "Worker"}${data.worker.department ? ` · ${data.worker.department}` : ""}${data.manager ? ` · reports to ${data.manager.name}` : ""}`}
+        sub={`${data.worker.role_on_floor || "Employee"}${data.worker.department ? ` · ${data.worker.department}` : ""}${data.manager ? ` · reports to ${data.manager.name}` : ""}`}
       />
 
       <div className="sm-stats sm-stats-4">
