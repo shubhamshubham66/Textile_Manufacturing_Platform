@@ -447,67 +447,6 @@
   margin: 0 0 28px;
 }
 
-/* How it works: a thread through five knots */
-.lp-steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 20px;
-  position: relative;
-}
-.lp-steps::before {
-  content: "";
-  position: absolute;
-  top: 27px;
-  left: 10%;
-  right: 10%;
-  border-top: 2px dashed rgba(27, 42, 107, 0.25);
-}
-.lp-step {
-  position: relative;
-  text-align: center;
-}
-.lp-step-knot {
-  position: relative;
-  z-index: 1;
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 14px;
-  display: grid;
-  place-items: center;
-  border-radius: 16px;
-  background: var(--lp-indigo);
-  color: #fff;
-  box-shadow: 0 0 0 6px var(--lp-white);
-}
-.lp-step-no {
-  display: block;
-  font: 700 12px/1 var(--lp-display);
-  color: var(--lp-haldi);
-  letter-spacing: 0.08em;
-  margin-bottom: 4px;
-}
-.lp-step h3 {
-  font-size: 20px;
-  margin: 0 0 6px;
-}
-.lp-step-who {
-  display: inline-block;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--lp-indigo);
-  background: var(--lp-indigo-soft);
-  padding: 3px 10px;
-  border-radius: 999px;
-  margin-bottom: 10px;
-}
-.lp-step p {
-  font-size: 14.5px;
-  color: var(--lp-text);
-}
-
 /* Features */
 .lp-features {
   display: grid;
@@ -804,11 +743,6 @@
   }
   .lp-hero-inner { gap: 40px; }
   .lp-board { max-width: 620px; }
-  .lp-steps {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    row-gap: 36px;
-  }
-  .lp-steps::before { display: none; }
   .lp-footer-grid { grid-template-columns: 1fr 1fr; }
   .lp-footer-brand { grid-column: 1 / -1; }
 }
@@ -851,15 +785,6 @@
   .lp-loss-value { font-size: 26px; }
   .lp-section { padding: 64px 0; }
   .lp-head { margin-bottom: 32px; }
-  .lp-steps { grid-template-columns: 1fr; row-gap: 20px; }
-  .lp-step {
-    display: grid;
-    grid-template-columns: 56px 1fr;
-    column-gap: 14px;
-    text-align: left;
-  }
-  .lp-step-knot { grid-row: span 4; margin: 0; }
-  .lp-step-who { justify-self: start; }
   .lp-usp { padding: 24px; }
   .lp-formula { gap: 8px; }
   .lp-formula b { font-size: 17px; }
@@ -990,4 +915,125 @@
 }
 @media (max-width: 640px) {
   .lp-av-photo figcaption { position: static; max-width: none; margin-top: 12px; box-shadow: none; border: 1px solid var(--lp-line); }
+}
+
+/* About: eyebrow, problem label, solution box */
+.lp-eyebrow {
+  display: inline-block; font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--lp-indigo); background: var(--lp-haldi-soft);
+  padding: 4px 10px; border-radius: 999px; margin-bottom: 12px;
+}
+.lp-av-label {
+  font-size: 13px !important; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--lp-madder) !important; margin: 0 0 4px;
+}
+.lp-av-solution {
+  margin-top: 18px; padding: 18px 20px; border-radius: 14px;
+  background: var(--lp-indigo); color: #d9def3;
+}
+.lp-av-solution h3 {
+  color: var(--lp-haldi) !important; font-size: 13px; text-transform: uppercase;
+  letter-spacing: 0.08em; margin: 0 0 6px;
+}
+.lp-av-solution p { font-size: 15.5px; line-height: 1.55; }
+.lp-pbtn-play { font-size: 11px; margin-right: 8px; }
+
+/* Demo / CTA strip */
+.lp-cta-strip {
+  background-color: var(--lp-indigo);
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(0deg, rgba(232, 163, 23, 0.07) 0 1px, transparent 1px 26px);
+  padding: 56px 0;
+}
+.lp-cta-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+.lp-cta-strip h2 { color: #fff !important; font-size: clamp(26px, 3vw, 36px); margin: 0 0 6px; }
+.lp-cta-strip p { color: #c7cdea; font-size: 17px; }
+.lp-cta-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.lp-btn-ghost-light { color: #fff; border-color: rgba(255, 255, 255, 0.6); background: transparent; }
+.lp-btn-ghost-light:hover { background: rgba(255, 255, 255, 0.1); border-color: #fff; }
+@media (max-width: 640px) {
+  .lp-cta-actions, .lp-cta-actions .lp-btn { width: 100%; }
+}
+
+/* ---------- How it works: staircase over a mill photo ---------- */
+.lp-stairs {
+  --st-display: "Bricolage Grotesque", var(--lp-display);
+  font-family: "Public Sans", var(--lp-body);
+  color: #1b2a6b;
+  padding: 80px 48px 72px;
+  background-image:
+    linear-gradient(rgba(14, 24, 70, 0.64), rgba(14, 24, 70, 0.64)),
+    url(/images/winding-floor.jpg);
+  background-size: cover;
+  background-position: center 35%;
+}
+.lp-stairs-inner { max-width: 1180px; margin: 0 auto; }
+.lp-stairs-head { max-width: 640px; }
+.lp-stairs h2 {
+  margin: 0;
+  font-family: var(--st-display);
+  font-size: clamp(34px, 4.4vw, 52px);
+  line-height: 1.05;
+  font-weight: 800;
+  color: #fff;
+}
+.lp-stairs-head p { margin: 16px 0 0; font-size: 18px; line-height: 1.5; color: #e3e8f8; }
+.lp-stairs-steps {
+  list-style: none;
+  margin: 56px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+  align-items: end;
+}
+.lp-stair {
+  box-sizing: border-box;
+  min-height: calc(320px + var(--i) * 30px);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 20px;
+  box-shadow: 0 14px 34px rgba(8, 14, 50, 0.28);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  padding: 24px 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lp-stair-top { display: flex; justify-content: space-between; align-items: flex-start; color: #1b2a6b; }
+.lp-stair-no { font-family: var(--st-display); font-size: 60px; line-height: 0.9; font-weight: 800; color: #b86e00; }
+.lp-stair h3 { margin: 0; font-family: var(--st-display); font-size: 26px; font-weight: 800; color: #1b2a6b; }
+.lp-stair-who {
+  align-self: flex-start;
+  background: #e4e8f6;
+  color: #1b2a6b;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.lp-stair p { margin: 0; font-size: 15px; line-height: 1.55; color: #4b5478; }
+/* Last step: the truck leaves, so it's the dark one */
+.lp-stair.is-last {
+  background: rgba(27, 42, 107, 0.93);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 14px 34px rgba(8, 14, 50, 0.35);
+}
+.lp-stair.is-last .lp-stair-top { color: #fff; }
+.lp-stair.is-last .lp-stair-no { color: #f2b24c; }
+.lp-stair.is-last h3 { color: #fff; }
+.lp-stair.is-last .lp-stair-who { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.lp-stair.is-last p { color: #d5dbf2; }
+
+@media (max-width: 1080px) {
+  .lp-stairs-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
+  .lp-stair { min-height: 0; }
+}
+@media (max-width: 640px) {
+  .lp-stairs { padding: 64px 16px 56px; }
+  .lp-stairs-head p { font-size: 16.5px; }
+  .lp-stairs-steps { grid-template-columns: 1fr; margin-top: 36px; gap: 12px; }
+  .lp-stair-no { font-size: 46px; }
 }

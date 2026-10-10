@@ -1,14 +1,13 @@
-// About: what the system gives the mill, one item per point.
-const POINTS = [
-  { title: "Yarn stock", text: "Live yarn stock with a low-stock warning, and a yarn check on every new order" },
-  { title: "Floor board", text: "Which order is on which machine, how far along, what's idle or broken" },
-  { title: "Roll quality", text: "Each roll inspected as pass, rework or reject, traced to its order and machine" },
-  { title: "Buyer portal", text: "Buyers see whether their order is being woven, checked or ready to ship" },
-  { title: "Wages & profit", text: "Attendance, wages, yarn bills and buyer payments in one monthly profit-or-loss" },
+// About: who Everest is, the five problems the mill had, and the solution.
+const PROBLEMS = [
+  { title: "Yarn stock lives in a notebook", text: "Nobody knows what's left until a machine stops for want of yarn." },
+  { title: "Orders are found by walking the floor", text: "Which order is on which machine, and how far along, is anyone's guess." },
+  { title: "Quality is noted on paper slips", text: "Rejected rolls can't be traced back to the order or machine that made them." },
+  { title: "Buyers phone for every update", text: "Staff stop work to answer \u201cwhere is my order?\u201d calls all day." },
+  { title: "Wages and costs sit in separate registers", text: "No one sees the month's real profit or loss until it's too late." },
 ];
 
-// Photo of the weaving floor on the left, numbered list on the right.
-function About() {
+export default function About() {
   return (
     <section id="about" className="lp-section">
       <div className="lp-inner lp-av-split">
@@ -18,13 +17,21 @@ function About() {
             <b>5</b> registers replaced by one system
           </figcaption>
         </figure>
+
         <div>
           <div className="lp-head lp-head-left">
+            <span className="lp-eyebrow">About Everest Textile Mills</span>
             <h2>The mill&apos;s memory lives in people. We put it in one system.</h2>
-            <p>Orders get delayed, machines sit idle, and nobody knows what a single roll really cost.</p>
+            <p>
+              Everest spins, weaves and dyes cotton fabric under one roof, with a
+              store, a machine floor, quality checks and dispatch. Until now all
+              of it ran on notebooks, slips and phone calls.
+            </p>
           </div>
+
+          <h3 className="lp-av-label">The problem</h3>
           <ol className="lp-av-list">
-            {POINTS.map(({ title, text }, i) => (
+            {PROBLEMS.map(({ title, text }, i) => (
               <li key={title}>
                 <span className="lp-av-no">{String(i + 1).padStart(2, "0")}</span>
                 <div>
@@ -34,10 +41,17 @@ function About() {
               </li>
             ))}
           </ol>
+
+          <div className="lp-av-solution">
+            <h3>The solution</h3>
+            <p>
+              One platform where the store, floor, quality, dispatch and accounts
+              teams share live data: yarn stock with warnings, a live floor board,
+              roll-by-roll quality, a buyer portal and a monthly profit-or-loss.
+            </p>
+          </div>
         </div>
       </div>
     </section>
   );
 }
-
-export default About;

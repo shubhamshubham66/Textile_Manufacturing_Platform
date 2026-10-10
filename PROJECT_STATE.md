@@ -335,3 +335,10 @@ results, one completed dispatch + invoice + partial payment, employees + attenda
 - Hero now: soft grid panel, "One system to run our whole mill" (single-company wording), Login + "See what it does" buttons, mill-floor photo on the right (`frontend/public/images/mill-floor.jpg`, 270 KB).
 - Rest of the landing (About, How it works, Features, AI, Footer) unchanged.
 - About section: weaving-floor photo (`frontend/public/images/weaving-floor.jpg`) on the left with a numbered list of 5 points on the right; old before/after list removed.
+
+## Phase 12c — Landing sections per spec
+- Hero buttons: Login + Watch demo (scrolls to How it works).
+- About: "About Everest Textile Mills" intro, The problem (5 points), The solution box.
+- How it works: staircase cards over a mill photo (`frontend/public/images/winding-floor.jpg`), last step (Ship) dark.
+- New demo strip (`CtaStrip.jsx`): Try as owner / Try as buyer → `/login?demo=owner|buyer` logs straight in.
+- Login page: `?demo=<role>` auto-signs in with that demo account.
