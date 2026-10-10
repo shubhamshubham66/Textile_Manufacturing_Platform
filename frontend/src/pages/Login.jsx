@@ -4,12 +4,24 @@ import { useAuth } from "../auth/AuthContext.jsx";
 // Demo accounts shown on the login screen for quick judging. Passwords here are
 // throwaway demo credentials (also in the README), not real secrets.
 const DEMO_ACCOUNTS = [
-  { role: "Owner", email: "owner@everest.test" },
-  { role: "Store manager", email: "store@everest.test" },
-  { role: "Floor supervisor", email: "floor@everest.test" },
-  { role: "Quality inspector", email: "quality@everest.test" },
-  { role: "Accountant", email: "accounts@everest.test" },
-  { role: "Buyer", email: "buyer@everest.test" },
+  { role: "Owner", email: "owner@everest.test", password: "owner123" },
+  { role: "Store manager", email: "store@everest.test", password: "store123" },
+  {
+    role: "Floor supervisor",
+    email: "floor@everest.test",
+    password: "floor123",
+  },
+  {
+    role: "Quality inspector",
+    email: "quality@everest.test",
+    password: "quality123",
+  },
+  {
+    role: "Accountant",
+    email: "accounts@everest.test",
+    password: "accounts123",
+  },
+  { role: "Buyer", email: "buyer@everest.test", password: "buyer123" },
 ];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -55,6 +67,30 @@ export default function Login() {
     }
   }
 
+  // One-click demo login: logs in immediately with a demo account.
+  async function quickLogin(account) {
+    setFormError("");
+    setFieldErrors({});
+    setEmail(account.email);
+    setPassword(account.password);
+    setSubmitting(true);
+    try {
+      await login(account.email, account.password);
+      window.location.assign("/app");
+    } catch (err) {
+      if (err.status === 401) setFormError("Invalid demo credentials.");
+      else
+        setFormError(
+          err.message || "Could not log in. Is the backend running?",
+        );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const owner = DEMO_ACCOUNTS[0];
+  const buyer = DEMO_ACCOUNTS[DEMO_ACCOUNTS.length - 1];
+
   return (
     <div className="auth-wrap">
       <div className="auth-card">
@@ -66,6 +102,24 @@ export default function Login() {
         <p className="muted">
           Welcome back. Enter your credentials to continue.
         </p>
+
+        {/* One-click demo login for judging */}
+        <div className="demo-quick">
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => quickLogin(owner)}
+          >
+            ▶ Try as owner
+          </button>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => quickLogin(buyer)}
+          >
+            ▶ Try as buyer
+          </button>
+        </div>
 
         {formError && (
           <div className="form-error" role="alert">
@@ -114,19 +168,18 @@ export default function Login() {
         </form>
 
         <details className="demo-box">
-          <summary>Demo logins (click to fill)</summary>
-          <p className="muted">Password for all demo accounts: see README.</p>
+          <summary>All demo logins (one-click)</summary>
+          <p className="muted">
+            Click any role to sign in instantly (demo data).
+          </p>
           <ul className="demo-list">
             {DEMO_ACCOUNTS.map((a) => (
               <li key={a.email}>
                 <button
                   type="button"
                   className="demo-fill"
-                  onClick={() => {
-                    setEmail(a.email);
-                    setPassword("");
-                    setFieldErrors({});
-                  }}
+                  disabled={submitting}
+                  onClick={() => quickLogin(a)}
                 >
                   <strong>{a.role}</strong>
                   <span className="muted">{a.email}</span>
