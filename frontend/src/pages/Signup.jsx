@@ -2,19 +2,12 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "../lib/api.js";
 
 // Signup, step by step:
-//   1. Role + Name + Email  -> "Send OTP" (code arrives by email)
+//   1. Name + Email  -> "Send OTP" (code arrives by email)
 //   2. Enter the 6-digit code -> "Verify"
 //   3. New password + Confirm password -> "Create account"
 // After the account is made the page stays here and shows a "Go to sign in"
-// button; it never jumps to another page on its own.
-const ROLES = [
-  { value: "owner", label: "Admin" },
-  { value: "store_manager", label: "Store manager" },
-  { value: "floor_supervisor", label: "Floor supervisor" },
-  { value: "quality_inspector", label: "Quality inspector" },
-  { value: "accountant", label: "Accountant" },
-  { value: "buyer", label: "Buyer" },
-];
+// button; it never jumps to another page on its own. There's no role to pick:
+// the server makes every new account a Buyer.
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -25,7 +18,6 @@ function passwordProblem(pw) {
 }
 
 export default function Signup() {
-  const [role, setRole] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -64,7 +56,6 @@ export default function Signup() {
 
   async function sendOtp() {
     const errs = {};
-    if (!role) errs.role = "Choose your role.";
     if (name.trim().length < 2) errs.name = "Enter your full name.";
     if (!EMAIL_RE.test(email.trim())) errs.email = "Enter a valid email address.";
     setErrors(errs);
@@ -116,7 +107,6 @@ export default function Signup() {
   async function createAccount(e) {
     e.preventDefault();
     const errs = {};
-    if (!role) errs.role = "Choose your role.";
     if (name.trim().length < 2) errs.name = "Enter your full name.";
     const pwErr = passwordProblem(password);
     if (pwErr) errs.password = pwErr;
@@ -133,7 +123,6 @@ export default function Signup() {
         body: {
           name: name.trim(),
           email: email.trim(),
-          role,
           password,
           confirm_password: confirm,
           email_token: emailToken,
@@ -148,14 +137,13 @@ export default function Signup() {
   }
 
   if (created) {
-    const roleLabel = ROLES.find((r) => r.value === role)?.label || role;
     return (
       <div className="auth-wrap">
         <div className="auth-card signup-done">
           <div className="signup-tick" aria-hidden>✓</div>
           <h1 className="auth-title">Account created</h1>
           <p className="muted">
-            <strong>{name.trim()}</strong> ({roleLabel}) can now sign in with{" "}
+            <strong>{name.trim()}</strong> can now sign in with{" "}
             <strong>{email.trim()}</strong> and the password just set.
           </p>
           <a href="/login" className="btn btn-primary btn-block">
@@ -183,23 +171,6 @@ export default function Signup() {
         )}
 
         <form onSubmit={createAccount} noValidate>
-          <label className="field">
-            <span>Role</span>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className={errors.role ? "invalid" : ""}
-            >
-              <option value="">Select your role</option>
-              {ROLES.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-            {errors.role && <small className="field-error">{errors.role}</small>}
-          </label>
-
           <label className="field">
             <span>Full name</span>
             <input

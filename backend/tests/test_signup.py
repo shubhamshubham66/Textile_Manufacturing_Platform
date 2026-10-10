@@ -47,14 +47,14 @@ def env(monkeypatch):
     app.dependency_overrides.clear()
 
 
-def _signup(c, sent, email="new@mill.in", role="store_manager", name="Ravi Kumar", pw="Mill2026a"):
+def _signup(c, sent, email="new@mill.in", name="Ravi Kumar", pw="Mill2026a", extra=None):
     assert c.post("/api/auth/signup/send-otp", json={"email": email}).status_code == 200
     r = c.post("/api/auth/signup/verify-otp", json={"email": email, "otp": sent[email]})
     assert r.status_code == 200, r.text
     token = r.json()["email_token"]
     return c.post("/api/auth/signup", json={
-        "name": name, "email": email, "role": role,
-        "password": pw, "confirm_password": pw, "email_token": token,
+        "name": name, "email": email,
+        "password": pw, "confirm_password": pw, "email_token": token, **(extra or {}),
     })
 
 
@@ -64,12 +64,12 @@ def test_full_signup_then_login(env):
     assert r.status_code == 201, r.text
     login = c.post("/api/auth/login", json={"email": "new@mill.in", "password": "Mill2026a"})
     assert login.status_code == 200
-    assert login.json()["user"]["role"] == "store_manager"
+    assert login.json()["user"]["role"] == "buyer"
 
 
-def test_buyer_signup_gets_own_buyer_record(env):
+def test_signup_is_always_buyer_with_own_record(env):
     c, sent, Session = env
-    assert _signup(c, sent, email="buyer@shop.in", role="buyer", name="Asha Traders").status_code == 201
+    assert _signup(c, sent, email="buyer@shop.in", name="Asha Traders").status_code == 201
     db = Session()
     u = db.query(m.User).filter_by(email="buyer@shop.in").one()
     assert u.buyer_id is not None and u.buyer.name == "Asha Traders"
@@ -99,7 +99,7 @@ def test_token_for_other_email_is_refused(env):
     c.post("/api/auth/signup/send-otp", json={"email": "a@mill.in"})
     token = c.post("/api/auth/signup/verify-otp", json={"email": "a@mill.in", "otp": sent["a@mill.in"]}).json()["email_token"]
     r = c.post("/api/auth/signup", json={
-        "name": "Bad", "email": "b@mill.in", "role": "owner",
+        "name": "Bad", "email": "b@mill.in",
         "password": "Mill2026a", "confirm_password": "Mill2026a", "email_token": token,
     })
     assert r.status_code == 400
@@ -115,7 +115,6 @@ def test_email_token_cannot_be_used_to_log_in(env):
 def test_rules(env):
     c, sent, _ = env
     assert _signup(c, sent, email="p@mill.in", pw="short1").status_code == 400          # weak password
-    assert _signup(c, sent, email="r@mill.in", role="superuser").status_code == 400     # unknown role
     assert _signup(c, sent, email="d@mill.in").status_code == 201
     assert c.post("/api/auth/signup/send-otp", json={"email": "d@mill.in"}).status_code == 409  # already exists
     assert c.post("/api/auth/signup/send-otp", json={"email": "not-an-email"}).status_code == 400
@@ -126,7 +125,16 @@ def test_mismatched_passwords(env):
     c.post("/api/auth/signup/send-otp", json={"email": "q@mill.in"})
     token = c.post("/api/auth/signup/verify-otp", json={"email": "q@mill.in", "otp": sent["q@mill.in"]}).json()["email_token"]
     r = c.post("/api/auth/signup", json={
-        "name": "Qadir", "email": "q@mill.in", "role": "accountant",
+        "name": "Qadir", "email": "q@mill.in",
         "password": "Mill2026a", "confirm_password": "Mill2026b", "email_token": token,
     })
     assert r.status_code == 400 and "match" in r.json()["error"]["message"]
+
+
+def test_role_in_request_is_ignored(env):
+    """Nobody can make themselves Admin through the API."""
+    c, sent, Session = env
+    assert _signup(c, sent, email="sneaky@mill.in", extra={"role": "owner"}).status_code == 201
+    db = Session()
+    u = db.query(m.User).filter_by(email="sneaky@mill.in").one()
+    assert u.role.name == "buyer" and u.buyer_id is not None
