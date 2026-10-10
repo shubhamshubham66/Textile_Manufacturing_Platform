@@ -1,60 +1,83 @@
-// Features: cards for the six headline capabilities.
+import { IconBell, IconEye, IconRoll, IconChart, IconOrder } from "./landing/Icons.jsx";
+
+// Features: the idle-loss USP gets the big panel; the rest sit beside it.
 const FEATURES = [
   {
-    icon: "📦",
-    title: "Stock alerts",
-    text: "Live yarn stock with a warning before it runs low, and a yarn-sufficiency check on every new order.",
+    Icon: IconBell,
+    title: "Stock that warns you",
+    text: "Low-yarn alerts, and a yes/no yarn check before you confirm an order.",
   },
   {
-    icon: "🏭",
-    title: "Live machine status",
-    text: "See which order is on which machine, how far along it is, and what's idle or broken — without walking the floor.",
+    Icon: IconEye,
+    title: "The floor without walking it",
+    text: "Every machine's order, progress, and today's metres at a glance.",
   },
   {
-    icon: "🧾",
-    title: "Roll traceability",
-    text: "Every roll is linked to its order and machine, with a pass / rework / reject record you can trust.",
+    Icon: IconRoll,
+    title: "Every roll traceable",
+    text: "Each roll links back to its order and machine, with its inspection result.",
   },
   {
-    icon: "👤",
-    title: "Buyer tracking",
-    text: "Buyers see whether their order is being woven, checked or ready to ship — in their own portal.",
+    Icon: IconOrder,
+    title: "Buyers track their own orders",
+    text: "Their own orders and invoices only, never anyone else's.",
   },
   {
-    icon: "📈",
-    title: "Profit report",
-    text: "Raw-material bills, wages and buyer payments come together into a monthly profit-or-loss view.",
-  },
-  {
-    icon: "⏱️",
-    title: "Idle machine loss in ₹",
-    text: "Our unique point: idle hours × hourly cost shown as a real rupee loss on the dashboard.",
-    highlight: true,
+    Icon: IconChart,
+    title: "The month's real profit",
+    text: "Yarn bills, wages and buyer payments meet in one profit-or-loss.",
   },
 ];
 
 export default function Features() {
   return (
-    <section id="features" className="section">
-      <div className="section-inner">
-        <h2 className="section-title">What you get</h2>
-        <p className="section-sub">
-          Everything the floor, the office and the owner need, in one place.
-        </p>
-        <div className="feature-grid">
-          {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className={`feature-card ${f.highlight ? "feature-highlight" : ""}`}
-            >
-              <div className="feature-icon" aria-hidden>
-                {f.icon}
-              </div>
-              <h3>{f.title}</h3>
-              <p>{f.text}</p>
-              {f.highlight && <span className="feature-tag">Our edge</span>}
+    <section id="features" className="lp-section">
+      <div className="lp-inner">
+        <div className="lp-head">
+          <h2>What the owner gets that a register never gave</h2>
+        </div>
+
+        <div className="lp-features">
+          <article className="lp-usp">
+            <span className="lp-usp-tag">Only in Everest</span>
+            <h3>Idle machine loss, in rupees</h3>
+            <p>
+              Every stop is logged with a reason: no yarn, motor fault, shift
+              changeover. Idle time stops being a feeling and becomes a number
+              on the owner&apos;s dashboard.
+            </p>
+            <div className="lp-formula" aria-label="Idle hours times hourly cost equals rupees lost">
+              <span>
+                <b>11.5 h</b>
+                <small>idle + breakdown</small>
+              </span>
+              <i>×</i>
+              <span>
+                <b>₹250–400</b>
+                <small>per machine-hour</small>
+              </span>
+              <i>=</i>
+              <span className="lp-formula-total">
+                <b>₹3,404</b>
+                <small>lost today</small>
+              </span>
             </div>
-          ))}
+            <p className="lp-usp-foot">Top reason today: motor fault on Spin-03 (4 h).</p>
+          </article>
+
+          <ul className="lp-feature-list">
+            {FEATURES.map(({ Icon, title, text }) => (
+              <li key={title}>
+                <span className="lp-feature-icon">
+                  <Icon />
+                </span>
+                <div>
+                  <h3>{title}</h3>
+                  <p>{text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </section>

@@ -1,51 +1,50 @@
-// About: the problem (5 points) and the solution (5 points), text drawn from the
-// README, plus the unique point about the mill's memory living in people.
-const PROBLEMS = [
-  "Raw material stock lives in a notebook.",
-  "Machine and order status is only known by walking the floor.",
-  "Quality checks are recorded on paper slips.",
-  "Buyers get order updates by phone calls.",
-  "Worker attendance and wages sit in a register.",
-];
-
-const SOLUTIONS = [
-  "Live yarn stock with low-stock alerts and a yarn check on new orders.",
-  "A real-time floor view: which order is on which machine, and what's idle or broken.",
-  "Digital roll inspection — pass, rework or reject — traceable to order and machine.",
-  "A buyer portal where buyers track their own orders without a phone call.",
-  "Attendance, wages, bills and payments feed one profit-or-loss view.",
+// About: what the mill runs on today, and what replaces each piece.
+const SWAPS = [
+  {
+    before: "Yarn stock in a notebook",
+    after: "Live yarn stock with a low-stock warning, and a yarn check on every new order",
+  },
+  {
+    before: "Walking the floor to find an order",
+    after: "A floor board: which order is on which machine, how far along, what's idle or broken",
+  },
+  {
+    before: "Quality on paper slips",
+    after: "Each roll inspected as pass, rework or reject, traced to its order and machine",
+  },
+  {
+    before: "Buyers phoning for updates",
+    after: "A buyer portal showing whether the order is being woven, checked or ready to ship",
+  },
+  {
+    before: "Wages in a register",
+    after: "Attendance, wages, yarn bills and buyer payments in one monthly profit-or-loss",
+  },
 ];
 
 export default function About() {
   return (
-    <section id="about" className="section">
-      <div className="section-inner">
-        <h2 className="section-title">The problem, and what we do about it</h2>
-
-        <div className="callout">
-          <strong>The real issue:</strong> today the mill's memory lives in
-          people, not in a system. When someone is away, the knowledge walks out
-          with them.
+    <section id="about" className="lp-section">
+      <div className="lp-inner">
+        <div className="lp-head">
+          <h2>The mill&apos;s memory lives in people. We put it in one system.</h2>
+          <p>
+            Orders get delayed, machines sit idle, and nobody knows what a single
+            roll really cost. Here is what changes.
+          </p>
         </div>
 
-        <div className="two-col">
-          <div className="panel panel-problem">
-            <h3>Today (the pain)</h3>
-            <ul className="check-list cross">
-              {PROBLEMS.map((p) => (
-                <li key={p}>{p}</li>
-              ))}
-            </ul>
-          </div>
-          <div className="panel panel-solution">
-            <h3>With Everest</h3>
-            <ul className="check-list tick">
-              {SOLUTIONS.map((s) => (
-                <li key={s}>{s}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
+        <ul className="lp-swaps">
+          {SWAPS.map((s) => (
+            <li key={s.before}>
+              <span className="lp-before">{s.before}</span>
+              <span className="lp-swap-arrow" aria-hidden>
+                →
+              </span>
+              <span className="lp-after">{s.after}</span>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
