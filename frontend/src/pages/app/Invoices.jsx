@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch, getToken } from "../../lib/api.js";
+import { inr } from "../../lib/format.js";
 
 // Buyer: list + PDF download for OWN invoices only.
 export default function Invoices() {
@@ -36,7 +37,6 @@ export default function Invoices() {
     }
   }
 
-  const inr = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
 
   return (
     <div className="module">
