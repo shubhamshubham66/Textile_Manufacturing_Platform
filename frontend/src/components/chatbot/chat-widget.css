@@ -1,0 +1,137 @@
+/* Self-contained styles for the chatbot widget (cw- prefix to avoid clashes). */
+.cw-mount {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 90;
+}
+
+.cw-bubble {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: #0d9488;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(13, 148, 136, 0.45);
+}
+.cw-bubble:hover {
+  background: #0f766e;
+}
+
+.cw-panel {
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  width: 320px;
+  max-width: 90vw;
+  height: 440px;
+  max-height: 70vh;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(2, 6, 23, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cw-head {
+  background: #0f766e;
+  color: #fff;
+  padding: 0.65rem 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.cw-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #4ade80;
+  display: inline-block;
+}
+.cw-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cw-body {
+  flex: 1;
+  padding: 0.75rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: #f8fafc;
+}
+.cw-msg {
+  max-width: 85%;
+  padding: 0.5rem 0.7rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.cw-user {
+  align-self: flex-end;
+  background: #0d9488;
+  color: #fff;
+  border-bottom-right-radius: 3px;
+}
+.cw-bot {
+  align-self: flex-start;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-bottom-left-radius: 3px;
+}
+.cw-typing {
+  opacity: 0.7;
+  font-style: italic;
+}
+.cw-error {
+  align-self: center;
+  color: #991b1b;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.82rem;
+}
+
+.cw-input {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  border-top: 1px solid #e5e7eb;
+  background: #fff;
+}
+.cw-input input {
+  flex: 1;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  font-size: 0.9rem;
+}
+.cw-send {
+  border: none;
+  background: #0d9488;
+  color: #fff;
+  padding: 0 0.9rem;
+  border-radius: 9px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.cw-send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
