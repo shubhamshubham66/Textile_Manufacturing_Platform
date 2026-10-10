@@ -346,3 +346,7 @@ results, one completed dispatch + invoice + partial payment, employees + attenda
 ## Phase 12d — How it works: warehouse photo
 - Background is now a warehouse photo (`frontend/public/images/warehouse.jpg`), kept bright; heading at the top, five equal cards in the lower half.
 - Cards are flat, muted colours (cotton, haldi, sage, madder, blue-grey) instead of the glass staircase; subheading bold for readability.
+
+## Phase 12e — Owner section photo
+- "What the owner gets" section: photo of two managers (`frontend/public/images/owners-review.jpg`) shown in full, idle-loss card overlapping its lower edge (builds on PR #19's layout).
+- Added the sixth benefit "Attendance, no register" (new `IconCalendar`); "lost today" label made readable on the amber chip.

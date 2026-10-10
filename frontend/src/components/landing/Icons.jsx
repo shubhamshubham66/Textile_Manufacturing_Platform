@@ -97,3 +97,11 @@ export const IconArrow = (p) => (
     <path d="M5 12h14M13 6l6 6-6 6" />
   </svg>
 );
+
+export const IconCalendar = (p) => (
+  <svg {...base} {...p}>
+    <rect x="4" y="5" width="16" height="16" rx="2" />
+    <path d="M4 10h16M8 3v4M16 3v4" />
+    <path d="M9 15l2 2 4-4" />
+  </svg>
+);
