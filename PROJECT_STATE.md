@@ -3,8 +3,8 @@
 Single source of truth for the current state of the project. Update this at the end
 of every phase. Keep it short and factual.
 
-**Last updated:** Phase 7 (Quality & Dispatch) — 10 Oct 2026
-**Current phase:** Phase 7 — Quality & Dispatch
+**Last updated:** Phase 8 (Payments, Attendance & Reports) — 10 Oct 2026
+**Current phase:** Phase 8 — Payments, Attendance & Reports
 
 ---
 
@@ -78,6 +78,16 @@ See `API_CONTRACT.md` for full request/response details.
 | GET    | `/api/dispatch/finished-stock` | On-shelf vs dispatched        | Implemented (not runtime-tested here) |
 | GET    | `/api/dispatch/invoice/{id}` | Invoice JSON (rolls listed)     | Implemented (not runtime-tested here) |
 | GET    | `/api/dispatch/invoice/{id}/pdf` | Invoice PDF                 | Implemented (not runtime-tested here) |
+| POST   | `/api/payments/buyer`       | Record buyer payment (invoice status) | Implemented (not runtime-tested here) |
+| POST   | `/api/payments/supplier`    | Pay supplier                     | Implemented (not runtime-tested here) |
+| GET    | `/api/payments/dues`        | Pending dues (receivable/payable) | Implemented; ties out vs seed |
+| POST   | `/api/attendance`           | Mark attendance                  | Implemented (not runtime-tested here) |
+| POST   | `/api/wages/calculate`      | Calculate wages (days×rate+OT)   | Implemented (not runtime-tested here) |
+| POST   | `/api/wages/{id}/pay`       | Pay wage                         | Implemented (not runtime-tested here) |
+| GET    | `/api/reports/cost-per-order` | Yarn+wages+machine per order   | Implemented (not runtime-tested here) |
+| GET    | `/api/reports/machines`     | Output + idle loss per machine   | Implemented (not runtime-tested here) |
+| GET    | `/api/reports/profit-loss`  | Month P&L                        | Implemented; ties out vs seed |
+| GET    | `/api/reports/dashboard`    | Owner dashboard cards            | Implemented (not runtime-tested here) |
 | POST   | `/api/chatbot/message`      | AI assistant (mini dev, later)   | Defined (contract only) |
 
 ---
@@ -190,6 +200,19 @@ Tables (18): `roles`, `users`, `buyers`, `orders`, `order_items`, `yarn_stock`,
   - Frontend: `pages/app/Quality.jsx` (new roll, inspect modal, Pending/Passed/
     Failed tabs, defect report) and `pages/app/Dispatch.jsx` (pick passed rolls,
     confirm, finished stock, dispatch list, print invoice PDF).
+- **Phase 8 — Payments, Attendance & Reports (code complete; money math verified):**
+  - Backend: `routers/payments.py` (buyer/supplier payments, dues, invoice-status
+    recompute), `routers/wages.py` (attendance upsert, wage calc days×rate+OT, pay),
+    `routers/reports.py` + `services/reports.py` (cost-per-order, machine report,
+    P&L, dashboard).
+  - Costing: cost/order = yarn (linked receipts) + wages + machine, where wages &
+    machine cost are allocated by each order's output-metre share. P&L = payments in
+    − supplier out − wages.
+  - **Verified vs seed by hand:** invoice ₹44,100; buyer-in ₹26,460; supplier-out
+    ₹180,000; wages ₹10,350; P&L −₹163,890; buyer due ₹17,640.
+  - Frontend: `pages/app/{Payments,Attendance,Wages,Reports,Dashboard}.jsx`.
+    Dashboard has KPI cards + a CSS bar chart (no chart dependency). AppShell now
+    renders all 13 module resources.
 
 ---
 
