@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthContext.jsx";
 
-// Demo accounts shown on the login screen for quick judging. Passwords here are
+// Demo accounts, used only by the landing page's "Try as owner / buyer" links
+// (/login?demo=owner). Nothing demo-related is shown on this page. Passwords are
 // throwaway demo credentials (also in the README), not real secrets.
 const DEMO_ACCOUNTS = [
   { role: "Owner", email: "owner@everest.test", password: "owner123" },
@@ -97,9 +98,6 @@ export default function Login() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const owner = DEMO_ACCOUNTS[0];
-  const buyer = DEMO_ACCOUNTS[DEMO_ACCOUNTS.length - 1];
-
   return (
     <div className="auth-wrap">
       <div className="auth-card">
@@ -111,24 +109,6 @@ export default function Login() {
         <p className="muted">
           Welcome back. Enter your credentials to continue.
         </p>
-
-        {/* One-click demo login for judging */}
-        <div className="demo-quick">
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={() => quickLogin(owner)}
-          >
-            ▶ Try as owner
-          </button>
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={() => quickLogin(buyer)}
-          >
-            ▶ Try as buyer
-          </button>
-        </div>
 
         {formError && (
           <div className="form-error" role="alert">
@@ -143,7 +123,7 @@ export default function Login() {
               type="email"
               value={email}
               autoComplete="username"
-              placeholder="you@everest.test"
+              placeholder="you@gmail.com"
               onChange={(e) => setEmail(e.target.value)}
               className={fieldErrors.email ? "invalid" : ""}
             />
@@ -179,28 +159,6 @@ export default function Login() {
         <p className="muted auth-switch">
           New here? <a href="/signup">Create an account</a>
         </p>
-
-        <details className="demo-box">
-          <summary>All demo logins (one-click)</summary>
-          <p className="muted">
-            Click any role to sign in instantly (demo data).
-          </p>
-          <ul className="demo-list">
-            {DEMO_ACCOUNTS.map((a) => (
-              <li key={a.email}>
-                <button
-                  type="button"
-                  className="demo-fill"
-                  disabled={submitting}
-                  onClick={() => quickLogin(a)}
-                >
-                  <strong>{a.role}</strong>
-                  <span className="muted">{a.email}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </details>
 
         <p className="muted auth-foot">
           <a href="/">← Back to home</a>
