@@ -37,6 +37,7 @@ MENU_CONFIG: dict[str, list[dict]] = {
         {"label": "Yarn store", "path": "/app/yarn", "resource": "yarn"},
         {"label": "Stock", "path": "/app/stock", "resource": "stock"},
         {"label": "Purchase", "path": "/app/purchase", "resource": "purchase"},
+        {"label": "Dispatch", "path": "/app/dispatch", "resource": "dispatch"},
     ],
     ROLE_FLOOR_SUPERVISOR: [
         {"label": "Production", "path": "/app/production", "resource": "production"},
