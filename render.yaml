@@ -30,6 +30,11 @@ services:
       # API directly; the default setup proxies /api through Vercel instead.
       - key: CORS_ORIGINS
         sync: false
+      # Signup email OTP via Brevo (HTTP API; Render blocks SMTP).
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_FROM_EMAIL
+        sync: false
       # AI assistant (server-side only). Leave empty until the Dify app is ready.
       - key: DIFY_API_KEY
         sync: false

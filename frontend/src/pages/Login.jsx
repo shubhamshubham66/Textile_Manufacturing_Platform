@@ -176,6 +176,10 @@ export default function Login() {
           </button>
         </form>
 
+        <p className="muted auth-switch">
+          New here? <a href="/signup">Create an account</a>
+        </p>
+
         <details className="demo-box">
           <summary>All demo logins (one-click)</summary>
           <p className="muted">

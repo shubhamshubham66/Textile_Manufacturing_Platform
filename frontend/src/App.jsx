@@ -1,12 +1,14 @@
 import Landing from "./pages/Landing.jsx";
 import HealthCheck from "./pages/HealthCheck.jsx";
 import Login from "./pages/Login.jsx";
+import Signup from "./pages/Signup.jsx";
 import AppShell from "./pages/AppShell.jsx";
 import { useAuth } from "./auth/AuthContext.jsx";
 
 // Minimal path-based routing (no router dependency yet):
 //   /          -> public landing page
 //   /login     -> login page (redirects to /app if already signed in)
+//   /signup    -> create an account (role, name, email OTP, password)
 //   /app       -> protected app shell (redirects to /login if not signed in)
 //   /health    -> Phase 2 backend/DB health check
 export default function App() {
@@ -25,6 +27,8 @@ export default function App() {
       </div>
     );
   }
+
+  if (path.startsWith("/signup")) return <Signup />;
 
   if (path.startsWith("/login")) {
     if (user) {

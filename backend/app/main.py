@@ -25,6 +25,7 @@ from app.routers import payments as payments_router
 from app.routers import production as production_router
 from app.routers import quality as quality_router
 from app.routers import reports as reports_router
+from app.routers import signup as signup_router
 from app.routers import wages as wages_router
 from app.routers import yarn as yarn_router
 from chatbot.router import router as chatbot_router
@@ -79,6 +80,7 @@ app.add_middleware(
 
 # Routers
 app.include_router(auth_router.router)
+app.include_router(signup_router.router)
 app.include_router(orders_router.router)
 app.include_router(yarn_router.router)
 app.include_router(production_router.router)
@@ -98,6 +100,9 @@ _STATUS_CODE = {
     403: "FORBIDDEN",
     404: "NOT_FOUND",
     409: "CONFLICT",
+    429: "TOO_MANY_REQUESTS",
+    502: "UPSTREAM_ERROR",
+    503: "UNAVAILABLE",
 }
 
 

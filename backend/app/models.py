@@ -16,6 +16,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Integer,
     Numeric,
     String,
     Text,
@@ -375,3 +376,20 @@ class Wage(Base):
     paid_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     employee: Mapped["Employee"] = relationship(back_populates="wages")
+
+
+# --------------------------------------------------------------------------- #
+# Signup email OTP
+# --------------------------------------------------------------------------- #
+class EmailOtp(Base):
+    """One pending signup code per email. The code itself is never stored, only
+    its bcrypt hash; the row is deleted once the code is used."""
+
+    __tablename__ = "email_otps"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(180), unique=True, index=True)
+    code_hash: Mapped[str] = mapped_column(String(255))
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    sent_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)

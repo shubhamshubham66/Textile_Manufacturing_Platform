@@ -46,3 +46,22 @@ def decode_access_token(token: str) -> dict | None:
         return jwt.decode(token, settings.jwt_secret, algorithms=[ALGORITHM])
     except JWTError:
         return None
+
+
+# Short-lived proof that an email address passed the signup OTP check. It is a
+# separate token type ("purpose") so it can never be used as a login token.
+SIGNUP_PURPOSE = "signup_email"
+
+
+def create_email_token(email: str, minutes: int = 15) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=minutes)
+    payload = {"email": email, "purpose": SIGNUP_PURPOSE, "exp": expire}
+    return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)
+
+
+def read_email_token(token: str) -> str | None:
+    """Return the verified email, or None if the token is bad or expired."""
+    data = decode_access_token(token)
+    if not data or data.get("purpose") != SIGNUP_PURPOSE:
+        return None
+    return data.get("email")
