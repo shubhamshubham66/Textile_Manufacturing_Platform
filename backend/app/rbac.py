@@ -176,9 +176,19 @@ MENU_CONFIG: dict[str, list[dict]] = {
         {"label": "Wages", "path": "/app/wages", "resource": "wages"},
         {"label": "My tasks", "path": "/app/my-tasks", "resource": "my_tasks"},
     ],
+    # Buyer portal: 10-screen dashboard. All `by_*` resources are buyer-only;
+    # the existing my_orders/invoices keys are kept so older links still work.
     ROLE_BUYER: [
-        {"label": "My orders", "path": "/app/my-orders", "resource": "my_orders"},
-        {"label": "Invoices", "path": "/app/invoices", "resource": "invoices"},
+        {"label": "Dashboard", "path": "/app/by-dashboard", "resource": "by_dashboard"},
+        {"label": "Browse Products", "path": "/app/by-products", "resource": "by_products"},
+        {"label": "Place New Order", "path": "/app/by-new-order", "resource": "by_new_order"},
+        {"label": "My Orders", "path": "/app/by-orders", "resource": "my_orders"},
+        {"label": "Track Order", "path": "/app/by-track", "resource": "by_track"},
+        {"label": "Product Specifications", "path": "/app/by-specs", "resource": "by_specs"},
+        {"label": "Invoices & Payments", "path": "/app/by-invoices", "resource": "invoices"},
+        {"label": "Delivery History", "path": "/app/by-delivery", "resource": "by_delivery"},
+        {"label": "Notifications", "path": "/app/by-notifications", "resource": "by_notifications"},
+        {"label": "My Profile", "path": "/app/by-profile", "resource": "by_profile"},
     ],
 }
 
