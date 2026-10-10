@@ -3,8 +3,8 @@
 Single source of truth for the current state of the project. Update this at the end
 of every phase. Keep it short and factual.
 
-**Last updated:** Phase 6 (Production & Idle Loss) — 10 Oct 2026
-**Current phase:** Phase 6 — Production & Idle Loss
+**Last updated:** Phase 7 (Quality & Dispatch) — 10 Oct 2026
+**Current phase:** Phase 7 — Quality & Dispatch
 
 ---
 
@@ -67,6 +67,17 @@ See `API_CONTRACT.md` for full request/response details.
 | GET    | `/api/production/output/today` | Today's output per machine    | Implemented (not runtime-tested here) |
 | PATCH  | `/api/production/machines/{id}/hourly-cost` | Set hourly cost | Implemented (not runtime-tested here) |
 | GET    | `/api/production/idle-loss` | Idle loss ₹ per machine + total (USP) | Implemented; math verified vs hand calc |
+| POST   | `/api/quality/rolls`        | Create roll (Pending)            | Implemented (not runtime-tested here) |
+| GET    | `/api/quality/rolls`        | List rolls (status/order filter) | Implemented (not runtime-tested here) |
+| POST   | `/api/quality/rolls/{id}/inspect` | Pass/rework/reject + defect | Implemented (not runtime-tested here) |
+| GET    | `/api/quality/defect-report` | Counts by defect/machine/order  | Implemented (not runtime-tested here) |
+| GET    | `/api/dispatch/orders`      | Orders with passed rolls         | Implemented (not runtime-tested here) |
+| GET    | `/api/dispatch/orders/{id}/pickable` | Passed, undispatched rolls | Implemented (not runtime-tested here) |
+| POST   | `/api/dispatch/confirm`     | One-txn dispatch + invoice       | Implemented; invoice math verified; UNIQUE guard |
+| GET    | `/api/dispatch`             | List dispatches                  | Implemented (not runtime-tested here) |
+| GET    | `/api/dispatch/finished-stock` | On-shelf vs dispatched        | Implemented (not runtime-tested here) |
+| GET    | `/api/dispatch/invoice/{id}` | Invoice JSON (rolls listed)     | Implemented (not runtime-tested here) |
+| GET    | `/api/dispatch/invoice/{id}/pdf` | Invoice PDF                 | Implemented (not runtime-tested here) |
 | POST   | `/api/chatbot/message`      | AI assistant (mini dev, later)   | Defined (contract only) |
 
 ---
@@ -164,6 +175,21 @@ Tables (18): `roles`, `users`, `buyers`, `orders`, `order_items`, `yarn_stock`,
     against hand calculations** (standalone assertion run). Order progress =
     produced metres / ordered metres (capped 100).
   - Seed: running machines assigned current orders/stages matching their output.
+- **Phase 7 — Quality & Dispatch (code complete; critical math verified):**
+  - Backend: `routers/quality.py` (new roll/list/inspect/defect-report) and
+    `routers/dispatch.py` (pickable/confirm/list/finished-stock/invoice JSON+PDF),
+    plus `services/dispatch.py` (the one-transaction confirm).
+  - **No double dispatch — two layers:** app check (roll must be `pass`, reject
+    `dispatched`) + DB `UNIQUE(dispatch_items.roll_id)`; IntegrityError → 409 and
+    full rollback.
+  - Only `pass` rolls are pickable/dispatchable (backend-enforced, not just UI).
+  - Invoice auto-created in the same txn: `metres × rate + tax` (tax rate
+    configurable, demo 5%). **Invoice math verified vs hand calc.**
+  - PDF invoice via reportlab lists the exact rolls. Dispatch added to Store
+    manager menu (new `dispatch` resource).
+  - Frontend: `pages/app/Quality.jsx` (new roll, inspect modal, Pending/Passed/
+    Failed tabs, defect report) and `pages/app/Dispatch.jsx` (pick passed rolls,
+    confirm, finished stock, dispatch list, print invoice PDF).
 
 ---
 
