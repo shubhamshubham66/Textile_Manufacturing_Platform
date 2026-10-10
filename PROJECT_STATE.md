@@ -423,3 +423,9 @@ a title, units, tooltips and an aria-label text alternative.
 - App pages now follow the URL (`/app/reports` etc.): refresh stays on the page, Back works, deep links open the right page.
 - Verified on a Postgres DB built with the old code: 0 errors across all 17 role pages.
 
+## Phase 14 — Real-time data workflow
+- Live updates over Server-Sent Events. `backend/app/live.py` turns committed changes (machine status, order stage, yarn stock + low-stock crossing, new rolls / inspections, production logs, payments, invoices/dispatch, attendance/wages) into events; a rolled-back change sends nothing. `backend/app/routers/live.py`: `POST /api/live/ticket` (60 s ticket, not a login token), `GET /api/live/stream?ticket=` (per-role filtered; buyers only see their own orders/payments; 15 s heartbeat), `GET /api/live/alerts` (what needs attention now).
+- Frontend `src/live/LiveContext.jsx`: one stream per tab, auto-reconnect with backoff + full reload after reconnect. `useLive(topics, load)` on all 14 data pages reloads quietly (no "Loading…" flash). Top bar: "● Live · updated Xs ago"; bell with unread count and list; short toasts for alerts.
+- In-process event bus: fine for the single Uvicorn worker on Render; several workers would need Redis pub/sub.
+- Tests: `backend/tests/test_live.py` (6). Verified with separate owner / floor / quality / buyer browsers on Postgres.
+

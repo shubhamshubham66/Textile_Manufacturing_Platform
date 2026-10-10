@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api.js";
+import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 
 function isoDaysAgo(n) {
   const d = new Date();
@@ -21,7 +22,7 @@ export default function Wages() {
   });
 
   async function load() {
-    setLoading(true);
+    if (!isLiveRefresh()) setLoading(true);
     setError("");
     try {
       setWages(await apiFetch("/api/wages"));
@@ -35,6 +36,9 @@ export default function Wages() {
   useEffect(() => {
     load();
   }, []);
+
+  // Reload quietly when something this page shows changes elsewhere.
+  useLive(["wages"], load);
 
   async function calculate() {
     setMsg("");

@@ -16,6 +16,7 @@ import Dashboard from "./app/Dashboard.jsx";
 import MyOrders from "./app/MyOrders.jsx";
 import Invoices from "./app/Invoices.jsx";
 import ChatBubble from "../components/ChatBubble.jsx";
+import { LiveProvider, useLiveStatus } from "../live/LiveContext.jsx";
 
 // Resource key -> built module page. Resources not listed here fall back to a
 // clearly-labelled prototype placeholder (built in later phases).
@@ -51,8 +52,62 @@ const ROLE_LABELS = {
 // The app shell after login. The sidebar is built from the `menu` returned by the
 // backend for the user's role — ONE config, no per-role UI code. The content area
 // is a placeholder; real module pages arrive in later phases.
+// Wrap the shell so every page can use live updates.
 export default function AppShell() {
+  return (
+    <LiveProvider>
+      <Shell />
+    </LiveProvider>
+  );
+}
+
+const LEVEL_ICON = { alert: "⛔", warn: "⚠️", success: "✅", info: "ℹ️" };
+
+function ago(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.round(s / 60);
+  return m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`;
+}
+
+// "● Live · updated 3s ago" in the top bar.
+function LiveBadge() {
+  const { status, updatedAt } = useLiveStatus();
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const text =
+    status === "live"
+      ? `Live · updated ${updatedAt ? ago(Date.now() - updatedAt) : "now"}`
+      : status === "connecting"
+        ? "Connecting…"
+        : "Reconnecting…";
+  return (
+    <span className={`live-badge is-${status}`} title="Screens update by themselves when anything changes">
+      <i aria-hidden />
+      <span className="live-badge-text">{text}</span>
+    </span>
+  );
+}
+
+function Toasts() {
+  const { toasts, dismissToast } = useLiveStatus();
+  return (
+    <div className="live-toasts" aria-live="polite">
+      {toasts.map((t) => (
+        <button key={t.key} className={`live-toast is-${t.level}`} onClick={() => dismissToast(t.key)}>
+          <span aria-hidden>{LEVEL_ICON[t.level] || "ℹ️"}</span> {t.message}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Shell() {
   const { user, menu, logout } = useAuth();
+  const live = useLiveStatus();
   // The open page follows the URL (/app/reports etc.), so refresh keeps you on
   // the same page and the browser Back button moves between pages.
   const pathFromUrl = () => {
@@ -151,16 +206,21 @@ export default function AppShell() {
           </div>
 
           <div className="shell-top-actions">
+            <LiveBadge />
             {/* Notifications bell */}
             <div className="notif-wrap">
               <button
                 className="icon-btn"
                 title="Notifications"
-                aria-label="Notifications"
+                aria-label={`Notifications${live.unread ? `, ${live.unread} new` : ""}`}
                 aria-expanded={notifOpen}
-                onClick={() => setNotifOpen((v) => !v)}
+                onClick={() => {
+                  setNotifOpen((v) => !v);
+                  live.markRead();
+                }}
               >
                 🔔
+                {live.unread > 0 && <span className="notif-count">{live.unread}</span>}
               </button>
               {notifOpen && (
                 <div
@@ -169,9 +229,25 @@ export default function AppShell() {
                   aria-label="Notifications"
                 >
                   <div className="notif-head">Notifications</div>
-                  <div className="notif-empty muted">
-                    You're all caught up — no new notifications.
-                  </div>
+                  {live.notes.length === 0 ? (
+                    <div className="notif-empty muted">
+                      You're all caught up — no new notifications.
+                    </div>
+                  ) : (
+                    <ul className="notif-list">
+                      {live.notes.map((n) => (
+                        <li key={n.key} className={`notif-item is-${n.level}`}>
+                          <span aria-hidden>{LEVEL_ICON[n.level] || "ℹ️"}</span>
+                          <span>
+                            {n.message}
+                            <small className="muted">
+                              {n.current ? "Right now" : new Date(n.at).toLocaleTimeString()}
+                            </small>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )}
             </div>
@@ -217,6 +293,8 @@ export default function AppShell() {
       {sidebarOpen && (
         <div className="shell-overlay" onClick={() => setSidebarOpen(false)} />
       )}
+
+      <Toasts />
 
       {/* Floating chat bubble on every logged-in page too (mount point). */}
       <ChatBubble />

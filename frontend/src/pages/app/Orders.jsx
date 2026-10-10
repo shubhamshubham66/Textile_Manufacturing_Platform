@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api.js";
+import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 import { inr, qty, ddmmyyyy, statusLabel } from "../../lib/format.js";
 import "../../owner.css";
 
@@ -67,7 +68,7 @@ export default function Orders() {
   const [trackLoading, setTrackLoading] = useState(false);
 
   async function loadOrders() {
-    setLoading(true);
+    if (!isLiveRefresh()) setLoading(true);
     setError("");
     try {
       const params = new URLSearchParams();
@@ -93,6 +94,9 @@ export default function Orders() {
     loadOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
+
+  // Reload quietly when something this page shows changes elsewhere.
+  useLive(["orders", "quality", "production"], loadOrders);
 
   function validate() {
     const e = {};

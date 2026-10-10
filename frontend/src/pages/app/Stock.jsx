@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api.js";
+import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 
 // Stock list with live quantity per type+colour and a low-stock alert.
 export default function Stock() {
@@ -8,7 +9,7 @@ export default function Stock() {
   const [error, setError] = useState("");
 
   async function load() {
-    setLoading(true);
+    if (!isLiveRefresh()) setLoading(true);
     setError("");
     try {
       setRows(await apiFetch("/api/yarn/stock"));
@@ -22,6 +23,9 @@ export default function Stock() {
   useEffect(() => {
     load();
   }, []);
+
+  // Reload quietly when something this page shows changes elsewhere.
+  useLive(["yarn"], load);
 
   const lowRows = rows.filter((r) => r.low_stock);
 

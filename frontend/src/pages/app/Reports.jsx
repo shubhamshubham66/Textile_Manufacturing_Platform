@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api.js";
+import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 import {
   inr,
   qty,
@@ -36,7 +37,7 @@ export default function Reports() {
   const [error, setError] = useState("");
 
   async function load(m) {
-    setLoading(true);
+    if (!isLiveRefresh()) setLoading(true);
     setError("");
     try {
       const { start, end } = monthRange(m);
@@ -64,6 +65,9 @@ export default function Reports() {
     load(month);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month]);
+
+  // Reload quietly when something this page shows changes elsewhere.
+  useLive(["machines", "production", "orders", "yarn", "quality", "payments", "wages"], () => load(month));
 
   const tabs = [
     ["cost", "Cost per order"],

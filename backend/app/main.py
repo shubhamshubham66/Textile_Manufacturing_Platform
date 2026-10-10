@@ -26,6 +26,7 @@ from app.routers import production as production_router
 from app.routers import quality as quality_router
 from app.routers import reports as reports_router
 from app.routers import signup as signup_router
+from app.routers import live as live_router
 from app.routers import wages as wages_router
 from app.routers import yarn as yarn_router
 from chatbot.router import router as chatbot_router
@@ -65,6 +66,11 @@ def prepare_database() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    import asyncio
+
+    from app.live import bus  # registers the session hooks for live updates
+
+    bus.bind_loop(asyncio.get_running_loop())
     try:
         prepare_database()
     except Exception:  # noqa: BLE001 - keep the API up; /api/health reports DB state
@@ -85,6 +91,7 @@ app.add_middleware(
 # Routers
 app.include_router(auth_router.router)
 app.include_router(signup_router.router)
+app.include_router(live_router.router)
 app.include_router(orders_router.router)
 app.include_router(yarn_router.router)
 app.include_router(production_router.router)

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api.js";
+import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 
 const EMPTY = {
   supplier_id: "",
@@ -20,7 +21,7 @@ export default function Purchase() {
   const [saving, setSaving] = useState(false);
 
   async function loadPurchases() {
-    setLoading(true);
+    if (!isLiveRefresh()) setLoading(true);
     try {
       setPos(await apiFetch("/api/yarn/purchase"));
     } catch (err) {
@@ -36,6 +37,9 @@ export default function Purchase() {
       .catch((e) => setFormError(e.message));
     loadPurchases();
   }, []);
+
+  // Reload quietly when something this page shows changes elsewhere.
+  useLive(["yarn"], loadPurchases);
 
   function validate() {
     const e = {};

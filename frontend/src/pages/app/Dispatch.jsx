@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch, getToken } from "../../lib/api.js";
+import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 
 // Dispatch module (store manager): pick ONLY passed rolls, confirm dispatch in
 // one transaction (marks rolls + creates dispatch + invoice), finished-stock
@@ -17,7 +18,7 @@ export default function Dispatch() {
   const [busy, setBusy] = useState(false);
 
   async function loadAll() {
-    setLoading(true);
+    if (!isLiveRefresh()) setLoading(true);
     setError("");
     try {
       const [o, d, f] = await Promise.all([
@@ -38,6 +39,9 @@ export default function Dispatch() {
   useEffect(() => {
     loadAll();
   }, []);
+
+  // Reload quietly when something this page shows changes elsewhere.
+  useLive(["quality", "orders", "payments"], loadAll);
 
   async function openPicker(orderId) {
     setConfirmMsg("");

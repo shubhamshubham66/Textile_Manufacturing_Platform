@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch, getToken } from "../../lib/api.js";
+import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 import { inr } from "../../lib/format.js";
 
 // Buyer: list + PDF download for OWN invoices only.
@@ -9,7 +10,7 @@ export default function Invoices() {
   const [error, setError] = useState("");
 
   async function load() {
-    setLoading(true);
+    if (!isLiveRefresh()) setLoading(true);
     setError("");
     try {
       setInvoices(await apiFetch("/api/buyer/invoices"));
@@ -23,6 +24,9 @@ export default function Invoices() {
   useEffect(() => {
     load();
   }, []);
+
+  // Reload quietly when something this page shows changes elsewhere.
+  useLive(["payments", "orders"], load);
 
   async function download(invoiceId) {
     try {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api.js";
+import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 
 // Attendance (accountant): mark present/absent/half_day + shift per employee/day.
 export default function Attendance() {
@@ -10,7 +11,7 @@ export default function Attendance() {
   const [msg, setMsg] = useState("");
 
   async function load() {
-    setLoading(true);
+    if (!isLiveRefresh()) setLoading(true);
     setError("");
     try {
       const [emps, att] = await Promise.all([
@@ -29,6 +30,9 @@ export default function Attendance() {
   useEffect(() => {
     load();
   }, []);
+
+  // Reload quietly when something this page shows changes elsewhere.
+  useLive(["wages"], load);
 
   async function mark(employee_id, status, shift = "morning") {
     setMsg("");

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api.js";
+import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 import { inr, ddmmyyyy, statusLabel } from "../../lib/format.js";
 import "../../owner.css";
 
@@ -28,7 +29,7 @@ export default function Payments() {
   });
 
   async function loadAll() {
-    setLoading(true);
+    if (!isLiveRefresh()) setLoading(true);
     setError("");
     try {
       const [m, p, d] = await Promise.all([
@@ -49,6 +50,9 @@ export default function Payments() {
   useEffect(() => {
     loadAll();
   }, []);
+
+  // Reload quietly when something this page shows changes elsewhere.
+  useLive(["payments", "orders"], loadAll);
 
   function flash(kind, text) {
     setMsgKind(kind);

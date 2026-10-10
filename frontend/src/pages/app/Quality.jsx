@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api.js";
+import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 
 const DEFECTS = ["none", "hole", "colour_mismatch", "uneven_weaving", "other"];
 const DEFECT_LABELS = {
@@ -32,7 +33,7 @@ export default function Quality() {
   const [inspect, setInspect] = useState(null); // {id, result, defect_type, notes}
 
   async function loadRolls() {
-    setLoading(true);
+    if (!isLiveRefresh()) setLoading(true);
     setError("");
     try {
       let data;
@@ -56,7 +57,7 @@ export default function Quality() {
   }
 
   async function loadReport() {
-    setLoading(true);
+    if (!isLiveRefresh()) setLoading(true);
     try {
       setReport(await apiFetch("/api/quality/defect-report"));
     } catch (err) {
@@ -77,6 +78,9 @@ export default function Quality() {
     else loadRolls();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
+
+  // Reload quietly when something this page shows changes elsewhere.
+  useLive(["quality", "production"], () => (tab === "report" ? loadReport() : loadRolls()));
 
   function validateRoll() {
     const e = {};
