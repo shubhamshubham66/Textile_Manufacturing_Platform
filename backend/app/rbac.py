@@ -16,6 +16,11 @@ ROLE_ACCOUNTANT = "accountant"
 ROLE_BUYER = "buyer"
 # General manager: created by the owner from the Team page (no self-signup).
 ROLE_MANAGER = "manager"
+# Production manager: owns the production floor end-to-end — plans production,
+# assigns machines/workers/shifts, tracks output/downtime, raises material
+# shortage requests, hands finished batches to QC, and reports to the
+# Supermanager. Cannot touch finance, stock levels or dispatch directly.
+ROLE_PRODUCTION_MANAGER = "production_manager"
 
 ALL_ROLES = [
     ROLE_OWNER,
@@ -25,6 +30,7 @@ ALL_ROLES = [
     ROLE_ACCOUNTANT,
     ROLE_BUYER,
     ROLE_MANAGER,
+    ROLE_PRODUCTION_MANAGER,
 ]
 
 # One role -> menu config. `path` is the frontend route; `resource` ties the menu
@@ -55,6 +61,25 @@ MENU_CONFIG: dict[str, list[dict]] = {
         {"label": "Alerts", "path": "/app/super-alerts", "resource": "super_alerts"},
         {"label": "Activity log", "path": "/app/super-activity", "resource": "super_activity"},
         {"label": "Settings", "path": "/app/super-settings", "resource": "super_settings"},
+    ],
+    # Production manager: the production floor control panel. Receives confirmed
+    # orders/instructions from the Supermanager, plans and assigns work, tracks
+    # output and downtime, requests short material, hands batches to QC and
+    # reports progress. All 12 screens are its own resources (`pm_*`) so its
+    # permissions are isolated from the floor-supervisor screens.
+    ROLE_PRODUCTION_MANAGER: [
+        {"label": "Dashboard", "path": "/app/pm-dashboard", "resource": "pm_dashboard"},
+        {"label": "Production Orders", "path": "/app/pm-orders", "resource": "pm_orders"},
+        {"label": "Production Planning", "path": "/app/pm-planning", "resource": "pm_planning"},
+        {"label": "Production Stages", "path": "/app/pm-stages", "resource": "pm_stages"},
+        {"label": "Machine Management", "path": "/app/pm-machines", "resource": "pm_machines"},
+        {"label": "Worker & Task Assignment", "path": "/app/pm-workers", "resource": "pm_workers"},
+        {"label": "Production Monitoring", "path": "/app/pm-monitoring", "resource": "pm_monitoring"},
+        {"label": "Material Requests", "path": "/app/pm-materials", "resource": "pm_materials"},
+        {"label": "QC Handover", "path": "/app/pm-qc", "resource": "pm_qc"},
+        {"label": "Production Reports", "path": "/app/pm-reports", "resource": "pm_reports"},
+        {"label": "Notifications", "path": "/app/pm-notifications", "resource": "pm_notifications"},
+        {"label": "Activity Logs", "path": "/app/pm-activity", "resource": "pm_activity"},
     ],
     # Purchase & raw material desk (+ dispatch, which the store also runs).
     ROLE_STORE_MANAGER: [

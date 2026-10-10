@@ -151,6 +151,7 @@ real passwords. Set a strong `JWT_SECRET` in `.env` for any real deployment.
 | Floor supervisor  | `floor@everest.test`    | `floor123`    |
 | Quality inspector | `quality@everest.test`  | `quality123`  |
 | Accountant        | `accounts@everest.test` | `accounts123` |
+| Production manager | `production@everest.test` | `production123` |
 | Buyer             | `buyer@everest.test`    | `buyer123`    |
 
 Each role sees only its own menu, and the backend enforces role access (forbidden

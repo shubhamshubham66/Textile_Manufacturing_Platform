@@ -1,9 +1,22 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../auth/AuthContext.jsx";
 import Orders from "./app/Orders.jsx";
-import { PurchaseDashboard, SuppliersDesk, RawInventory } from "./app/purchase/PurchaseMain.jsx";
-import { PurchaseRequests, PurchaseOrders, MaterialReceiving } from "./app/purchase/PurchaseFlow.jsx";
-import { LowStockAlerts, MaterialRequirements, PurchaseReports, PurchaseNotifications } from "./app/purchase/PurchaseInsight.jsx";
+import {
+  PurchaseDashboard,
+  SuppliersDesk,
+  RawInventory,
+} from "./app/purchase/PurchaseMain.jsx";
+import {
+  PurchaseRequests,
+  PurchaseOrders,
+  MaterialReceiving,
+} from "./app/purchase/PurchaseFlow.jsx";
+import {
+  LowStockAlerts,
+  MaterialRequirements,
+  PurchaseReports,
+  PurchaseNotifications,
+} from "./app/purchase/PurchaseInsight.jsx";
 import Machines from "./app/Machines.jsx";
 import Production from "./app/Production.jsx";
 import Quality from "./app/Quality.jsx";
@@ -14,8 +27,19 @@ import SuperDashboard from "./app/super/SuperDashboard.jsx";
 import SuperManagers from "./app/super/SuperManagers.jsx";
 import SuperWorkers from "./app/super/SuperWorkers.jsx";
 import SuperTasks from "./app/super/SuperTasks.jsx";
-import { SuperProduction, SuperInventory, SuperQuality, SuperDispatch } from "./app/super/SuperMonitors.jsx";
-import { SuperAttendance, SuperAccounts, SuperAlerts, SuperActivity, SuperSettings } from "./app/super/SuperAdmin.jsx";
+import {
+  SuperProduction,
+  SuperInventory,
+  SuperQuality,
+  SuperDispatch,
+} from "./app/super/SuperMonitors.jsx";
+import {
+  SuperAttendance,
+  SuperAccounts,
+  SuperAlerts,
+  SuperActivity,
+  SuperSettings,
+} from "./app/super/SuperAdmin.jsx";
 import MyTasks from "./app/MyTasks.jsx";
 import { MenuIcon } from "../components/super/icons.jsx";
 import TopSearch from "../components/super/TopSearch.jsx";
@@ -28,6 +52,24 @@ import MasterData from "./app/MasterData.jsx";
 import MyOrders from "./app/MyOrders.jsx";
 import Invoices from "./app/Invoices.jsx";
 import Team from "./app/Team.jsx";
+import ProdDashboard from "./app/prod/ProdDashboard.jsx";
+import {
+  ProdOrders,
+  ProdPlanning,
+  ProdStages,
+} from "./app/prod/ProdOrders.jsx";
+import {
+  ProdMachines,
+  ProdWorkers,
+  ProdMonitoring,
+} from "./app/prod/ProdFloor.jsx";
+import {
+  ProdMaterials,
+  ProdQc,
+  ProdReports,
+  ProdNotifications,
+  ProdActivity,
+} from "./app/prod/ProdOps.jsx";
 import ChatBubble from "../components/ChatBubble.jsx";
 import { LiveProvider, useLiveStatus } from "../live/LiveContext.jsx";
 
@@ -74,6 +116,19 @@ const PAGES = {
   invoices: Invoices,
   team: Team,
   master_data: MasterData,
+  // Production Manager screens.
+  pm_dashboard: ProdDashboard,
+  pm_orders: ProdOrders,
+  pm_planning: ProdPlanning,
+  pm_stages: ProdStages,
+  pm_machines: ProdMachines,
+  pm_workers: ProdWorkers,
+  pm_monitoring: ProdMonitoring,
+  pm_materials: ProdMaterials,
+  pm_qc: ProdQc,
+  pm_reports: ProdReports,
+  pm_notifications: ProdNotifications,
+  pm_activity: ProdActivity,
 };
 
 // Role label lookup for display (keys match backend role names).
@@ -85,6 +140,7 @@ const ROLE_LABELS = {
   accountant: "Accountant",
   buyer: "Buyer",
   manager: "Supermanager",
+  production_manager: "Production manager",
 };
 
 // The app shell after login. The sidebar is built from the `menu` returned by the
