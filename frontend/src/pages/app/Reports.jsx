@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api.js";
+import { inr } from "../../lib/format.js";
 
 // Owner reports: cost per order, machine report, profit/loss (month).
 export default function Reports() {
@@ -33,7 +34,6 @@ export default function Reports() {
     load();
   }, []);
 
-  const inr = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
 
   return (
     <div className="module">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api.js";
+import { inr, statusLabel } from "../../lib/format.js";
 
 const STAGE_ORDER = [
   "draft",
@@ -34,7 +35,6 @@ export default function Dashboard() {
     load();
   }, []);
 
-  const inr = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
 
   if (loading)
     return (
@@ -102,7 +102,7 @@ export default function Dashboard() {
           <div className="bars">
             {stages.map(([stage, count]) => (
               <div className="bar-row" key={stage}>
-                <span className="bar-label">{stage}</span>
+                <span className="bar-label">{statusLabel(stage)}</span>
                 <div className="bar-track">
                   <div
                     className="bar-fill"
