@@ -74,3 +74,17 @@ def require_resource(resource: str):
         return user
 
     return _dep
+
+
+def get_current_buyer(user: User = Depends(get_current_user)) -> User:
+    """Dependency for buyer-portal endpoints.
+
+    Requires the user to be a buyer AND linked to a buyer record. Returns the
+    user; callers must scope every query to `user.buyer_id`. This is the single
+    place that guarantees a buyer can only ever reach their own data.
+    """
+    if user.role.name != rbac.ROLE_BUYER:
+        raise _forbidden("Only buyers may access the buyer portal")
+    if user.buyer_id is None:
+        raise _forbidden("This buyer login is not linked to a buyer account")
+    return user

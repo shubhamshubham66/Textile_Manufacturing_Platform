@@ -1366,3 +1366,102 @@ h4 {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ============================================================
+   Phase 9 — buyer portal (stepper) + chat panel
+   ============================================================ */
+.stepper {
+  display: flex;
+  gap: 0;
+  flex-wrap: wrap;
+}
+.step-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 90px;
+  position: relative;
+  color: var(--muted);
+}
+.step-dot::before {
+  content: "";
+  position: absolute;
+  top: 15px;
+  left: -50%;
+  width: 100%;
+  height: 2px;
+  background: var(--line);
+  z-index: 0;
+}
+.step-dot:first-child::before {
+  display: none;
+}
+.step-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  position: relative;
+  z-index: 1;
+}
+.step-name {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  text-align: center;
+}
+.step-dot.done .step-circle,
+.step-dot.current .step-circle {
+  background: var(--brand);
+  color: #fff;
+}
+.step-dot.done::before,
+.step-dot.current::before {
+  background: var(--brand);
+}
+.step-dot.current .step-name {
+  color: var(--brand-dark);
+  font-weight: 700;
+}
+
+/* Chat panel (mount point visuals) */
+.chat-panel {
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  width: 300px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.chat-panel-head {
+  background: var(--brand-dark);
+  color: #fff;
+  padding: 0.6rem 0.9rem;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.chat-panel-close {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.3rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.chat-panel-body {
+  padding: 1rem;
+  font-size: 0.9rem;
+}
+.chat-bubble:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
