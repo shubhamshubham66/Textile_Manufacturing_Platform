@@ -3,8 +3,8 @@
 Single source of truth for the current state of the project. Update this at the end
 of every phase. Keep it short and factual.
 
-**Last updated:** Phase 8 (Payments, Attendance & Reports) — 10 Oct 2026
-**Current phase:** Phase 8 — Payments, Attendance & Reports
+**Last updated:** Phase 9 (Buyer Portal) — 10 Oct 2026
+**Current phase:** Phase 9 — Buyer Portal
 
 ---
 
@@ -88,6 +88,10 @@ See `API_CONTRACT.md` for full request/response details.
 | GET    | `/api/reports/machines`     | Output + idle loss per machine   | Implemented (not runtime-tested here) |
 | GET    | `/api/reports/profit-loss`  | Month P&L                        | Implemented; ties out vs seed |
 | GET    | `/api/reports/dashboard`    | Owner dashboard cards            | Implemented (not runtime-tested here) |
+| GET    | `/api/buyer/orders`         | My orders (own only) + stage/ETA | Implemented; isolation test written |
+| GET    | `/api/buyer/orders/{id}`    | Track my order (404 if not mine) | Implemented; isolation test written |
+| GET    | `/api/buyer/invoices`       | My invoices (own only)           | Implemented; isolation test written |
+| GET    | `/api/buyer/invoices/{id}/pdf` | My invoice PDF (404 if not mine) | Implemented; isolation test written |
 | POST   | `/api/chatbot/message`      | AI assistant (mini dev, later)   | Defined (contract only) |
 
 ---
@@ -213,6 +217,20 @@ Tables (18): `roles`, `users`, `buyers`, `orders`, `order_items`, `yarn_stock`,
   - Frontend: `pages/app/{Payments,Attendance,Wages,Reports,Dashboard}.jsx`.
     Dashboard has KPI cards + a CSS bar chart (no chart dependency). AppShell now
     renders all 13 module resources.
+- **Phase 9 — Buyer Portal (code complete; isolation logic verified + test):**
+  - Backend: `deps.get_current_buyer` (buyer + linked buyer_id, else 403) and
+    `routers/buyer.py` (my orders w/ stage+progress+ETA, track one order, my
+    invoices, invoice PDF). **Every query scoped to `buyer_id`**; cross-buyer
+    single-resource access → 404 (no existence leak).
+  - Stage flow Confirmed→Weaving→Dyeing→Checking→Ready to ship→Shipped mapped from
+    order status; progress reuses the production service.
+  - **Explicit cross-buyer test:** `backend/tests/test_buyer_isolation.py` (two
+    buyers; each sees only their own orders/invoices; cross access → 404). Logic
+    also verified by a standalone simulation.
+  - Frontend: `pages/app/MyOrders.jsx` (list + track stepper + Ask AI) and
+    `pages/app/Invoices.jsx` (list + PDF). ChatBubble is now openable (mount point
+    only) and rendered on app pages too; "Ask AI" fires `etm:open-chat`.
+  - NOTE: chatbot widget itself is still the mini developer's — not implemented.
 
 ---
 
