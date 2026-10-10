@@ -1,55 +1,47 @@
-// AI assistant section: 3 how-to steps + a sample chat preview.
-// This is marketing/explainer content only — the real chatbot is built by the
-// mini developer and reached via our backend /api/chatbot/message.
+// AI assistant: how to use it in three steps, and a sample conversation.
+// The live assistant is the chat bubble (it talks to our backend, never to Dify
+// directly); the button below opens it.
 const STEPS = [
   {
-    n: 1,
+    title: "Open the chat bubble",
+    text: "It's in the corner of every page. Before login it answers how-to questions.",
+  },
+  {
     title: "Ask in plain words",
-    text: "Type a question like you'd ask a colleague — no menus to hunt through.",
+    text: "“Which machines are idle?” or “Is there enough blue yarn for ORD-2003?”",
   },
   {
-    n: 2,
-    title: "It reads live data",
-    text: "Logged in, the assistant answers from real factory data, limited to your role.",
-  },
-  {
-    n: 3,
-    title: "Act on the answer",
-    text: "Get stock warnings, order status and a daily owner summary without digging.",
+    title: "Get answers from live data",
+    text: "After login it reads real factory data, limited to your role. Buyers only see their own orders.",
   },
 ];
 
 const CHAT = [
-  {
-    from: "user",
-    text: "Which machines are idle right now and what's it costing?",
-  },
+  { from: "user", text: "Which machines are idle right now, and what's it costing?" },
   {
     from: "bot",
-    text: "3 machines are idle: Spin-02, Weave-03, Dye-02. Idle cost so far today ≈ ₹2,350. Spin-03 is in breakdown (motor fault).",
+    text: "Spin-02, Weave-03 and Dye-02 are idle, and Spin-03 is down with a motor fault. That's about ₹3,400 lost today.",
   },
-  { from: "user", text: "Is there enough blue yarn for order ORD-2003?" },
+  { from: "user", text: "Is there enough blue yarn for ORD-2003?" },
   {
     from: "bot",
-    text: "No — ORD-2003 needs 300 kg Cotton 40s (Blue) but only 90 kg is in stock. Raise a purchase for ~210 kg.",
+    text: "No. ORD-2003 needs 600 kg of Cotton 40s (Blue) and 90 kg is in stock. Raise a purchase for about 510 kg.",
   },
 ];
 
 export default function AiSection() {
   return (
-    <section id="ai" className="section section-alt">
-      <div className="section-inner">
-        <h2 className="section-title">Ask the AI assistant</h2>
-        <p className="section-sub">
-          A chat helper on every page — public FAQ before login, your live data
-          after.
-        </p>
-
-        <div className="ai-layout">
-          <ol className="ai-steps">
-            {STEPS.map((s) => (
-              <li key={s.n}>
-                <span className="ai-step-no">{s.n}</span>
+    <section id="ai" className="lp-section lp-section-tint">
+      <div className="lp-inner lp-ai">
+        <div>
+          <div className="lp-head lp-head-left">
+            <h2>Ask the mill a question</h2>
+            <p>An assistant that knows your stock, machines and orders.</p>
+          </div>
+          <ol className="lp-ai-steps">
+            {STEPS.map((s, i) => (
+              <li key={s.title}>
+                <span className="lp-ai-no">{i + 1}</span>
                 <div>
                   <h3>{s.title}</h3>
                   <p>{s.text}</p>
@@ -57,21 +49,28 @@ export default function AiSection() {
               </li>
             ))}
           </ol>
-
-          <div className="chat-preview" role="img" aria-label="Sample chat">
-            <div className="chat-head">
-              <span className="dot" /> Everest Assistant
-            </div>
-            <div className="chat-body">
-              {CHAT.map((msg, i) => (
-                <div key={i} className={`chat-msg ${msg.from}`}>
-                  {msg.text}
-                </div>
-              ))}
-            </div>
-            <div className="chat-foot muted">Sample conversation</div>
-          </div>
+          <button
+            type="button"
+            className="lp-btn lp-btn-primary"
+            onClick={() => window.dispatchEvent(new Event("etm:open-chat"))}
+          >
+            Open the assistant
+          </button>
         </div>
+
+        <figure className="lp-chat" aria-label="Sample conversation">
+          <div className="lp-chat-head">
+            <i /> Everest Assistant
+          </div>
+          <div className="lp-chat-body">
+            {CHAT.map((m, i) => (
+              <p key={i} className={`lp-msg lp-msg-${m.from}`}>
+                {m.text}
+              </p>
+            ))}
+          </div>
+          <figcaption>Sample conversation with demo data</figcaption>
+        </figure>
       </div>
     </section>
   );
