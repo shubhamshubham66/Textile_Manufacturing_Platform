@@ -3,8 +3,8 @@
 Single source of truth for the current state of the project. Update this at the end
 of every phase. Keep it short and factual.
 
-**Last updated:** Phase 2 (Stack, Setup & Database) — 10 Oct 2026
-**Current phase:** Phase 2 — Stack, Setup & Database
+**Last updated:** Phase 3 (Landing Page) — 10 Oct 2026
+**Current phase:** Phase 3 — Landing Page (public)
 
 ---
 
@@ -25,10 +25,14 @@ Decided in Phase 2. **Odoo is not required.**
 
 ## 2. Pages
 
-- `frontend/` — React + Vite app. Current screen: **backend health check** with
-  loading / ok / error states and a re-check button.
-- Planned (later phases): Landing, Orders, Yarn store, Production, Quality,
-  Dispatch, Payments, Attendance & wages, Owner reports, Buyer portal, AI chat bubble.
+- **Public landing page (`/`)** — Phase 3. Navbar (logo, section links, Demo,
+  Login; hamburger on mobile), Hero, About (problem/solution + unique point),
+  How it works (5 steps), Features (6 cards incl. idle-loss USP), AI section (3
+  steps + sample chat), Footer (Contact, Demo login, GitHub). Floating chat-bubble
+  **mount point only** (ChatBubble.jsx — mini dev fills it in).
+- **Health check (`/health`)** — Phase 2 backend/DB check, kept for demos.
+- Planned (later phases): Login, Orders, Yarn store, Production, Quality, Dispatch,
+  Payments, Attendance & wages, Owner reports, Buyer portal, real chat bubble.
 
 ---
 
@@ -85,6 +89,14 @@ the auth phase. A buyer login links to a buyer via `users.buyer_id`.
   - Frontend scaffold: Vite + React, health-check screen with loading/ok/error,
     `/api` proxy to backend.
   - DB models for all 18 tables + create + seed scripts.
+- **Phase 3 — Landing Page (code complete, not runtime-tested here):**
+  - Components: `Navbar, Hero, About, HowItWorks, Features, AiSection, Footer,
+    ChatBubble` + pages `Landing`, `HealthCheck`. Path-based routing in `App.jsx`.
+  - Responsive (hamburger menu on mobile; logo + Login stay visible), consistent
+    design system in `index.css`.
+  - All navbar links scroll to real sections (verified ids match). No dead buttons.
+  - Chat bubble is a disabled mount point only — mini dev builds the chatbot.
+  - JSX/CSS validated with Prettier (parses + formatted).
 
 ---
 
