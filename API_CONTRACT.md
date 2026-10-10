@@ -534,6 +534,37 @@ and `profit_loss`.
 
 ---
 
+## Buyer portal (role: buyer — resources `my_orders` / `invoices`)
+
+Every endpoint resolves the logged-in buyer via the token and scopes all data to
+their `buyer_id`. A buyer can **never** see another buyer's data — single-resource
+lookups that don't belong to the buyer return **404** (so existence isn't leaked).
+
+### GET /api/buyer/orders
+The buyer's own orders with a buyer-facing stage, progress and ETA:
+```json
+{ "id": 1, "order_no": "ORD-2001", "fabric_type": "Cotton Shirting",
+  "colour": "White", "quantity_meters": 2000, "status": "in_production",
+  "stage": "Weaving", "stage_index": 1, "progress_percent": 36.7,
+  "expected_delivery": "2026-10-24" }
+```
+Stage flow: Confirmed → Weaving → Dyeing → Checking → Ready to ship → Shipped
+(mapped from internal order status).
+
+### GET /api/buyer/orders/{id}
+Track one of the buyer's own orders (adds `stage_flow` for the stepper). **404** if
+the order isn't theirs.
+
+### GET /api/buyer/invoices
+The buyer's own invoices (invoice_no, order_no, subtotal, tax, total, status).
+
+### GET /api/buyer/invoices/{id}/pdf
+The buyer's own invoice as a PDF. **404** if the invoice isn't theirs.
+
+> Cross-buyer isolation is covered by `backend/tests/test_buyer_isolation.py`.
+
+---
+
 ### Role → menu / resource map (one config, enforced server-side)
 
 | Role              | Menu (resource)                                                     |
