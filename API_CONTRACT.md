@@ -271,6 +271,92 @@ Suppliers for the receive/purchase forms: `[{ "id": 1, "name": "Gujarat Yarn Sup
 
 ---
 
+## Production (role: floor_supervisor — resources `machines` / `production`)
+
+### GET /api/production/machines
+
+Every machine with status, assigned order and progress:
+
+```json
+{ "id": 4, "name": "Weave-01", "type": "weaving", "current_status": "running",
+  "hourly_cost": 400, "status_since": "2026-10-10T...", "current_order_id": 3,
+  "current_order_no": "ORD-2003", "current_stage": "weaving",
+  "progress_percent": 36.7 }
+```
+
+### GET /api/production/orders
+
+Assignable orders (confirmed / in_production / in_quality) for the assign form.
+
+### POST /api/production/machines/{id}/assign
+
+Link an order + stage to a machine. Moves a `confirmed` order to `in_production`.
+
+```json
+{ "order_id": 3, "stage": "weaving" }
+```
+
+`stage` ∈ spinning|weaving|dyeing. Returns the updated machine.
+
+### POST /api/production/machines/{id}/status
+
+Change status; writes a `machine_status_log` row (timestamped) and **closes the
+previous open window**. A **reason is required** for `idle` and `breakdown`.
+
+```json
+{ "status": "idle", "reason": "No yarn" }
+```
+
+| Field    | Type   | Required | Notes                                        |
+| -------- | ------ | -------- | -------------------------------------------- |
+| `status` | string | yes      | running\|idle\|breakdown.                    |
+| `reason` | string | cond.    | Required when status is idle or breakdown.   |
+
+`400 VALIDATION_ERROR` if idle/breakdown without a reason. Returns the machine.
+
+### POST /api/production/output
+
+Log metres produced (per machine/shift). Updates order progress.
+
+```json
+{ "machine_id": 4, "order_id": 3, "output_meters": 600, "shift": "morning" }
+```
+
+Response: `{ "ok": true, "order_no": "ORD-2003", "logged_meters": 600,
+"order_progress_percent": 40.0 }`.
+
+### GET /api/production/output/today
+
+Today's output per machine: `[{ "machine_id": 4, "machine_name": "Weave-01",
+"output_meters_today": 600 }]`.
+
+### PATCH /api/production/machines/{id}/hourly-cost
+
+Admin setting — hourly cost (power + wage + overhead), ₹/hr: `{ "hourly_cost": 400 }`.
+
+### GET /api/production/idle-loss
+
+Idle-machine loss (our USP): per-machine idle/breakdown hours × hourly cost, a
+grand total, and the top reasons by lost hours.
+
+```json
+{
+  "total_loss_rupees": 4525.0,
+  "total_lost_hours": 11.5,
+  "per_machine": [
+    { "machine_id": 3, "machine_name": "Spin-03", "current_status": "breakdown",
+      "hourly_cost": 250, "idle_hours": 0, "breakdown_hours": 4,
+      "lost_hours": 4, "loss_rupees": 1000 }
+  ],
+  "top_reasons": [ { "reason": "Motor fault", "hours": 4.0 } ]
+}
+```
+
+Loss = Σ(window hours) × hourly_cost over idle/breakdown logs; open windows run to
+"now". Verified against hand calculations.
+
+---
+
 ### Role → menu / resource map (one config, enforced server-side)
 
 | Role              | Menu (resource)                                                     |

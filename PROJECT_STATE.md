@@ -3,8 +3,8 @@
 Single source of truth for the current state of the project. Update this at the end
 of every phase. Keep it short and factual.
 
-**Last updated:** Phase 5 (Orders & Yarn Store) — 10 Oct 2026
-**Current phase:** Phase 5 — Orders & Yarn Store
+**Last updated:** Phase 6 (Production & Idle Loss) — 10 Oct 2026
+**Current phase:** Phase 6 — Production & Idle Loss
 
 ---
 
@@ -59,6 +59,14 @@ See `API_CONTRACT.md` for full request/response details.
 | POST   | `/api/yarn/purchase`        | Raise purchase order             | Implemented (not runtime-tested here) |
 | GET    | `/api/yarn/purchase`        | List purchase orders             | Implemented (not runtime-tested here) |
 | GET    | `/api/yarn/suppliers`       | Suppliers for forms              | Implemented (not runtime-tested here) |
+| GET    | `/api/production/machines`  | Machines: status, order, progress | Implemented (not runtime-tested here) |
+| GET    | `/api/production/orders`    | Assignable orders                | Implemented (not runtime-tested here) |
+| POST   | `/api/production/machines/{id}/assign` | Assign order + stage  | Implemented (not runtime-tested here) |
+| POST   | `/api/production/machines/{id}/status` | Change status (logs + reason) | Implemented (not runtime-tested here) |
+| POST   | `/api/production/output`    | Log metres produced              | Implemented (not runtime-tested here) |
+| GET    | `/api/production/output/today` | Today's output per machine    | Implemented (not runtime-tested here) |
+| PATCH  | `/api/production/machines/{id}/hourly-cost` | Set hourly cost | Implemented (not runtime-tested here) |
+| GET    | `/api/production/idle-loss` | Idle loss ₹ per machine + total (USP) | Implemented; math verified vs hand calc |
 | POST   | `/api/chatbot/message`      | AI assistant (mini dev, later)   | Defined (contract only) |
 
 ---
@@ -143,6 +151,19 @@ Tables (18): `roles`, `users`, `buyers`, `orders`, `order_items`, `yarn_stock`,
   - API_CONTRACT: orders + yarn endpoints documented.
   - Yarn estimation: required_kg = quantity_meters × 0.2 (configurable), matched by
     colour against stock.
+- **Phase 6 — Production & Idle Loss (code complete; math verified):**
+  - Model: `machines` gains `current_order_id` + `current_stage`.
+  - Backend: `services/production.py` (progress + idle-loss math) and
+    `routers/production.py` (machines list, assign, update-status with log
+    open/close + required reason for idle/breakdown, log output, today's output,
+    hourly-cost PATCH, idle-loss dashboard with top reasons).
+  - Frontend: `pages/app/Machines.jsx` (status/order/progress + inline assign,
+    update-status, hourly-cost) and `pages/app/Production.jsx` (idle-loss card,
+    log output, today's output).
+  - Idle-loss USP: loss = Σ(idle/breakdown window hours) × hourly_cost. **Verified
+    against hand calculations** (standalone assertion run). Order progress =
+    produced metres / ordered metres (capped 100).
+  - Seed: running machines assigned current orders/stages matching their output.
 
 ---
 
