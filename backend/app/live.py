@@ -31,17 +31,20 @@ STORE = rbac.ROLE_STORE_MANAGER
 FLOOR = rbac.ROLE_FLOOR_SUPERVISOR
 QUALITY = rbac.ROLE_QUALITY_INSPECTOR
 ACCOUNTS = rbac.ROLE_ACCOUNTANT
-STAFF = [OWNER, STORE, FLOOR, QUALITY, ACCOUNTS]
+MANAGER = rbac.ROLE_MANAGER
+STAFF = [OWNER, MANAGER, STORE, FLOOR, QUALITY, ACCOUNTS]
 
 # Topic -> roles whose screens should refresh for it.
 TOPIC_ROLES = {
-    "machines": [OWNER, FLOOR],
-    "production": [OWNER, FLOOR, QUALITY],
+    "machines": [OWNER, MANAGER, FLOOR],
+    "production": [OWNER, MANAGER, FLOOR, QUALITY],
     "orders": STAFF,
-    "yarn": [OWNER, STORE],
-    "quality": [OWNER, QUALITY, STORE],
-    "payments": [OWNER, ACCOUNTS],
-    "wages": [OWNER, ACCOUNTS],
+    "yarn": [OWNER, MANAGER, STORE],
+    "quality": [OWNER, MANAGER, QUALITY, STORE],
+    "payments": [OWNER, MANAGER, ACCOUNTS],
+    "wages": [OWNER, MANAGER, ACCOUNTS],
+    # Supermanager instructions to department managers.
+    "tasks": [MANAGER, STORE, FLOOR, QUALITY, ACCOUNTS],
 }
 
 ORDER_STAGE_LABEL = {
@@ -206,10 +209,18 @@ def _collect(session: Session) -> list[LiveEvent]:
             elif isinstance(obj, m.Employee):
                 out.append(LiveEvent("wages", TOPIC_ROLES["wages"]))
 
+            elif isinstance(obj, m.Task):
+                if is_new:
+                    out.append(LiveEvent("tasks", TOPIC_ROLES["tasks"], f"New instruction: {obj.title}", "info",
+                                         notify=True, notify_roles=[STORE, FLOOR, QUALITY, ACCOUNTS]))
+                else:
+                    out.append(LiveEvent("tasks", TOPIC_ROLES["tasks"], f"Task updated: {obj.title} ({obj.status.replace('_', ' ')})",
+                                         "info", notify=True, notify_roles=[MANAGER]))
+
             elif isinstance(obj, m.Order):
                 if is_new:
                     out.append(LiveEvent("orders", TOPIC_ROLES["orders"], f"New order {obj.order_no}", "info",
-                                         notify=True, notify_roles=[OWNER, STORE], buyer_id=obj.buyer_id,
+                                         notify=True, notify_roles=[OWNER, MANAGER, STORE], buyer_id=obj.buyer_id,
                                          buyer_message=f"Order {obj.order_no} was placed"))
                 else:
                     ch = _changed(obj, "status", session)

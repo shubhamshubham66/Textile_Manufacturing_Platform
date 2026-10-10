@@ -43,6 +43,8 @@ def get_current_user(
     user = db.query(User).filter(User.id == int(payload["sub"])).first()
     if user is None or not user.is_active:
         raise _unauthorized("User not found or inactive")
+    # Who is acting, for the automatic activity log (app/activity.py).
+    db.info["actor"] = {"id": user.id, "name": user.name, "role": user.role.name}
     return user
 
 
@@ -88,3 +90,16 @@ def get_current_buyer(user: User = Depends(get_current_user)) -> User:
     if user.buyer_id is None:
         raise _forbidden("This buyer login is not linked to a buyer account")
     return user
+
+
+def require_any_resource(*resources: str):
+    """Dependency: allow a role permitted for ANY of the given resources."""
+
+    def _dep(user: User = Depends(get_current_user)) -> User:
+        if not any(rbac.can_access(user.role.name, r) for r in resources):
+            raise _forbidden(
+                f"Role '{user.role.name}' may not access '{resources[0]}'"
+            )
+        return user
+
+    return _dep

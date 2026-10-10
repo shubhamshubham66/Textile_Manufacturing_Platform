@@ -22,17 +22,21 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import get_db
-from app.deps import require_resource
+from app.deps import get_current_user, require_any_resource, require_resource
 from app.models import (
     Buyer,
     Machine,
     Order,
     OrderItem,
+    ProductionLog,
     QualityInspection,
     Roll,
+    User,
     YarnStock,
 )
 from app.services.production import order_display_progress
+from app.services.tasks import create_order_tasks
+from app.settings_store import get_setting
 
 settings = get_settings()
 router = APIRouter(prefix="/api/orders", tags=["orders"])
@@ -73,6 +77,8 @@ class OrderOut(BaseModel):
     deadline: date | None
     status: str
     created_at: datetime
+    review_note: str | None = None
+    buyer_note: str | None = None
 
 
 class CheckYarnOut(BaseModel):
@@ -100,6 +106,8 @@ def _order_out(o: Order) -> OrderOut:
         deadline=o.deadline,
         status=o.status,
         created_at=o.created_at,
+        review_note=o.review_note,
+        buyer_note=o.buyer_note,
     )
 
 
@@ -126,7 +134,7 @@ def _available_kg(db: Session, colour: str, yarn_type: str | None) -> float:
 def list_orders(
     status: str | None = Query(None),
     q: str | None = Query(None, description="search order no / fabric / colour"),
-    _=Depends(require_resource("orders")),
+    _=Depends(require_any_resource("orders", "order_desk")),
     db: Session = Depends(get_db),
 ):
     query = db.query(Order)
@@ -148,7 +156,7 @@ def list_orders(
 @router.post("", response_model=OrderOut, status_code=201)
 def create_order(
     body: OrderCreate,
-    _=Depends(require_resource("orders")),
+    _=Depends(require_resource("order_desk")),
     db: Session = Depends(get_db),
 ):
     buyer = db.query(Buyer).filter(Buyer.id == body.buyer_id).first()
@@ -191,7 +199,7 @@ class BuyerOut(BaseModel):
 
 @router.get("/_meta/buyers", response_model=list[BuyerOut])
 def list_buyers(
-    _=Depends(require_resource("orders")),
+    _=Depends(require_any_resource("orders", "order_desk")),
     db: Session = Depends(get_db),
 ):
     """Buyers for the New order form (owner only)."""
@@ -202,7 +210,7 @@ def list_buyers(
 @router.get("/{order_id}", response_model=OrderOut)
 def get_order(
     order_id: int,
-    _=Depends(require_resource("orders")),
+    _=Depends(require_any_resource("orders", "order_desk")),
     db: Session = Depends(get_db),
 ):
     order = db.query(Order).filter(Order.id == order_id).first()
@@ -213,6 +221,7 @@ def get_order(
 
 STAGE_FLOW = [
     "draft",
+    "pending_review",
     "confirmed",
     "in_production",
     "in_quality",
@@ -225,7 +234,7 @@ STAGE_FLOW = [
 @router.get("/{order_id}/track")
 def track_order(
     order_id: int,
-    _=Depends(require_resource("orders")),
+    _=Depends(require_any_resource("orders", "order_desk")),
     db: Session = Depends(get_db),
 ):
     """Owner order tracker: stage, progress, late/on-track, and the order's rolls
@@ -290,13 +299,16 @@ def track_order(
 @router.get("/{order_id}/check-yarn", response_model=CheckYarnOut)
 def check_yarn(
     order_id: int,
-    _=Depends(require_resource("orders")),
+    _=Depends(require_any_resource("orders", "order_desk")),
     db: Session = Depends(get_db),
 ):
     order = db.query(Order).filter(Order.id == order_id).first()
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
+    return _yarn_check(db, order)
 
+
+def _yarn_check(db: Session, order: Order) -> CheckYarnOut:
     item = (
         db.query(OrderItem).filter(OrderItem.order_id == order.id).first()
     )
@@ -328,28 +340,165 @@ def check_yarn(
     )
 
 
+class ConfirmIn(BaseModel):
+    unit_price: float | None = Field(default=None, gt=0)  # set the rate for a buyer request
+    deadline: date | None = None
+
+
+class ReasonIn(BaseModel):
+    reason: str = Field(min_length=3, max_length=500)
+
+
+# States the Supermanager can still decide on.
+_REVIEWABLE = ("draft", "pending_review", "clarification")
+
+
+def _missing_info(order: Order) -> list[str]:
+    """Required information an order must have before it can be confirmed."""
+    missing = []
+    if not order.fabric_type or not order.colour:
+        missing.append("fabric type and colour")
+    if not order.quantity_meters or float(order.quantity_meters) <= 0:
+        missing.append("quantity")
+    if not order.unit_price or float(order.unit_price) <= 0:
+        missing.append("rate (₹/metre)")
+    if order.deadline is None:
+        missing.append("delivery deadline")
+    elif order.deadline < date.today():
+        missing.append("a deadline that is not already past")
+    return missing
+
+
+def _capacity(db: Session, order: Order) -> dict:
+    """Can the weaving floor make this order by its deadline, after the orders
+    already confirmed ahead of it? (estimate from the capacity setting)"""
+    per_day = float(get_setting(db, "capacity_m_per_machine_day") or 0)
+    looms = db.query(Machine).filter(Machine.type == "weaving", Machine.current_status != "breakdown").count()
+    ahead = 0.0
+    for o in db.query(Order).filter(Order.status.in_(_CONFIRMED_STATES), Order.id != order.id).all():
+        woven = db.query(func.coalesce(func.sum(ProductionLog.output_meters), 0)).filter(
+            ProductionLog.order_id == o.id, ProductionLog.stage == "weaving").scalar() or 0
+        ahead += max(0.0, float(o.quantity_meters) - float(woven))
+    need = ahead + float(order.quantity_meters or 0)
+    days = (order.deadline - date.today()).days if order.deadline else None
+    can_make = looms * per_day * days if days is not None and days > 0 else 0.0
+    ok = days is not None and days > 0 and can_make >= need
+    if days is None:
+        msg = "No deadline set, so capacity cannot be checked."
+    elif days <= 0:
+        msg = "The deadline is today or already past."
+    else:
+        msg = (f"{looms} working looms × {per_day:,.0f} m/day × {days} days = {can_make:,.0f} m; "
+               f"needed {need:,.0f} m ({ahead:,.0f} m of earlier orders + {float(order.quantity_meters):,.0f} m).")
+    return {"ok": ok, "message": msg, "looms": looms, "per_machine_day": per_day,
+            "days_left": days, "capacity_m": round(can_make, 2), "needed_m": round(need, 2),
+            "ahead_m": round(ahead, 2)}
+
+
+@router.get("/{order_id}/review")
+def review_order(
+    order_id: int,
+    _=Depends(require_resource("order_desk")),
+    db: Session = Depends(get_db),
+):
+    """Everything the Supermanager checks before deciding: missing information,
+    yarn, production capacity and the deadline."""
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return {
+        "order": _order_out(order),
+        "missing": _missing_info(order),
+        "yarn": _yarn_check(db, order),
+        "capacity": _capacity(db, order),
+        "can_decide": order.status in _REVIEWABLE,
+    }
+
+
 @router.post("/{order_id}/confirm", response_model=OrderOut)
 def confirm_order(
     order_id: int,
-    _=Depends(require_resource("orders")),
+    body: ConfirmIn | None = None,
+    user: User = Depends(get_current_user),
+    _=Depends(require_resource("order_desk")),
+    db: Session = Depends(get_db),
+):
+    """Confirm an order. Refused (400) while required information is missing.
+    On confirmation each department gets its instruction for the order."""
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status == "confirmed":
+        return _order_out(order)
+    if order.status not in _REVIEWABLE:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Order is '{order.status}' and cannot be confirmed",
+        )
+    if body and body.unit_price:
+        order.unit_price = body.unit_price
+    if body and body.deadline:
+        order.deadline = body.deadline
+    missing = _missing_info(order)
+    if missing:
+        raise HTTPException(status_code=400, detail="Cannot confirm yet — missing " + ", ".join(missing) + ".")
+    yarn = _yarn_check(db, order)
+    order.status = "confirmed"
+    order.reviewed_by_user_id = user.id
+    order.reviewed_at = datetime.utcnow()
+    create_order_tasks(db, order, user.id, yarn.short_by_kg)
+    db.commit()
+    db.refresh(order)
+    return _order_out(order)
+
+
+@router.post("/{order_id}/reject", response_model=OrderOut)
+def reject_order(
+    order_id: int,
+    body: ReasonIn,
+    user: User = Depends(get_current_user),
+    _=Depends(require_resource("order_desk")),
     db: Session = Depends(get_db),
 ):
     order = db.query(Order).filter(Order.id == order_id).first()
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
-    if order.status not in ("draft", "confirmed"):
-        raise HTTPException(
-            status_code=409,
-            detail=f"Order is '{order.status}' and cannot be confirmed",
-        )
-    order.status = "confirmed"
+    if order.status not in _REVIEWABLE:
+        raise HTTPException(status_code=409, detail=f"Order is '{order.status}' and cannot be rejected")
+    order.review_note = body.reason.strip()
+    order.status = "rejected"
+    order.reviewed_by_user_id = user.id
+    order.reviewed_at = datetime.utcnow()
+    db.commit()
+    db.refresh(order)
+    return _order_out(order)
+
+
+@router.post("/{order_id}/clarify", response_model=OrderOut)
+def ask_clarification(
+    order_id: int,
+    body: ReasonIn,
+    user: User = Depends(get_current_user),
+    _=Depends(require_resource("order_desk")),
+    db: Session = Depends(get_db),
+):
+    """Send an incomplete order back to the buyer with a question."""
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status not in ("draft", "pending_review"):
+        raise HTTPException(status_code=409, detail=f"Order is '{order.status}' — clarification can only be asked before a decision")
+    order.review_note = body.reason.strip()
+    order.status = "clarification"
+    order.reviewed_by_user_id = user.id
+    order.reviewed_at = datetime.utcnow()
     db.commit()
     db.refresh(order)
     return _order_out(order)
 
 
 # Orders may be edited or cancelled only BEFORE production starts.
-_EDITABLE_STATES = ("draft", "confirmed")
+_EDITABLE_STATES = ("draft", "pending_review", "clarification", "confirmed")
 
 
 class OrderEdit(BaseModel):
@@ -373,7 +522,7 @@ class OrderEdit(BaseModel):
 def edit_order(
     order_id: int,
     body: OrderEdit,
-    _=Depends(require_resource("orders")),
+    _=Depends(require_resource("order_desk")),
     db: Session = Depends(get_db),
 ):
     """Correct an order before production. Blocked once it is in production or
@@ -410,7 +559,7 @@ def edit_order(
 @router.post("/{order_id}/cancel", response_model=OrderOut)
 def cancel_order(
     order_id: int,
-    _=Depends(require_resource("orders")),
+    _=Depends(require_resource("order_desk")),
     db: Session = Depends(get_db),
 ):
     """Cancel an order before production (draft/confirmed only). A cancelled

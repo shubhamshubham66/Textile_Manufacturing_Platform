@@ -58,6 +58,9 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    # Department a department manager runs (purchase|production|qc|store|
+    # dispatch|accounts). None = the default for the user's role.
+    department: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
     role: Mapped["Role"] = relationship(back_populates="users")
     buyer: Mapped["Buyer | None"] = relationship(back_populates="users")
@@ -96,6 +99,11 @@ class Order(Base):
     status: Mapped[str] = mapped_column(String(30), default="draft")
     unit_price: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    # Review by the Supermanager: reason for reject / clarification asked.
+    review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    buyer_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     buyer: Mapped["Buyer"] = relationship(back_populates="orders")
     items: Mapped[list["OrderItem"]] = relationship(back_populates="order")
@@ -355,6 +363,9 @@ class Employee(Base):
     role_on_floor: Mapped[str | None] = mapped_column(String(80), nullable=True)
     daily_wage: Mapped[float] = mapped_column(Numeric(10, 2), default=0)
     phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    department: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    manager_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     attendance: Mapped[list["Attendance"]] = relationship(back_populates="employee")
     wages: Mapped[list["Wage"]] = relationship(back_populates="employee")
@@ -403,3 +414,61 @@ class EmailOtp(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime)
     sent_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
+
+
+# --------------------------------------------------------------------------- #
+# Supermanager: instructions (tasks), activity log, settings
+# --------------------------------------------------------------------------- #
+class Task(Base):
+    """An instruction from the Supermanager to a department manager."""
+
+    __tablename__ = "tasks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(160))
+    details: Mapped[str | None] = mapped_column(Text, nullable=True)
+    department: Mapped[str] = mapped_column(String(30))
+    manager_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    order_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Worker the department manager handed this task to (optional).
+    worker_employee_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    priority: Mapped[str] = mapped_column(String(10), default="medium")  # low|medium|high|urgent
+    deadline: Mapped[date | None] = mapped_column(Date, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending|in_progress|completed
+    created_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    auto: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+
+class TaskUpdate(Base):
+    __tablename__ = "task_updates"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"))
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(20))
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+
+class ActivityLog(Base):
+    """Append-only audit trail of important actions (written automatically)."""
+
+    __tablename__ = "activity_logs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    user_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    user_role: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    category: Mapped[str] = mapped_column(String(30))  # order|stock|qc|dispatch|attendance|team|worker|task|payment
+    action: Mapped[str] = mapped_column(String(60))
+    details: Mapped[str] = mapped_column(Text, default="")
+
+
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(60), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, default="")

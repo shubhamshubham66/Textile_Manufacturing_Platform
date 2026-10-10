@@ -200,7 +200,7 @@ export default function Dashboard() {
               )
             }
           >
-            ＋ Create manager
+            ＋ Create supermanager
           </button>
           <MonthPicker value={month} onChange={setMonth} />
           <button
@@ -292,7 +292,7 @@ export default function Dashboard() {
         </div>
         {(counts.all ?? 0) === 0 ? (
           <p className="muted">
-            No orders yet. Orders appear here as the Store manager records them.
+            No orders yet. Orders appear here as the Supermanager records them.
           </p>
         ) : rows.length === 0 ? (
           <p className="muted">No orders match this filter.</p>

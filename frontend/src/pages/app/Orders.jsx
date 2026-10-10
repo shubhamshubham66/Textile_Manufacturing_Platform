@@ -5,7 +5,7 @@ import { inr, qty, ddmmyyyy, statusLabel } from "../../lib/format.js";
 import "../../owner.css";
 
 // Owner Orders — READ ONLY. The owner views orders and tracks them; orders are
-// created, confirmed and cancelled by the Store manager (not here). No New-order
+// created, confirmed and cancelled by the Supermanager (not here). No New-order
 // form, no Check yarn, no Confirm/Edit/Cancel on this screen.
 
 const STATUSES = [
@@ -93,7 +93,7 @@ export default function Orders() {
     <div className="module owner-page">
       <h2>Orders</h2>
       <p className="muted">
-        Read-only view. Orders are created and confirmed by the Store manager.
+        Read-only view. Orders are created and confirmed by the Supermanager.
       </p>
 
       <section className="panel">

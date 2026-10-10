@@ -685,3 +685,15 @@
   opacity: 0.4;
   cursor: default;
 }
+
+/* Manager order desk: row buttons wrap inside the cell instead of overflowing. */
+.order-desk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 200px;
+}
+.order-desk-actions .btn {
+  white-space: nowrap;
+}

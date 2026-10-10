@@ -416,14 +416,18 @@ def seed() -> None:
         # ---- Employees, attendance, wages (October) ----
         employees = [
             m.Employee(name="Imran Shaikh", role_on_floor="Spinning operator",
-                       daily_wage=550, phone="+91 90001 30001"),
+                       daily_wage=550, phone="+91 90001 30001", department="production"),
             m.Employee(name="Kavita Jadhav", role_on_floor="Weaving operator",
-                       daily_wage=600, phone="+91 90001 30002"),
+                       daily_wage=600, phone="+91 90001 30002", department="production"),
             m.Employee(name="Suresh Yadav", role_on_floor="Dyeing operator",
-                       daily_wage=650, phone="+91 90001 30003"),
+                       daily_wage=650, phone="+91 90001 30003", department="production"),
             m.Employee(name="Anita Kumari", role_on_floor="Quality helper",
-                       daily_wage=500, phone="+91 90001 30004"),
+                       daily_wage=500, phone="+91 90001 30004", department="qc"),
         ]
+        # Each worker reports to the manager of their department.
+        db.flush()
+        for e in employees:
+            e.manager_user_id = staff[2].id if e.department == "production" else staff[3].id
         db.add_all(employees)
         db.flush()
 

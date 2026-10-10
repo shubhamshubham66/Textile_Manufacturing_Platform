@@ -66,6 +66,9 @@ export function monthLabel(value) {
 // Internal status codes -> readable labels ("in_production" -> "In production").
 const STATUS_LABELS = {
   draft: "Draft",
+  pending_review: "Pending review",
+  clarification: "Needs clarification",
+  rejected: "Rejected",
   confirmed: "Confirmed",
   in_production: "In production",
   in_quality: "In quality check",

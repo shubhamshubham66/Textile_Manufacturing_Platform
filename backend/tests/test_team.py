@@ -83,7 +83,7 @@ def test_owner_creates_manager_who_logs_in_with_id(env):
 
     r = login(c, "mgr-001", "Mgr2026abc")  # ID is case-insensitive
     assert r.status_code == 200 and r.json()["user"]["role"] == "manager"
-    assert r.json()["menu"][0]["path"] == "/app/home"
+    assert r.json()["menu"][0]["path"] == "/app/super"
 
 
 def test_rules(env):
