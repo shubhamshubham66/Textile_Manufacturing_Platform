@@ -635,3 +635,53 @@
   text-align: right;
   white-space: nowrap;
 }
+.owner-money-num {
+  display: inline-grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-right: 0.45rem;
+  border-radius: 50%;
+  background: var(--card-accent);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.owner-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+}
+.owner-pager-btns {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+.owner-pager-btns button {
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.owner-pager-btns button:hover:not(:disabled) {
+  border-color: var(--brand);
+}
+.owner-pager-btns button.is-current {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  font-weight: 700;
+}
+.owner-pager-btns button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

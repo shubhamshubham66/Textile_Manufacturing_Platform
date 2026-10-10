@@ -111,9 +111,9 @@ export default function OwnerMoney() {
           <label className="owner-month">
             <span>Show</span>
             <select value={view} onChange={(e) => setView(e.target.value)}>
-              {VIEWS.map(([k, label]) => (
+              {VIEWS.map(([k, label], i) => (
                 <option key={k} value={k}>
-                  {label}
+                  {i + 1}. {label}
                 </option>
               ))}
             </select>
@@ -134,7 +134,7 @@ export default function OwnerMoney() {
 
       {/* The three totals double as tabs. */}
       <div className="owner-money-cards">
-        {VIEWS.map(([k, label]) => (
+        {VIEWS.map(([k, label], i) => (
           <button
             key={k}
             type="button"
@@ -142,7 +142,10 @@ export default function OwnerMoney() {
             onClick={() => setView(k)}
             aria-pressed={view === k}
           >
-            <span className="owner-money-label">{label}</span>
+            <span className="owner-money-label">
+              <span className="owner-money-num">{i + 1}</span>
+              {label}
+            </span>
             <strong className="owner-money-value">
               {totals ? inr(totals[k]) : "—"}
             </strong>
@@ -231,9 +234,70 @@ export default function OwnerMoney() {
   );
 }
 
+// 10 rows per page; page buttons 1, 2, 3 … under a table.
+const PAGE_SIZE = 10;
+
+function usePaged(rows, resetKey) {
+  const [page, setPage] = useState(1);
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  useEffect(() => setPage(1), [resetKey]);
+  const cur = Math.min(page, pages);
+  return {
+    page: cur,
+    pages,
+    setPage,
+    rows: rows.slice((cur - 1) * PAGE_SIZE, cur * PAGE_SIZE),
+    total: rows.length,
+  };
+}
+
+function Pager({ p }) {
+  if (p.pages <= 1) return null;
+  const from = (p.page - 1) * PAGE_SIZE + 1;
+  const to = Math.min(p.page * PAGE_SIZE, p.total);
+  return (
+    <nav className="owner-pager" aria-label="Pages">
+      <span className="muted">
+        {from}–{to} of {p.total}
+      </span>
+      <div className="owner-pager-btns">
+        <button
+          type="button"
+          onClick={() => p.setPage(p.page - 1)}
+          disabled={p.page === 1}
+          aria-label="Previous page"
+        >
+          ‹
+        </button>
+        {Array.from({ length: p.pages }, (_, i) => i + 1).map((n) => (
+          <button
+            key={n}
+            type="button"
+            className={n === p.page ? "is-current" : ""}
+            aria-current={n === p.page ? "page" : undefined}
+            onClick={() => p.setPage(n)}
+          >
+            {n}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => p.setPage(p.page + 1)}
+          disabled={p.page === p.pages}
+          aria-label="Next page"
+        >
+          ›
+        </button>
+      </div>
+    </nav>
+  );
+}
+
 function PaymentRows({ rows, onVoid, emptyText }) {
+  const pg = usePaged(rows, emptyText);
   if (rows.length === 0) return <p className="muted">{emptyText}</p>;
   return (
+    <>
     <div className="owner-table-wrap">
       <table className="data-table">
         <thead>
@@ -246,7 +310,7 @@ function PaymentRows({ rows, onVoid, emptyText }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((p) => (
+          {pg.rows.map((p) => (
             <tr key={p.id} className={p.voided ? "owner-voided" : ""}>
               <td>{ddmmyyyy(p.paid_at)}</td>
               <td>{p.party || "—"}</td>
@@ -271,11 +335,14 @@ function PaymentRows({ rows, onVoid, emptyText }) {
         </tbody>
       </table>
     </div>
+    <Pager p={pg} />
+    </>
   );
 }
 
 function RawView({ data, pays, month, onVoid }) {
   const bills = data.bills.bills.filter((b) => inMonth(b.date, month));
+  const billsPg = usePaged(bills, month);
   const raised = bills
     .filter((b) => b.status !== "cancelled")
     .reduce((t, b) => t + b.amount, 0);
@@ -305,6 +372,7 @@ function RawView({ data, pays, month, onVoid }) {
         {bills.length === 0 ? (
           <p className="muted">No bills raised in {monthLabel(month)}.</p>
         ) : (
+          <>
           <div className="owner-table-wrap">
             <table className="data-table">
               <thead>
@@ -318,7 +386,7 @@ function RawView({ data, pays, month, onVoid }) {
                 </tr>
               </thead>
               <tbody>
-                {bills.map((b) => (
+                {billsPg.rows.map((b) => (
                   <tr key={b.bill_no}>
                     <td>{ddmmyyyy(b.date)}</td>
                     <td>{b.bill_no}</td>
@@ -338,6 +406,8 @@ function RawView({ data, pays, month, onVoid }) {
               </tbody>
             </table>
           </div>
+          <Pager p={billsPg} />
+          </>
         )}
       </section>
     </>
@@ -345,6 +415,7 @@ function RawView({ data, pays, month, onVoid }) {
 }
 
 function WagesView({ wages, month }) {
+  const wagePg = usePaged(wages.per_employee, month);
   return (
     <>
       <section className="panel">
@@ -359,6 +430,7 @@ function WagesView({ wages, month }) {
         {wages.per_employee.length === 0 ? (
           <p className="muted">No wages in {monthLabel(month)}.</p>
         ) : (
+          <>
           <div className="owner-table-wrap">
             <table className="data-table">
               <thead>
@@ -373,7 +445,7 @@ function WagesView({ wages, month }) {
                 </tr>
               </thead>
               <tbody>
-                {wages.per_employee.map((w, i) => (
+                {wagePg.rows.map((w, i) => (
                   <tr key={i}>
                     <td>{w.employee}</td>
                     <td>{w.role_on_floor || "—"}</td>
@@ -395,6 +467,8 @@ function WagesView({ wages, month }) {
               </tbody>
             </table>
           </div>
+          <Pager p={wagePg} />
+          </>
         )}
       </section>
     </>
@@ -403,6 +477,7 @@ function WagesView({ wages, month }) {
 
 function BuyersView({ data, pays, month, onVoid }) {
   const owe = data.dues.buyers_owe_us;
+  const owePg = usePaged(owe, month);
   return (
     <>
       <section className="panel">
@@ -433,6 +508,7 @@ function BuyersView({ data, pays, month, onVoid }) {
         {owe.length === 0 ? (
           <p className="muted">All buyers have paid in full.</p>
         ) : (
+          <>
           <div className="owner-table-wrap">
             <table className="data-table">
               <thead>
@@ -445,7 +521,7 @@ function BuyersView({ data, pays, month, onVoid }) {
                 </tr>
               </thead>
               <tbody>
-                {owe.map((b, i) => (
+                {owePg.rows.map((b, i) => (
                   <tr key={i}>
                     <td>{b.buyer_name}</td>
                     <td>{b.invoice_no}</td>
@@ -463,6 +539,8 @@ function BuyersView({ data, pays, month, onVoid }) {
               </tbody>
             </table>
           </div>
+          <Pager p={owePg} />
+          </>
         )}
       </section>
     </>
