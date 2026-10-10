@@ -330,3 +330,7 @@ results, one completed dispatch + invoice + partial payment, employees + attenda
 - Hero has a live-looking floor board with a ticking ₹ idle-loss counter (respects reduced motion).
 - Sections: About (before → after), How it works (5 steps with roles), Features (idle-loss USP), AI help (opens chat bubble), Footer with demo logins.
 - Mobile: hamburger menu, logo + Login always visible; checked at 1366px and 390px with no horizontal overflow.
+
+## Phase 12b — Landing hero with mill photo
+- Hero now: soft grid panel, "One system to run our whole mill" (single-company wording), Login + "See what it does" buttons, mill-floor photo on the right (`frontend/public/images/mill-floor.jpg`, 270 KB).
+- Rest of the landing (About, How it works, Features, AI, Footer) unchanged.
