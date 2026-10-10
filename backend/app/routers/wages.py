@@ -177,13 +177,22 @@ def calculate_wages(
         days = 0.0
         overtime = 0.0
         for a in atts:
+            # Only verified records feed wages: a row entered by a manager is
+            # trusted; a row the worker submitted must be verified first.
+            source = getattr(a, "source", "manager") or "manager"
+            verified = bool(getattr(a, "verified", False))
+            if source == "worker" and not verified:
+                continue
             if a.status == "present":
                 days += 1.0
             elif a.status == "half_day":
                 days += 0.5
-            extra = float(a.hours_worked) - STANDARD_HOURS
-            if extra > 0:
-                overtime += extra * OVERTIME_RATE_PER_HOUR
+            # Prefer an explicit overtime figure (worker/manager verified);
+            # otherwise fall back to hours beyond the standard day.
+            ot_hours = float(getattr(a, "overtime_hours", 0) or 0)
+            if ot_hours <= 0:
+                ot_hours = max(0.0, float(a.hours_worked) - STANDARD_HOURS)
+            overtime += ot_hours * OVERTIME_RATE_PER_HOUR
         amount = round(days * float(e.daily_wage) + overtime, 2)
 
         existing = (

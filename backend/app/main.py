@@ -36,6 +36,7 @@ from app.routers import tasks as tasks_router
 from app.routers import prod_manager as prod_manager_router
 from app.routers import sales_manager as sales_manager_router
 from app.routers import accounts_manager as accounts_manager_router
+from app.routers import worker as worker_router
 from app.routers import purchase as purchase_router
 from app import activity as _activity  # noqa: F401  (registers the activity-log listener)
 from chatbot.router import router as chatbot_router
@@ -138,6 +139,7 @@ app.include_router(tasks_router.router)
 app.include_router(prod_manager_router.router)
 app.include_router(sales_manager_router.router)
 app.include_router(accounts_manager_router.router)
+app.include_router(worker_router.router)
 app.include_router(purchase_router.router)
 app.include_router(buyer_router.router)
 app.include_router(chatbot_router)  # AI assistant proxy (backend/chatbot/)

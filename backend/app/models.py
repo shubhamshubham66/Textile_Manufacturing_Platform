@@ -61,6 +61,9 @@ class User(Base):
     # Department a department manager runs (purchase|production|qc|store|
     # dispatch|accounts). None = the default for the user's role.
     department: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    # Set only for worker logins; links the login to the Employee (floor) record
+    # it represents, so the worker sees only their own tasks and attendance.
+    employee_id: Mapped[int | None] = mapped_column(ForeignKey("employees.id"), nullable=True)
 
     role: Mapped["Role"] = relationship(back_populates="users")
     buyer: Mapped["Buyer | None"] = relationship(back_populates="users")
@@ -258,6 +261,8 @@ class ProductionLog(Base):
     output_meters: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     log_date: Mapped[date] = mapped_column(Date, default=lambda: date.today())
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    # Worker who logged this output (worker portal). Added via schema_sync.
+    worker_employee_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 # --------------------------------------------------------------------------- #
@@ -414,6 +419,16 @@ class Attendance(Base):
     shift: Mapped[str] = mapped_column(String(20), default="morning")  # morning|evening|night
     status: Mapped[str] = mapped_column(String(20), default="present")  # present|absent|half_day
     hours_worked: Mapped[float] = mapped_column(Numeric(5, 2), default=0)
+    # Worker self check-in / check-out (added via schema_sync on existing DBs).
+    check_in: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    check_out: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    overtime_hours: Mapped[float] = mapped_column(Numeric(5, 2), default=0)
+    source: Mapped[str] = mapped_column(String(20), default="manager")  # manager|worker
+    # The department manager verifies attendance before Accounts uses it for
+    # wages. A worker-submitted row stays unverified until the manager confirms.
+    verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    verified_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     employee: Mapped["Employee"] = relationship(back_populates="attendance")
 

@@ -92,6 +92,20 @@ def get_current_buyer(user: User = Depends(get_current_user)) -> User:
     return user
 
 
+def get_current_worker(user: User = Depends(get_current_user)) -> User:
+    """Dependency for worker-portal endpoints.
+
+    Requires the user to be a worker AND linked to an Employee record. Callers
+    scope every query to `user.employee_id`, so a worker only ever sees their
+    own tasks, attendance and profile.
+    """
+    if user.role.name != rbac.ROLE_WORKER:
+        raise _forbidden("Only workers may access the worker portal")
+    if user.employee_id is None:
+        raise _forbidden("This worker login is not linked to an employee record")
+    return user
+
+
 def require_any_resource(*resources: str):
     """Dependency: allow a role permitted for ANY of the given resources."""
 

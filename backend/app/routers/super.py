@@ -263,6 +263,7 @@ def _worker_out(db: Session, e: Employee, start: date, end: date) -> dict:
     a = dict(att)
     mgr = db.get(User, e.manager_user_id) if e.manager_user_id else None
     tasks = db.query(Task).filter(Task.worker_employee_id == e.id).order_by(Task.id.desc()).all()
+    login = db.query(User).filter(User.employee_id == e.id).first()
     return {
         "id": e.id, "name": e.name, "role_on_floor": e.role_on_floor, "phone": e.phone,
         "daily_wage": sd._f(e.daily_wage), "department": e.department,
@@ -271,6 +272,8 @@ def _worker_out(db: Session, e: Employee, start: date, end: date) -> dict:
         "attendance": {"present": a.get("present", 0), "half_day": a.get("half_day", 0), "absent": a.get("absent", 0)},
         "tasks": [{"id": t.id, "title": t.title, "status": shown_status(t)} for t in tasks[:5]],
         "tasks_open": sum(1 for t in tasks if t.status != "completed"),
+        "has_login": login is not None,
+        "login_email": login.email if login else None,
     }
 
 
@@ -307,8 +310,37 @@ class WorkerIn(BaseModel):
     daily_wage: float = Field(ge=0, le=100000)
     department: str | None = None
     manager_user_id: int | None = None
+    # Optional worker login: create a sign-in account for this worker.
+    login_email: str | None = Field(default=None, max_length=180)
+    login_password: str | None = None
 
     _d = field_validator("department")(classmethod(lambda cls, v: _dept(v or None)))
+
+    @field_validator("login_email")
+    @classmethod
+    def _email(cls, v):
+        v = (v or "").strip().lower()
+        if not v:
+            return None
+        if "@" not in v or "." not in v.split("@")[-1]:
+            raise ValueError("enter a valid login email, or leave it empty")
+        return v
+
+
+class WorkerLoginIn(BaseModel):
+    email: str = Field(min_length=5, max_length=180)
+    password: str
+    confirm_password: str
+
+    _p = field_validator("password")(classmethod(lambda cls, v: _password_ok(v)))
+
+    @field_validator("email")
+    @classmethod
+    def _email(cls, v: str) -> str:
+        v = v.strip().lower()
+        if "@" not in v or "." not in v.split("@")[-1]:
+            raise ValueError("enter a valid email")
+        return v
 
 
 def _check_manager(db: Session, manager_user_id: int | None) -> None:
@@ -319,6 +351,18 @@ def _check_manager(db: Session, manager_user_id: int | None) -> None:
         raise HTTPException(400, "Reporting manager must be a department manager")
 
 
+def _create_worker_login(db: Session, employee: Employee, email: str, password: str) -> User:
+    """Create a `worker` User linked to the Employee (one login per worker)."""
+    email = email.strip().lower()
+    if db.query(User).filter(func.lower(User.email) == email).first():
+        raise HTTPException(409, "That email already has an account")
+    role = _role(db, rbac.ROLE_WORKER)
+    u = User(name=employee.name, email=email, password_hash=hash_password(password),
+             role=role, department=employee.department, employee_id=employee.id, is_active=True)
+    db.add(u)
+    return u
+
+
 @router.post("/workers", status_code=201)
 def create_worker(body: WorkerIn, _=Depends(require_resource("super_workers")), db: Session = Depends(get_db)):
     _check_manager(db, body.manager_user_id)
@@ -326,9 +370,39 @@ def create_worker(body: WorkerIn, _=Depends(require_resource("super_workers")), 
                  phone=(body.phone or "").strip() or None, daily_wage=body.daily_wage,
                  department=body.department, manager_user_id=body.manager_user_id, is_active=True)
     db.add(e)
+    db.flush()
+    # Optionally give the worker a login in the same step.
+    if body.login_email and body.login_password:
+        if not _password_ok(body.login_password):
+            raise HTTPException(400, "Password needs at least 8 characters with letters and numbers")
+        _create_worker_login(db, e, body.login_email, body.login_password)
     db.commit()
     s, en = sd.month_window()
     return _worker_out(db, e, s, en)
+
+
+@router.post("/workers/{emp_id}/login", status_code=201)
+def set_worker_login(emp_id: int, body: WorkerLoginIn, _=Depends(require_resource("super_workers")),
+                     db: Session = Depends(get_db)):
+    """Create or reset the login for an existing worker."""
+    if body.password != body.confirm_password:
+        raise HTTPException(400, "Passwords do not match")
+    e = db.get(Employee, emp_id)
+    if e is None:
+        raise HTTPException(404, "Worker not found")
+    existing = db.query(User).filter(User.employee_id == e.id).first()
+    if existing is not None:
+        clash = db.query(User).filter(func.lower(User.email) == body.email, User.id != existing.id).first()
+        if clash:
+            raise HTTPException(409, "That email already has an account")
+        existing.email = body.email
+        existing.password_hash = hash_password(body.password)
+        existing.is_active = True
+        db.commit()
+        return {"ok": True, "employee_id": e.id, "email": existing.email, "reset": True}
+    _create_worker_login(db, e, body.email, body.password)
+    db.commit()
+    return {"ok": True, "employee_id": e.id, "email": body.email, "created": True}
 
 
 @router.put("/workers/{emp_id}")
