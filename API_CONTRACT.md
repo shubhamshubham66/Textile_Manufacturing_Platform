@@ -357,12 +357,113 @@ Loss = Σ(window hours) × hourly_cost over idle/breakdown logs; open windows ru
 
 ---
 
+## Quality (role: quality_inspector — resources `quality` / `rolls`)
+
+### GET /api/quality/_meta
+
+Orders, machines and defect types for the new-roll / inspect forms.
+
+### POST /api/quality/rolls
+
+Create a roll (status `pending`, auto unique `roll_no`).
+
+```json
+{ "order_id": 3, "machine_id": 4, "length_meters": 50 }
+```
+
+Returns the roll (201).
+
+### GET /api/quality/rolls
+
+List rolls. Optional `?status=pending|pass|rework|reject|dispatched` and
+`?order_id=`.
+
+### POST /api/quality/rolls/{id}/inspect
+
+Record an inspection; sets the roll status.
+
+```json
+{ "result": "reject", "defect_type": "hole", "notes": "edge tear" }
+```
+
+| Field         | Type   | Required | Notes                                            |
+| ------------- | ------ | -------- | ------------------------------------------------ |
+| `result`      | string | yes      | pass\|rework\|reject.                            |
+| `defect_type` | string | cond.    | none\|hole\|colour_mismatch\|uneven_weaving\|other. Required (≠none) for rework/reject; must be none for pass. |
+| `notes`       | string | no       | Free text.                                       |
+
+`409` if the roll is already dispatched. Returns the updated roll.
+
+### GET /api/quality/defect-report
+
+Counts by defect, machine and order (rework+reject), plus roll-status tallies, so
+a cause can be traced.
+
+---
+
+## Dispatch (role: store_manager — resource `dispatch`)
+
+### GET /api/dispatch/orders
+
+Orders with at least one passed, not-yet-dispatched roll:
+`[{ "order_id": 1, "order_no": "ORD-2001", "buyer_name": "...", "passed_rolls": 8 }]`.
+
+### GET /api/dispatch/orders/{id}/pickable
+
+**ONLY** passed rolls of this order that are not yet dispatched (what may be picked):
+
+```json
+{ "order_id": 1, "order_no": "ORD-2001", "unit_price": 95,
+  "rolls": [{ "id": 10, "roll_no": "R-0001", "length_meters": 50 }] }
+```
+
+### POST /api/dispatch/confirm
+
+Confirm a dispatch in **one database transaction**: validate rolls (must belong to
+the order and be `pass`), mark them `dispatched`, create the dispatch record +
+items (reduces finished-on-shelf stock), and auto-create the invoice
+(`metres × rate + tax`). Any failure rolls everything back.
+
+```json
+{ "order_id": 1, "roll_ids": [10, 11, 12] }
+```
+
+Response:
+
+```json
+{ "dispatch_no": "DSP-3002", "invoice_no": "INV-4002", "total_rolls": 3,
+  "total_meters": 150, "subtotal": 14250, "tax": 712.5, "total": 14962.5 }
+```
+
+| Status | Code      | When                                                        |
+| ------ | --------- | ----------------------------------------------------------- |
+| 400    | VALIDATION_ERROR | A roll isn't `pass`, or doesn't belong to the order. |
+| 409    | CONFLICT  | A roll is already dispatched — **double dispatch prevented** (also enforced by a UNIQUE DB constraint on `dispatch_items.roll_id`). |
+
+### GET /api/dispatch
+
+List dispatches with their invoice numbers.
+
+### GET /api/dispatch/finished-stock
+
+Per order: rolls/metres **on shelf** (passed, not dispatched) vs **dispatched**.
+
+### GET /api/dispatch/invoice/{id}
+
+Invoice JSON with the exact rolls listed, subtotal, tax, total.
+
+### GET /api/dispatch/invoice/{id}/pdf
+
+The invoice as a PDF (`application/pdf`, inline) listing the exact rolls.
+
+---
+
 ### Role → menu / resource map (one config, enforced server-side)
 
 | Role              | Menu (resource)                                                     |
 | ----------------- | ------------------------------------------------------------------- |
 | owner             | Dashboard, Orders, Reports, Payments                                |
-| store_manager     | Yarn store (yarn), Stock (stock), Purchase (purchase)               |
+| store_manager     | Yarn store (yarn), Stock (stock), Purchase (purchase), Dispatch (dispatch) |
 | floor_supervisor  | Production, Machines                                                |
 | quality_inspector | Quality, Rolls                                                      |
 | accountant        | Payments, Attendance, Wages                                         |
