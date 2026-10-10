@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api.js";
+import { inr, ddmmyyyy, statusLabel } from "../../lib/format.js";
+import "../../owner.css";
 
 // Payments module (owner + accountant): record buyer payment, pay supplier,
-// pending dues.
+// due tracker (with ageing) and payment history.
 export default function Payments() {
   const [meta, setMeta] = useState({ invoices: [], suppliers: [] });
   const [payments, setPayments] = useState([]);
@@ -10,6 +12,7 @@ export default function Payments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
+  const [msgKind, setMsgKind] = useState("ok");
   const [busy, setBusy] = useState(false);
 
   const [buyerForm, setBuyerForm] = useState({
@@ -21,6 +24,7 @@ export default function Payments() {
     supplier_id: "",
     amount: "",
     method: "bank",
+    is_advance: false,
   });
 
   async function loadAll() {
@@ -46,11 +50,16 @@ export default function Payments() {
     loadAll();
   }, []);
 
+  function flash(kind, text) {
+    setMsgKind(kind);
+    setMsg(text);
+  }
+
   async function payBuyer(ev) {
     ev.preventDefault();
     setMsg("");
     if (!buyerForm.invoice_id || !(Number(buyerForm.amount) > 0)) {
-      setMsg("Select an invoice and enter an amount > 0.");
+      flash("err", "Select an invoice and enter an amount greater than 0.");
       return;
     }
     setBusy(true);
@@ -63,13 +72,14 @@ export default function Payments() {
           method: buyerForm.method,
         },
       });
-      setMsg(
-        `Payment recorded on ${res.invoice_no}: now ${res.invoice_status}, balance ₹${res.balance.toLocaleString("en-IN")}.`,
+      flash(
+        "ok",
+        `Payment recorded on ${res.invoice_no}: now ${statusLabel(res.invoice_status)}, balance ${inr(res.balance)}.`,
       );
       setBuyerForm({ invoice_id: "", amount: "", method: "bank" });
       await loadAll();
     } catch (err) {
-      setMsg(err.message);
+      flash("err", err.message);
     } finally {
       setBusy(false);
     }
@@ -79,7 +89,7 @@ export default function Payments() {
     ev.preventDefault();
     setMsg("");
     if (!supForm.supplier_id || !(Number(supForm.amount) > 0)) {
-      setMsg("Select a supplier and enter an amount > 0.");
+      flash("err", "Select a supplier and enter an amount greater than 0.");
       return;
     }
     setBusy(true);
@@ -90,23 +100,38 @@ export default function Payments() {
           supplier_id: Number(supForm.supplier_id),
           amount: Number(supForm.amount),
           method: supForm.method,
+          is_advance: supForm.is_advance,
         },
       });
-      setMsg(`Paid ₹${res.amount.toLocaleString("en-IN")} to ${res.supplier}.`);
-      setSupForm({ supplier_id: "", amount: "", method: "bank" });
+      flash(
+        "ok",
+        `Paid ${inr(res.amount)} to ${res.supplier}. Outstanding now ${inr(res.outstanding_after)}.`,
+      );
+      setSupForm({
+        supplier_id: "",
+        amount: "",
+        method: "bank",
+        is_advance: false,
+      });
       await loadAll();
     } catch (err) {
-      setMsg(err.message);
+      flash("err", err.message);
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="module">
+    <div className="module owner-page">
       <h2>Payments</h2>
       {error && <div className="form-error">{error}</div>}
-      {msg && <div className="callout callout-ok">{msg}</div>}
+      {msg && (
+        <div
+          className={`callout ${msgKind === "ok" ? "callout-ok" : "callout-warn"}`}
+        >
+          {msg}
+        </div>
+      )}
 
       <div className="two-col">
         <section className="panel">
@@ -123,7 +148,7 @@ export default function Payments() {
                 <option value="">Select invoice…</option>
                 {meta.invoices.map((i) => (
                   <option key={i.id} value={i.id}>
-                    {i.invoice_no} — {i.buyer_name} (bal ₹{i.balance})
+                    {i.invoice_no} — {i.buyer_name} (bal {inr(i.balance)})
                   </option>
                 ))}
               </select>
@@ -154,7 +179,7 @@ export default function Payments() {
               </select>
             </label>
             <button className="btn btn-primary" disabled={busy}>
-              Record payment
+              {busy ? "Saving…" : "Record payment"}
             </button>
           </form>
         </section>
@@ -203,34 +228,68 @@ export default function Payments() {
                 <option value="upi">UPI</option>
               </select>
             </label>
+            <label
+              className="field"
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: "0.5rem",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={supForm.is_advance}
+                onChange={(e) =>
+                  setSupForm({ ...supForm, is_advance: e.target.checked })
+                }
+                style={{ width: "auto" }}
+              />
+              <span style={{ margin: 0 }}>
+                Advance (allow paying more than the outstanding bill)
+              </span>
+            </label>
             <button className="btn btn-primary" disabled={busy}>
-              Pay supplier
+              {busy ? "Saving…" : "Pay supplier"}
             </button>
           </form>
         </section>
       </div>
 
-      {/* Pending dues */}
+      {/* Due tracker */}
       <section className="panel">
-        <h3>Pending dues</h3>
+        <h3>Due tracker</h3>
         {loading || !dues ? (
           <p className="muted">Loading…</p>
         ) : (
-          <div className="two-col">
+          <div className="owner-due-grid">
             <div>
-              <h4>
-                Buyers owe us (₹{dues.total_receivable.toLocaleString("en-IN")})
-              </h4>
+              <h4>Buyers owe us ({inr(dues.total_receivable)})</h4>
               {dues.buyers_owe_us.length === 0 ? (
                 <p className="muted">All settled.</p>
               ) : (
                 <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Buyer</th>
+                      <th>Invoice</th>
+                      <th>Date</th>
+                      <th className="num">Due</th>
+                      <th className="num">Age</th>
+                    </tr>
+                  </thead>
                   <tbody>
-                    {dues.buyers_owe_us.map((b) => (
-                      <tr key={b.buyer_name}>
+                    {dues.buyers_owe_us.map((b, i) => (
+                      <tr key={i}>
                         <td>{b.buyer_name}</td>
-                        <td>
-                          <strong>₹{b.due.toLocaleString("en-IN")}</strong>
+                        <td>{b.invoice_no}</td>
+                        <td>{ddmmyyyy(b.invoice_date)}</td>
+                        <td className="num owner-num">{inr(b.due)}</td>
+                        <td className="num">
+                          <span
+                            className={`owner-chip ${b.overdue ? "owner-chip-red" : "owner-chip-grey"}`}
+                          >
+                            {b.days_overdue} d{b.overdue ? " · overdue" : ""}
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -239,19 +298,31 @@ export default function Payments() {
               )}
             </div>
             <div>
-              <h4>
-                We owe suppliers (₹{dues.total_payable.toLocaleString("en-IN")})
-              </h4>
+              <h4>We owe suppliers ({inr(dues.total_payable)})</h4>
               {dues.we_owe_suppliers.length === 0 ? (
                 <p className="muted">All settled.</p>
               ) : (
                 <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Supplier</th>
+                      <th>Bill date</th>
+                      <th className="num">Due</th>
+                      <th className="num">Age</th>
+                    </tr>
+                  </thead>
                   <tbody>
-                    {dues.we_owe_suppliers.map((s) => (
-                      <tr key={s.supplier_name}>
+                    {dues.we_owe_suppliers.map((s, i) => (
+                      <tr key={i}>
                         <td>{s.supplier_name}</td>
-                        <td>
-                          <strong>₹{s.due.toLocaleString("en-IN")}</strong>
+                        <td>{ddmmyyyy(s.bill_date)}</td>
+                        <td className="num owner-num">{inr(s.due)}</td>
+                        <td className="num">
+                          <span
+                            className={`owner-chip ${s.overdue ? "owner-chip-red" : "owner-chip-grey"}`}
+                          >
+                            {s.days_overdue} d{s.overdue ? " · overdue" : ""}
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -274,7 +345,8 @@ export default function Payments() {
               <tr>
                 <th>Direction</th>
                 <th>Party</th>
-                <th>Amount</th>
+                <th>Date</th>
+                <th className="num">Amount</th>
                 <th>Method</th>
               </tr>
             </thead>
@@ -283,13 +355,14 @@ export default function Payments() {
                 <tr key={p.id}>
                   <td>
                     <span
-                      className={`status status-${p.direction === "incoming" ? "pass" : "raised"}`}
+                      className={`owner-chip ${p.direction === "incoming" ? "owner-chip-green" : "owner-chip-amber"}`}
                     >
                       {p.direction === "incoming" ? "In" : "Out"}
                     </span>
                   </td>
                   <td>{p.party}</td>
-                  <td>₹{p.amount.toLocaleString("en-IN")}</td>
+                  <td>{ddmmyyyy(p.paid_at)}</td>
+                  <td className="num owner-num">{inr(p.amount)}</td>
                   <td>{p.method}</td>
                 </tr>
               ))}

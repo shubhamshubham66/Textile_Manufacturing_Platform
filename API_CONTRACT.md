@@ -193,6 +193,24 @@ Compare required yarn vs. available stock (same colour).
 Set status to `confirmed` (available for production). `409` if the order is in a
 state that cannot be confirmed. Returns the updated order.
 
+### GET /api/orders/{id}/track
+
+Owner order tracker (owner only). Current stage + progress + late flag + the
+order's rolls with inspection result and the machine that made them:
+```json
+{
+  "order_no": "ORD-2003", "buyer_name": "Delhi Garments Co",
+  "fabric_type": "Denim", "colour": "Blue", "quantity_meters": 3000,
+  "status": "in_quality", "stage_index": 3,
+  "stage_flow": ["draft","confirmed","in_production","in_quality","ready_to_ship","dispatched","closed"],
+  "progress_percent": 100.0, "deadline": "2026-10-26", "late": false,
+  "rolls": [ { "roll_no": "R-0015", "length_meters": 50, "status": "pass",
+               "result": "pass", "defect_type": "none", "machine": "Dye-01" } ]
+}
+```
+`late` is `true` when the deadline has passed and progress < 100% (and the order
+is not yet dispatched/closed). `404` if the order does not exist.
+
 ---
 
 ## Yarn store (role: store_manager — resources `yarn` / `stock` / `purchase`)
@@ -451,14 +469,34 @@ fully paid.
 ```
 
 ### POST /api/payments/supplier
-Pay a supplier (yarn bills): `{ "supplier_id": 1, "amount": 50000, "method": "bank" }`.
+Pay a supplier (yarn bills): `{ "supplier_id": 1, "amount": 50000, "method": "bank",
+"is_advance": false }`.
+Server-side validation: `amount > 0`; the amount may **not exceed the supplier's
+outstanding bill** (Σ raised/received PO value − Σ payments) unless `is_advance`
+is `true`. A `400 VALIDATION_ERROR` is returned otherwise with a clear message.
+Response adds `outstanding_after` and `is_advance`.
 
 ### GET /api/payments
-Payment history (incoming + outgoing).
+Payment history (incoming + outgoing), newest first; each row includes `paid_at`.
 
 ### GET /api/payments/dues
-Pending dues: `buyers_owe_us` (Σ invoice balances) and `we_owe_suppliers`
-(Σ PO value − outgoing payments), plus `total_receivable` / `total_payable`.
+Pending dues with ageing:
+```json
+{
+  "buyers_owe_us": [
+    { "buyer_name": "Delhi Garments Co", "invoice_no": "INV-4002",
+      "invoice_date": "2026-10-14", "due": 17640.0,
+      "days_overdue": 12, "overdue": false }
+  ],
+  "we_owe_suppliers": [
+    { "supplier_name": "Punjab Cotton Co", "bill_date": "2026-10-06",
+      "due": 80000.0, "days_overdue": 20, "overdue": false }
+  ],
+  "total_receivable": 17640.0,
+  "total_payable": 80000.0
+}
+```
+`overdue` is `true` when the bill/invoice is more than 30 days old.
 
 ---
 
@@ -491,25 +529,50 @@ List wage records. ### POST /api/wages/{id}/pay — mark a wage paid (409 if alr
 
 ## Owner reports (role: owner — resources `reports` / `dashboard`)
 
-### GET /api/reports/cost-per-order
-Per order: `yarn_cost + wage_cost + machine_cost = total_cost`, plus `revenue_est`
-and `margin_est`. Wages and machine cost are allocated to orders in proportion to
-each order's production output (metres).
+All report endpoints accept an optional month window `?start=YYYY-MM-DD&end=YYYY-MM-DD`.
+When omitted they default to the **current calendar month**. Every response echoes
+the resolved `start` / `end`. All return **403** for non-owner roles.
 
-### GET /api/reports/machines
-Per machine: total output metres, idle/breakdown hours, idle loss ₹.
+### GET /api/reports/cost-per-order?start=&end=
+`{ "start", "end", "rows": [ ... ] }` where each row is:
+`yarn_cost + wage_cost + machine_cost = total_cost`, plus `revenue_est` and
+`margin_est`.
+- **Yarn** = Σ receipts linked to the order (kg × rate); if none linked, the
+  order's required-kg × average purchase rate for that yarn (no more ₹0 for
+  orders that consumed yarn).
+- **Wages** = total month wages × the order's share of production output (metres).
+- **Machine** = Σ machines' `power_overhead_cost` (power+overhead, **excludes
+  operator wages**) × the same output share, so wages are never double-counted.
+
+### GET /api/reports/machines?start=&end=
+`{ "start", "end", "machines": [ ... ], "totals": { ... } }`. Each machine row:
+`total_output_meters`, `running_hours`, `idle_hours`, `breakdown_hours`,
+`idle_loss_rupees`, `top_idle_reason`. `totals` sums the numeric columns.
 
 ### GET /api/reports/profit-loss?start=&end=
-Month (or window) P&L:
+Month cash-basis net:
 ```json
-{ "buyer_payments_in": 26460, "supplier_payments_out": 180000, "wages": 10350,
-  "profit_or_loss": -163890, "is_profit": false }
+{ "start": "2026-10-01", "end": "2026-10-31",
+  "buyer_payments_in": 225960, "supplier_payments_out": 200000, "wages": 10350,
+  "profit_or_loss": 15610, "is_profit": true }
 ```
-`profit = payments_in − supplier_out − wages`.
+`profit = payments_in − supplier_out − wages` (all within the window).
 
-### GET /api/reports/dashboard
-Key cards: `orders_by_stage`, `low_stock_count` + `low_stock`, `idle_loss_rupees`,
-and `profit_loss`.
+### GET /api/reports/wages?start=&end=
+Owner wages view (owner only):
+```json
+{ "start", "end", "total_wages": 10350, "total_paid": 8100, "total_unpaid": 2250,
+  "per_employee": [ { "employee", "role_on_floor", "days_present", "daily_wage",
+                      "amount", "status", "period_start", "period_end" } ],
+  "per_order": [ { "order_no", "output_meters", "wages_allocated" } ] }
+```
+`per_order` uses the same output-share basis as cost-per-order, so the two tie out.
+
+### GET /api/reports/dashboard?start=&end=
+Key cards + charts data: `machine_count`, `orders_by_stage`, `low_stock_count` +
+`low_stock`, `idle_loss_rupees`, `idle_loss_by_reason` (`[{reason, loss_rupees}]`),
+and `profit_loss` (the same object as `/profit-loss`, so the Dashboard card and
+the Reports P&L always match).
 
 ---
 

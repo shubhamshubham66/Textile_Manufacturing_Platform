@@ -279,8 +279,9 @@ Tables (18): `roles`, `users`, `buyers`, `orders`, `order_items`, `yarn_stock`,
 
 - No open bugs from the Phase 11 live run. Not yet tested against the real Dify
   service (needs the Dify app + key).
-- Demo story: seeded month shows a loss (−₹1.59 lakh: ₹1.8 lakh supplier payments
-  vs ₹31k received). Adjust seed figures if a profit view is wanted for judging.
+- (Resolved in Phase 13) The seed previously showed a loss and yarn ₹0 per order.
+  The October-2026 seed now nets a small **profit (+₹15,610)** and links yarn
+  receipts to orders so cost-per-order shows real yarn cost.
 
 ---
 
@@ -350,3 +351,62 @@ results, one completed dispatch + invoice + partial payment, employees + attenda
 ## Phase 12e — Owner section photo
 - "What the owner gets" section: photo of two managers (`frontend/public/images/owners-review.jpg`) shown in full, idle-loss card overlapping its lower edge (builds on PR #19's layout).
 - Added the sixth benefit "Attendance, no register" (new `IconCalendar`); "lost today" label made readable on the amber chip.
+
+## Phase 13 — Owner month-end workflow (Dashboard, Reports, Orders, Payments)
+
+**One costing definition (used on every owner screen):**
+- Order cost = yarn + wages + machine.
+  - Yarn = Σ receipts linked to the order (kg × rate); fallback = required-kg ×
+    average purchase rate for that yarn (fixes "Yarn ₹0").
+  - Wages = total month wages × order's share of production output (m).
+  - Machine = Σ `machines.power_overhead_cost` (power+overhead only, **no operator
+    wage**) × output share. New column `power_overhead_cost` ≈ 60% of `hourly_cost`;
+    falls back to 60% of `hourly_cost` when unset. This stops wages being counted
+    twice.
+- Order margin (estimate) = revenue (invoiced, else output×rate) − cost. Labelled
+  "estimate".
+- **Month net (cash basis)** = buyer payments received − supplier bills paid −
+  wages, within the month. The Dashboard card and Reports › Profit/loss use this
+  one definition, so they match exactly.
+- Idle loss = idle+breakdown hours × full `hourly_cost` (unchanged).
+
+**What changed:**
+- Backend `services/reports.py`: month-windowed; real yarn cost; machine cost from
+  `power_overhead_cost`; new `wages_report` + `idle_loss_by_reason`; cash-basis P&L.
+- Backend `routers/reports.py`: every endpoint takes `?start&end` (defaults to the
+  current month); new `GET /api/reports/wages`; dashboard returns `machine_count`
+  and `idle_loss_by_reason`.
+- Backend `routers/payments.py`: supplier payment rejects amounts over the
+  outstanding bill unless `is_advance`; dues now carry dates + `days_overdue`.
+- Backend `routers/orders.py`: new `GET /api/orders/{id}/track` (owner) for the
+  order tracker (stage, progress, late flag, rolls + inspection + machine).
+- Backend `models.py`: `machines.power_overhead_cost`.
+- Seed: one realistic **October 2026** month; receipts linked to orders; small
+  cash **profit (+₹15,610)**; `backend/tests/verify_month_math.py` checks the
+  numbers by hand (runs without FastAPI/network).
+- Frontend: month selector on Dashboard + Reports; Dashboard "Profit or loss
+  (this month)" card with sign-aware colour and "this month, N machines" copy
+  (removed "our unique metric"); waterfall + stage bars (clickable) + idle-reason
+  chart; Reports cost-per-order (real yarn, totals row, stacked chart), machine
+  report (running h, top reason, totals row, output chart), month P&L summary,
+  new **Wages** tab; Payments due tracker (ageing) + styled selects + Indian money
+  (2 dp) + supplier advance checkbox + dates in history; Orders dd/mm/yyyy
+  deadline, grey disabled "Confirmed", order tracker side panel.
+- Shared, **additive** files touched: `frontend/src/lib/format.js` (added `qty`,
+  `hrs`, `ddmmyyyy`, month helpers, 2-dp `inr`; existing exports kept) and
+  `frontend/src/pages/AppShell.jsx` (an inert `etm:navigate` listener). New files:
+  `frontend/src/owner.css`, `components/owner/MonthPicker.jsx`,
+  `components/owner/Charts.jsx`.
+
+**Charts:** dependency-free SVG/CSS (no chart library added — npm registry is
+blocked in the build sandbox, and this keeps the app installable). Each chart has
+a title, units, tooltips and an aria-label text alternative.
+
+**Known limits / not verified:**
+- Backend was **not run** in this environment (no PyPI/npm network to install
+  FastAPI/Vite). Logic verified by `verify_month_math.py` (pure Python) and
+  prettier parse of all JSX; HTTP/browser testing is pending on a networked host.
+- Machine `power_overhead_cost` 60% split is a documented assumption; adjust per
+  machine if real power/overhead figures are available.
+- Photos: owner empty states use text only (no new images added); wire real mill
+  photos into empty states when files are provided.
