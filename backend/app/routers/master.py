@@ -378,7 +378,12 @@ def correct_receipt(receipt_id: int, body: ReceiptEdit, _=Depends(OWNER), db: Se
             )
             .first()
         )
+    # Only a validated receipt has put yarn into stock; correcting a receipt
+    # still waiting for validation changes the record only.
+    if r.status not in (None, "validated"):
+        stock = None
     if stock is not None:
+        db.info["stock_ref"] = {"kind": "correction", "reference": f"Receipt #{r.id} corrected by owner"}
         new_qty = float(stock.quantity_kg) + delta
         if new_qty < 0:
             raise HTTPException(
@@ -395,5 +400,6 @@ def correct_receipt(receipt_id: int, body: ReceiptEdit, _=Depends(OWNER), db: Se
     r.unit_cost = body.unit_cost
     r.order_id = body.order_id
     db.commit()
+    db.info.pop("stock_ref", None)
     db.refresh(r)
     return _receipt_out(db, r)

@@ -33,6 +33,7 @@ from app.routers import wages as wages_router
 from app.routers import yarn as yarn_router
 from app.routers import super as super_router
 from app.routers import tasks as tasks_router
+from app.routers import purchase as purchase_router
 from app import activity as _activity  # noqa: F401  (registers the activity-log listener)
 from chatbot.router import router as chatbot_router
 
@@ -130,6 +131,7 @@ app.include_router(wages_router.router)
 app.include_router(reports_router.router)
 app.include_router(super_router.router)
 app.include_router(tasks_router.router)
+app.include_router(purchase_router.router)
 app.include_router(buyer_router.router)
 app.include_router(chatbot_router)  # AI assistant proxy (backend/chatbot/)
 

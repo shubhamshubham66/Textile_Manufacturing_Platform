@@ -23,9 +23,11 @@ router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
 
 def _mine(db: Session, user: User):
-    dept = dept_of(user)
+    from app.routers.purchase import _my_depts
+
+    depts = _my_depts(user)
     return db.query(Task).filter(or_(Task.manager_user_id == user.id,
-                                     (Task.department == dept) & Task.manager_user_id.is_(None)))
+                                     Task.department.in_(depts) & Task.manager_user_id.is_(None)))
 
 
 @router.get("/mine")

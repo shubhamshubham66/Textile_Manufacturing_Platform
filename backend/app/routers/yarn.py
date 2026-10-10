@@ -1,9 +1,9 @@
 """Yarn store module — scene 1 (yarn arrives) + stock + purchase.
 
 Endpoints (store_manager — RBAC resources "yarn"/"stock"/"purchase"):
-  POST /api/yarn/receipts     record a yarn receipt; stock updates automatically
+  POST /api/yarn/receipts     record a yarn receipt (stock updates when validated)
   GET  /api/yarn/stock        live stock per type+colour with low-stock flag
-  POST /api/yarn/purchase     raise a purchase order for a supplier (short yarn)
+  POST /api/yarn/purchase     retired: POs come from approved purchase requests
   GET  /api/yarn/purchase     list purchase orders
   GET  /api/yarn/suppliers    suppliers (for the receive/purchase forms)
 """
@@ -159,7 +159,8 @@ def receive_yarn(
         db.add(stock)
         db.flush()
 
-    # Record the receipt and increase stock in one transaction.
+    # Record the receipt. Stock goes up only when the store validates it
+    # (Purchase › Material receiving), so a delivery is checked first.
     receipt = YarnReceipt(
         yarn_stock_id=stock.id,
         supplier_id=body.supplier_id,
@@ -169,61 +170,26 @@ def receive_yarn(
         colour=body.colour,
         quantity_kg=body.quantity_kg,
         unit_cost=body.unit_cost,
+        status="recorded",
+        batch_no="—",
     )
     db.add(receipt)
-    stock.quantity_kg = float(stock.quantity_kg) + float(body.quantity_kg)
-    if body.unit_cost:
-        stock.unit_cost = body.unit_cost
-    stock.updated_at = datetime.utcnow()
-
-    # If this receipt fulfils a purchase order, mark it received.
-    if body.purchase_order_id:
-        po = (
-            db.query(PurchaseOrder)
-            .filter(PurchaseOrder.id == body.purchase_order_id)
-            .first()
-        )
-        if po and po.status == "raised":
-            po.status = "received"
-
     db.commit()
     db.refresh(stock)
     return _stock_out(stock)
 
 
-@router.post("/purchase", response_model=PurchaseOut, status_code=201)
+@router.post("/purchase", status_code=409)
 def raise_purchase(
     body: PurchaseCreate,
     _=Depends(require_resource("purchase")),
-    db: Session = Depends(get_db),
 ):
-    supplier = db.query(Supplier).filter(Supplier.id == body.supplier_id).first()
-    if supplier is None:
-        raise HTTPException(status_code=400, detail="Unknown supplier")
-
-    po = PurchaseOrder(
-        supplier_id=body.supplier_id,
-        po_no=_next_po_no(db),
-        yarn_type=body.yarn_type,
-        colour=body.colour,
-        quantity_kg=body.quantity_kg,
-        unit_cost=body.unit_cost,
-        status="raised",
-    )
-    db.add(po)
-    db.commit()
-    db.refresh(po)
-    return PurchaseOut(
-        id=po.id,
-        po_no=po.po_no,
-        supplier_id=po.supplier_id,
-        supplier_name=supplier.name,
-        yarn_type=po.yarn_type,
-        colour=po.colour,
-        quantity_kg=float(po.quantity_kg),
-        unit_cost=float(po.unit_cost),
-        status=po.status,
-        created_at=po.created_at,
+    """Retired. A purchase commitment needs an approved purchase request (the
+    Supermanager approval workflow), so POs are raised from
+    POST /api/purchase/orders instead."""
+    raise HTTPException(
+        status_code=409,
+        detail="Raise a purchase request first — purchase orders are created from approved requests.",
     )
 
 

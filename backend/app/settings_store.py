@@ -17,11 +17,15 @@ ALERT_KINDS = [
     ("dispatch", "Dispatch problems"),
     ("attendance", "Attendance exceptions"),
     ("overdue_tasks", "Overdue department tasks"),
+    ("purchase_approvals", "Purchase requests to approve"),
 ]
 
 DEFAULTS = {
     # Woven metres one running weaving machine makes in a day (capacity check).
     "capacity_m_per_machine_day": 400,
+    # Purchase requests up to this many kg are approved automatically
+    # (0 = every request needs Supermanager approval).
+    "purchase_auto_approve_kg": 0,
     # Alert categories shown on the Supermanager dashboard and Alerts page.
     "alerts": {k: True for k, _ in ALERT_KINDS},
 }
