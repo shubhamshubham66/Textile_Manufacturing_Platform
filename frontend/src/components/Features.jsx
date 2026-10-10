@@ -1,4 +1,10 @@
-import { IconBell, IconEye, IconRoll, IconChart, IconOrder } from "./landing/Icons.jsx";
+import {
+  IconBell,
+  IconEye,
+  IconRoll,
+  IconChart,
+  IconOrder,
+} from "./landing/Icons.jsx";
 
 // Features: the idle-loss USP gets the big panel; the rest sit beside it.
 const FEATURES = [
@@ -38,32 +44,40 @@ export default function Features() {
         </div>
 
         <div className="lp-features">
-          <article className="lp-usp">
-            <span className="lp-usp-tag">Only in Everest</span>
-            <h3>Idle machine loss, in rupees</h3>
-            <p>
-              Every stop is logged with a reason: no yarn, motor fault, shift
-              changeover. Idle time stops being a feeling and becomes a number
-              on the owner&apos;s dashboard.
-            </p>
-            <div className="lp-formula" aria-label="Idle hours times hourly cost equals rupees lost">
-              <span>
-                <b>11.5 h</b>
-                <small>idle + breakdown</small>
-              </span>
-              <i>×</i>
-              <span>
-                <b>₹250–400</b>
-                <small>per machine-hour</small>
-              </span>
-              <i>=</i>
-              <span className="lp-formula-total">
-                <b>₹3,404</b>
-                <small>lost today</small>
-              </span>
-            </div>
-            <p className="lp-usp-foot">Top reason today: motor fault on Spin-03 (4 h).</p>
-          </article>
+          {/* Left: factory photo with the idle-loss card overlaid at the bottom */}
+          <div className="lp-photo">
+            <article className="lp-usp">
+              <span className="lp-usp-tag">Only in Everest</span>
+              <h3>Idle machine loss, in rupees</h3>
+              <p>
+                Every stop is logged with a reason: no yarn, motor fault, shift
+                changeover. Idle time stops being a feeling and becomes a number
+                on the owner&apos;s dashboard.
+              </p>
+              <div
+                className="lp-formula"
+                aria-label="Idle hours times hourly cost equals rupees lost"
+              >
+                <span>
+                  <b>11.5 h</b>
+                  <small>idle + breakdown</small>
+                </span>
+                <i>×</i>
+                <span>
+                  <b>₹250–400</b>
+                  <small>per machine-hour</small>
+                </span>
+                <i>=</i>
+                <span className="lp-formula-total">
+                  <b>₹3,404</b>
+                  <small>lost today</small>
+                </span>
+              </div>
+              <p className="lp-usp-foot">
+                Top reason today: motor fault on Spin-03 (4 h).
+              </p>
+            </article>
+          </div>
 
           <ul className="lp-feature-list">
             {FEATURES.map(({ Icon, title, text }) => (
