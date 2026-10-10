@@ -173,9 +173,15 @@ export default function Dashboard() {
     },
   ];
 
-  const verdict = pl.is_profit
-    ? `The mill made a profit of ${inr(pl.profit_or_loss)} this month.`
-    : `The mill made a loss of ${inr(Math.abs(pl.profit_or_loss))} this month.`;
+  const noMoneyYet =
+    pl.buyer_payments_in === 0 &&
+    pl.supplier_payments_out === 0 &&
+    pl.wages === 0;
+  const verdict = noMoneyYet
+    ? "No payments, bills or wages recorded this month yet."
+    : pl.is_profit
+      ? `The mill made a profit of ${inr(pl.profit_or_loss)} this month.`
+      : `The mill made a loss of ${inr(Math.abs(pl.profit_or_loss))} this month.`;
 
   return (
     <div className="module owner-page">
@@ -241,7 +247,7 @@ export default function Dashboard() {
               </strong>
             </div>
             <p
-              className={`owner-verdict ${pl.is_profit ? "owner-pos" : "owner-neg"}`}
+              className={`owner-verdict ${noMoneyYet ? "owner-zero" : pl.is_profit ? "owner-pos" : "owner-neg"}`}
             >
               {verdict}
             </p>
@@ -284,8 +290,12 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
-        {rows.length === 0 ? (
-          <p className="muted">No orders in this view.</p>
+        {(counts.all ?? 0) === 0 ? (
+          <p className="muted">
+            No orders yet. Orders appear here as the Store manager records them.
+          </p>
+        ) : rows.length === 0 ? (
+          <p className="muted">No orders match this filter.</p>
         ) : (
           <table className="data-table owner-sticky">
             <thead>
@@ -595,21 +605,29 @@ function MoneySection({ wages, bills, buyerPay, pl }) {
               </tr>
             </thead>
             <tbody>
-              {(wages.per_employee || []).map((e, i) => (
-                <tr key={i}>
-                  <td>{e.employee}</td>
-                  <td className="num">{e.days_present}</td>
-                  <td className="num owner-num">{inr(e.daily_wage)}</td>
-                  <td className="num owner-num">{inr(e.amount)}</td>
-                  <td>
-                    <span
-                      className={`owner-chip ${e.status === "paid" ? "owner-chip-green" : "owner-chip-amber"}`}
-                    >
-                      {e.status === "paid" ? "Paid" : "Unpaid"}
-                    </span>
+              {(wages.per_employee || []).length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="muted">
+                    No wages recorded this month.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                (wages.per_employee || []).map((e, i) => (
+                  <tr key={i}>
+                    <td>{e.employee}</td>
+                    <td className="num">{e.days_present}</td>
+                    <td className="num owner-num">{inr(e.daily_wage)}</td>
+                    <td className="num owner-num">{inr(e.amount)}</td>
+                    <td>
+                      <span
+                        className={`owner-chip ${e.status === "paid" ? "owner-chip-green" : "owner-chip-amber"}`}
+                      >
+                        {e.status === "paid" ? "Paid" : "Unpaid"}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
               <tr className="owner-total">
                 <td>Total</td>
                 <td className="num" />
@@ -635,21 +653,29 @@ function MoneySection({ wages, bills, buyerPay, pl }) {
               </tr>
             </thead>
             <tbody>
-              {(bills.bills || []).map((b, i) => (
-                <tr key={i}>
-                  <td>{ddmmyyyy(b.date)}</td>
-                  <td>{b.supplier}</td>
-                  <td>{b.bill_no}</td>
-                  <td className="num owner-num">{inr(b.amount)}</td>
-                  <td>
-                    <span
-                      className={`owner-chip ${b.status === "received" ? "owner-chip-green" : "owner-chip-amber"}`}
-                    >
-                      {statusLabel(b.status)}
-                    </span>
+              {(bills.bills || []).length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="muted">
+                    No raw material bills recorded.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                (bills.bills || []).map((b, i) => (
+                  <tr key={i}>
+                    <td>{ddmmyyyy(b.date)}</td>
+                    <td>{b.supplier}</td>
+                    <td>{b.bill_no}</td>
+                    <td className="num owner-num">{inr(b.amount)}</td>
+                    <td>
+                      <span
+                        className={`owner-chip ${b.status === "received" ? "owner-chip-green" : "owner-chip-amber"}`}
+                      >
+                        {statusLabel(b.status)}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
           <p className="muted">
@@ -676,15 +702,23 @@ function MoneySection({ wages, bills, buyerPay, pl }) {
               </tr>
             </thead>
             <tbody>
-              {(buyerPay.payments || []).map((p, i) => (
-                <tr key={i}>
-                  <td>{ddmmyyyy(p.date)}</td>
-                  <td>{p.buyer}</td>
-                  <td>{p.invoice_no || "—"}</td>
-                  <td className="num owner-num">{inr(p.amount)}</td>
-                  <td>{p.method}</td>
+              {(buyerPay.payments || []).length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="muted">
+                    No buyer payments received this month.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                (buyerPay.payments || []).map((p, i) => (
+                  <tr key={i}>
+                    <td>{ddmmyyyy(p.date)}</td>
+                    <td>{p.buyer}</td>
+                    <td>{p.invoice_no || "—"}</td>
+                    <td className="num owner-num">{inr(p.amount)}</td>
+                    <td>{p.method}</td>
+                  </tr>
+                ))
+              )}
               <tr className="owner-total">
                 <td>Total</td>
                 <td />
