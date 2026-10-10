@@ -31,14 +31,13 @@ DEPT_ROLE = {
 }
 
 # Role -> department used when a user has none set (e.g. seeded logins).
-# The floor supervisor also sits in production (shares machine screens); the
-# production manager is the department's manager, so it is listed as the owner
-# of the "production" default below. The store manager keeps "store" as its
-# default even though it can still open the shared dispatch screens.
+# The production manager is the production department's manager, so it is listed
+# as the owner of the "production" default below. The store manager keeps
+# "store" as its default even though it can still open the shared dispatch
+# screens.
 ROLE_DEFAULT_DEPT = {
     rbac.ROLE_STORE_MANAGER: "store",
     rbac.ROLE_PRODUCTION_MANAGER: "production",
-    rbac.ROLE_FLOOR_SUPERVISOR: "production",
     rbac.ROLE_QUALITY_INSPECTOR: "qc",
     rbac.ROLE_ACCOUNTANT: "accounts",
     rbac.ROLE_ACCOUNTS_MANAGER: "accounts",

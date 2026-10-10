@@ -88,7 +88,7 @@ def alerts(user: User = Depends(get_current_user), db: Session = Depends(get_db)
     """Current things worth a look, for this role. Same shape as live events."""
     role = user.role.name
     out: list[dict] = []
-    if role in (rbac.ROLE_OWNER, rbac.ROLE_FLOOR_SUPERVISOR):
+    if role in (rbac.ROLE_OWNER, rbac.ROLE_PRODUCTION_MANAGER):
         for mch in db.query(Machine).filter(Machine.current_status.in_(["breakdown", "idle"])).order_by(Machine.name):
             down = mch.current_status == "breakdown"
             out.append({"topic": "machines", "level": "alert" if down else "warn",

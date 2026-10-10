@@ -63,7 +63,7 @@ def seed() -> None:
     try:
         # ---- Roles ----
         role_names = [
-            "owner", "store_manager", "floor_supervisor",
+            "owner", "store_manager",
             "quality_inspector", "accountant", "buyer", "manager",
             "production_manager", "sales_manager", "accounts_manager", "worker",
         ]
@@ -77,8 +77,6 @@ def seed() -> None:
                    email="owner@everest.test", password_hash=_hash("owner123")),
             m.User(role_id=roles["store_manager"].id, name="Sunita Patel",
                    email="store@everest.test", password_hash=_hash("store123")),
-            m.User(role_id=roles["floor_supervisor"].id, name="Arjun Mehta",
-                   email="floor@everest.test", password_hash=_hash("floor123")),
             m.User(role_id=roles["quality_inspector"].id, name="Priya Nair",
                    email="quality@everest.test", password_hash=_hash("quality123")),
             m.User(role_id=roles["accountant"].id, name="Deepak Rao",
