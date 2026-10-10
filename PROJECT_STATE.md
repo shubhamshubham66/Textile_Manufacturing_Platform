@@ -417,3 +417,9 @@ a title, units, tooltips and an aria-label text alternative.
 - Email via Brevo HTTP API (`backend/app/services/email.py`); needs `BREVO_API_KEY` + `MAIL_FROM_EMAIL` on Render. `SIGNUP_DEV_OTP=true` shows the code on screen for local dev only.
 - Tests: `backend/tests/test_signup.py` (8 cases).
 
+## Phase 13b — Fix: owner reports HTTP 500 on Render
+- Cause: PR #21 added `machines.power_overhead_cost`; the Render database was created earlier and `create_all` never adds columns to existing tables, so every query on machines failed ("column does not exist") — owner dashboard, reports, floor machines, quality rolls.
+- Fix: `backend/app/schema_sync.py` runs after `create_all` on startup and only ADDS missing model columns (with their default). No drops or changes. Test: `backend/tests/test_schema_sync.py`.
+- App pages now follow the URL (`/app/reports` etc.): refresh stays on the page, Back works, deep links open the right page.
+- Verified on a Postgres DB built with the old code: 0 errors across all 17 role pages.
+

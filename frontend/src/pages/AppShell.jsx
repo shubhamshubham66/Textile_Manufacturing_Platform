@@ -53,7 +53,34 @@ const ROLE_LABELS = {
 // is a placeholder; real module pages arrive in later phases.
 export default function AppShell() {
   const { user, menu, logout } = useAuth();
-  const [active, setActive] = useState(menu[0]?.path || "");
+  // The open page follows the URL (/app/reports etc.), so refresh keeps you on
+  // the same page and the browser Back button moves between pages.
+  const pathFromUrl = () => {
+    const here = window.location.pathname;
+    return menu.some((m) => m.path === here) ? here : menu[0]?.path || "";
+  };
+  const [active, setActiveState] = useState(pathFromUrl);
+
+  function setActive(path) {
+    setActiveState(path);
+    if (path && window.location.pathname !== path) {
+      window.history.pushState({}, "", path);
+    }
+  }
+
+  useEffect(() => {
+    // Plain /app (or an unknown /app/... path) -> show the first page's URL.
+    const here = window.location.pathname;
+    if (menu[0] && !menu.some((m) => m.path === here)) {
+      window.history.replaceState({}, "", menu[0].path);
+    }
+    function onPop() {
+      setActiveState(pathFromUrl());
+    }
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [menu]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
 

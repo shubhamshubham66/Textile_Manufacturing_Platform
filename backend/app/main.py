@@ -46,6 +46,10 @@ def prepare_database() -> None:
 
     if settings.auto_create_tables:
         Base.metadata.create_all(bind=engine)
+        # create_all never alters existing tables; add any new model columns.
+        from app.schema_sync import add_missing_columns
+
+        add_missing_columns(engine, Base.metadata)
     if settings.seed_if_empty:
         db = SessionLocal()
         try:
