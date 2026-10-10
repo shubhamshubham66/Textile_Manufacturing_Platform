@@ -1193,3 +1193,70 @@ h4 {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================
+   Phase 7 — quality & dispatch (tabs, modal, report grid)
+   ============================================================ */
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.tab {
+  background: none;
+  border: none;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+}
+.tab:hover {
+  color: var(--ink);
+}
+.tab.active {
+  color: var(--brand-dark);
+  border-bottom-color: var(--brand);
+}
+
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+.report-grid h4 {
+  margin-bottom: 0.5rem;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: grid;
+  place-items: center;
+  z-index: 80;
+  padding: 1rem;
+}
+.modal {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: var(--shadow);
+}
+.modal .field select,
+.modal .field input {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+
+@media (max-width: 820px) {
+  .report-grid {
+    grid-template-columns: 1fr;
+  }
+}

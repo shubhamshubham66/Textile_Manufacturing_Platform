@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # Low-stock threshold fallback (kg) used when a yarn row has no reorder level.
     default_reorder_level_kg: float = 100.0
 
+    # Invoice tax rate (fraction) applied to the dispatch subtotal. Demo GST 5%.
+    invoice_tax_rate: float = 0.05
+
     # CORS: comma-separated list of allowed frontend origins.
     cors_origins: str = "http://localhost:5173"
 
