@@ -11,7 +11,7 @@ enforcement returns 403 for unauthorized roles.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 
 from app import rbac
@@ -25,8 +25,19 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 # ---- Schemas ----
 class LoginRequest(BaseModel):
-    email: EmailStr
+    # Plain string, not EmailStr: EmailStr needs the extra email-validator package
+    # and rejects reserved demo domains like `everest.test`, which broke every
+    # demo login. A light check is enough here — the DB lookup decides.
+    email: str
     password: str
+
+    @field_validator("email")
+    @classmethod
+    def email_looks_valid(cls, v: str) -> str:
+        v = (v or "").strip().lower()
+        if "@" not in v or v.startswith("@") or v.endswith("@") or " " in v:
+            raise ValueError("Enter a valid email address")
+        return v
 
     @field_validator("password")
     @classmethod
