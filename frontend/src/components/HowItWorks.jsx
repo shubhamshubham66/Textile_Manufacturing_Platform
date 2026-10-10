@@ -1,5 +1,5 @@
-// How it works: five steps from order to truck, as cards that step up like a
-// staircase over a photo of the mill floor. The last step (Ship) is dark.
+// How it works: five equal cards in the lower half of a warehouse photo, from
+// order to truck. Each card has its own flat colour, like dyed cloth swatches.
 const ICON = {
   order: (
     <>
@@ -59,8 +59,7 @@ export default function HowItWorks() {
           {STEPS.map((s, i) => (
             <li
               key={s.title}
-              className={`lp-stair ${i === STEPS.length - 1 ? "is-last" : ""}`}
-              style={{ "--i": i }}
+              className={`lp-stair is-${s.icon}`}
             >
               <div className="lp-stair-top">
                 <span className="lp-stair-no">{String(i + 1).padStart(2, "0")}</span>

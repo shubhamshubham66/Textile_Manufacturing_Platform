@@ -342,3 +342,7 @@ results, one completed dispatch + invoice + partial payment, employees + attenda
 - How it works: staircase cards over a mill photo (`frontend/public/images/winding-floor.jpg`), last step (Ship) dark.
 - New demo strip (`CtaStrip.jsx`): Try as owner / Try as buyer → `/login?demo=owner|buyer` logs straight in.
 - Login page: `?demo=<role>` auto-signs in with that demo account.
+
+## Phase 12d — How it works: warehouse photo
+- Background is now a warehouse photo (`frontend/public/images/warehouse.jpg`), kept bright; heading at the top, five equal cards in the lower half.
+- Cards are flat, muted colours (cotton, haldi, sage, madder, blue-grey) instead of the glass staircase; subheading bold for readability.
