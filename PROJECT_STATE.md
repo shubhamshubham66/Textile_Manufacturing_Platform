@@ -324,3 +324,9 @@ results, one completed dispatch + invoice + partial payment, employees + attenda
 5. Buyer portal → track order status.
 6. Dispatch → pick passed rolls, confirm (one transaction), print invoice.
 7. Owner reports → cost per order, machine report, profit/loss.
+
+## Phase 12 — Landing page redesign
+- New public landing look (indigo/haldi palette, Archivo + IBM Plex Sans), styles in `frontend/src/landing.css`, all scoped under `.lp` / `lp-*`.
+- Hero has a live-looking floor board with a ticking ₹ idle-loss counter (respects reduced motion).
+- Sections: About (before → after), How it works (5 steps with roles), Features (idle-loss USP), AI help (opens chat bubble), Footer with demo logins.
+- Mobile: hamburger menu, logo + Login always visible; checked at 1366px and 390px with no horizontal overflow.

@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { BrandMark } from "./landing/Icons.jsx";
 
 // Public navbar.
-// Left: logo. Center: section links (scroll to section). Right: Demo + Login
-// (Login is the primary button). On mobile the center links collapse into a
-// hamburger menu while the logo and Login stay visible.
+// Left: logo. Centre: section links (smooth scroll). Right: Demo + Login (Login
+// is the primary button). On mobile the links collapse into a menu while the
+// logo and Login stay visible.
 const LINKS = [
   { id: "home", label: "Home" },
   { id: "about", label: "About" },
@@ -14,62 +15,55 @@ const LINKS = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   function go(id, e) {
     e.preventDefault();
     setOpen(false);
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   }
 
   return (
-    <header className="navbar">
-      <div className="nav-inner">
-        {/* Left: logo */}
-        <a href="#home" className="brand" onClick={(e) => go("home", e)}>
-          <span className="brand-mark">ET</span>
-          <span className="brand-text">Everest Textile Mills</span>
+    <header className={`lp-nav ${scrolled ? "is-scrolled" : ""}`}>
+      <div className="lp-nav-inner">
+        <a href="#home" className="lp-brand" onClick={(e) => go("home", e)}>
+          <BrandMark />
+          <span>
+            Everest <em>Textile Mills</em>
+          </span>
         </a>
 
-        {/* Center: links (hidden on mobile unless menu open) */}
-        <nav className={`nav-links ${open ? "open" : ""}`}>
+        <nav className={`lp-nav-links ${open ? "is-open" : ""}`} aria-label="Sections">
           {LINKS.map((l) => (
             <a key={l.id} href={`#${l.id}`} onClick={(e) => go(l.id, e)}>
               {l.label}
             </a>
           ))}
-          {/* Demo + Login also appear inside the mobile dropdown */}
-          <a
-            href="#how"
-            className="btn btn-ghost nav-mobile-only"
-            onClick={(e) => go("how", e)}
-          >
-            Demo
-          </a>
-          <a href="/login" className="btn btn-primary nav-mobile-only">
-            Login
+          <a href="/login" className="lp-btn lp-btn-quiet lp-only-mobile">
+            Try the demo
           </a>
         </nav>
 
-        {/* Right: Demo + Login (desktop) + hamburger (mobile) */}
-        <div className="nav-actions">
-          <a
-            href="#how"
-            className="btn btn-ghost nav-desktop-only"
-            onClick={(e) => go("how", e)}
-          >
+        <div className="lp-nav-actions">
+          <a href="/login" className="lp-btn lp-btn-quiet lp-only-desktop">
             Demo
           </a>
-          <a href="/login" className="btn btn-primary">
+          <a href="/login" className="lp-btn lp-btn-primary">
             Login
           </a>
           <button
-            className="hamburger"
-            aria-label="Toggle menu"
+            className="lp-menu"
+            aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
           >
-            <span />
             <span />
             <span />
           </button>
