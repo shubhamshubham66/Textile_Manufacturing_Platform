@@ -3,8 +3,8 @@
 Single source of truth for the current state of the project. Update this at the end
 of every phase. Keep it short and factual.
 
-**Last updated:** Phase 9 (Buyer Portal) — 10 Oct 2026
-**Current phase:** Phase 9 — Buyer Portal
+**Last updated:** Phase 10 (Testing & Polish) — 10 Oct 2026
+**Current phase:** Phase 10 — Testing & Polish
 
 ---
 
@@ -231,27 +231,41 @@ Tables (18): `roles`, `users`, `buyers`, `orders`, `order_items`, `yarn_stock`,
     `pages/app/Invoices.jsx` (list + PDF). ChatBubble is now openable (mount point
     only) and rendered on app pages too; "Ask AI" fires `etm:open-chat`.
   - NOTE: chatbot widget itself is still the mini developer's — not implemented.
+- **Phase 10 — Testing & Polish (no new features):**
+  - `backend/tests/flow_simulation.py` — DB-logic end-to-end of the full demo flow
+    + edge cases (**19/19 pass**): new order, yarn check, receive yarn, assign,
+    output/progress, rolls, inspect, atomic dispatch+invoice, buyer payment, P&L;
+    edges: non-passed dispatch, double dispatch (app + DB UNIQUE), negative qty,
+    empty list, wrong login, cross-buyer access.
+  - Audits: every endpoint except `/login` is role-guarded (403); frontend lint =
+    0 undefined-var errors; prettier clean; no dead buttons / placeholder prose.
+  - Fixes (smallest reliable): notifications bell dead-disabled → working
+    empty-state popover; flow-sim empty-list guard. No unrelated changes.
+  - Polish: one-click **Try as owner / buyer** demo login + full one-click role
+    list on the Login page. `docs/TEST_REPORT.md` added.
 
 ---
 
 ## 7. Pending Tasks
 
-- Run end-to-end on a networked host: install deps, `init_db`, `seed`, start both
-  servers, confirm health check shows DB connected. **(acceptance for Phase 2)**
-- Auth + role-based access.
-- Feature modules (Orders, Yarn, Production, Quality, Dispatch, Payments, Wages,
-  Reports, Buyer portal).
-- Chatbot `/api/chatbot/message` (mini dev, `backend/chatbot/`).
-- Public landing page + floating chat bubble.
+- **Run live on a networked host** (the only remaining gate — everything is
+  code-complete + DB-logic/static verified): install deps, `init_db`, `seed`, start
+  both servers, run `pytest`, and do the browser/HTTP demo pass.
+- Wire the chatbot (2 shared-file lines — see `chatbot/README.md`) + create the
+  Dify app with the provided prompt/KB and keys.
+- Optional: move session store / machine-cost allocation to stricter models if
+  desired (documented assumptions).
 
 ---
 
 ## 8. Known Bugs
 
-- **Cannot run/verify in the current sandbox** (`INTEGRATIONS_ONLY`): PyPI, npm and
-  a Postgres server are unreachable, so dependency install and the acceptance test
-  were not executed here. Python modules were byte-compiled (syntax valid). Must be
-  verified on a networked host.
+- **Live app not runnable in this sandbox** (`INTEGRATIONS_ONLY`): PyPI/npm/Postgres
+  unreachable, so real HTTP + browser + PDF + Dify were **not** executed here.
+  Verified instead by DB-logic simulation (19/19), compilation, and lint. Must be
+  confirmed on a networked host.
+- No open logic bugs found in Phase 10. The notifications-bell dead button was
+  fixed.
 
 ---
 

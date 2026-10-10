@@ -55,6 +55,7 @@ export default function AppShell() {
   const { user, menu, logout } = useAuth();
   const [active, setActive] = useState(menu[0]?.path || "");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   if (!user) return null; // guarded by App, but be safe
 
@@ -108,15 +109,30 @@ export default function AppShell() {
           </div>
 
           <div className="shell-top-actions">
-            {/* Notifications bell — placeholder */}
-            <button
-              className="icon-btn"
-              title="Notifications (coming soon)"
-              aria-label="Notifications"
-              disabled
-            >
-              🔔
-            </button>
+            {/* Notifications bell */}
+            <div className="notif-wrap">
+              <button
+                className="icon-btn"
+                title="Notifications"
+                aria-label="Notifications"
+                aria-expanded={notifOpen}
+                onClick={() => setNotifOpen((v) => !v)}
+              >
+                🔔
+              </button>
+              {notifOpen && (
+                <div
+                  className="notif-popover"
+                  role="dialog"
+                  aria-label="Notifications"
+                >
+                  <div className="notif-head">Notifications</div>
+                  <div className="notif-empty muted">
+                    You're all caught up — no new notifications.
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Profile: name + role */}
             <div className="profile">
