@@ -47,7 +47,6 @@ See `API_CONTRACT.md` for full request/response details.
 | POST   | `/api/auth/login`           | Login → JWT + user + menu        | Implemented (not runtime-tested here) |
 | GET    | `/api/auth/me`              | Current user + role menu         | Implemented (not runtime-tested here) |
 | POST   | `/api/auth/logout`          | Stateless logout                 | Implemented (not runtime-tested here) |
-| GET    | `/api/auth/_demo/payments`  | Demo 403 enforcement (owner/accountant only) | Implemented (not runtime-tested here) |
 | GET    | `/api/orders`               | List orders (status filter + search) | Implemented (not runtime-tested here) |
 | POST   | `/api/orders`               | Create order (draft) + yarn item | Implemented (not runtime-tested here) |
 | GET    | `/api/orders/_meta/buyers`  | Buyers for the order form        | Implemented (not runtime-tested here) |
@@ -123,8 +122,9 @@ Tables (18): `roles`, `users`, `buyers`, `orders`, `order_items`, `yarn_stock`,
 
 - Passwords hashed with **bcrypt** (passlib). Stateless **JWT** bearer auth
   (`JWT_SECRET` in `.env`, insecure dev default).
-- Endpoints: `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`, plus a demo
-  protected endpoint `/api/auth/_demo/payments`.
+- Endpoints: `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`. (The Phase 4
+  demo endpoint `/api/auth/_demo/payments` was removed once the real
+  `/api/payments/*` endpoints shipped; they enforce the same 403.)
 - **One RBAC config** (`backend/app/rbac.py`) defines role → menu and (derived)
   resource → allowed roles. Frontend renders menus from `/api/auth/me`; backend
   enforces with `require_resource(...)` / `require_roles(...)` → **403** when
