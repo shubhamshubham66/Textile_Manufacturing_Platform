@@ -1,5 +1,18 @@
 import { useState } from "react";
 import { useAuth } from "../auth/AuthContext.jsx";
+import Orders from "./app/Orders.jsx";
+import YarnStore from "./app/YarnStore.jsx";
+import Stock from "./app/Stock.jsx";
+import Purchase from "./app/Purchase.jsx";
+
+// Resource key -> built module page. Resources not listed here fall back to a
+// clearly-labelled prototype placeholder (built in later phases).
+const PAGES = {
+  orders: Orders,
+  yarn: YarnStore,
+  stock: Stock,
+  purchase: Purchase,
+};
 
 // Role label lookup for display (keys match backend role names).
 const ROLE_LABELS = {
@@ -99,17 +112,23 @@ export default function AppShell() {
         </header>
 
         <main className="shell-content">
-          <div className="placeholder-card">
-            <h2>{activeItem?.label}</h2>
-            <p className="muted">
-              This is the <strong>{activeItem?.label}</strong> area for the{" "}
-              <strong>{ROLE_LABELS[user.role] || user.role}</strong> role.
-            </p>
-            <p className="muted">
-              Prototype placeholder — this module is built in a later phase.
-            </p>
-            <span className="badge loading">Prototype</span>
-          </div>
+          {(() => {
+            const Page = PAGES[activeItem?.resource];
+            if (Page) return <Page />;
+            return (
+              <div className="placeholder-card">
+                <h2>{activeItem?.label}</h2>
+                <p className="muted">
+                  This is the <strong>{activeItem?.label}</strong> area for the{" "}
+                  <strong>{ROLE_LABELS[user.role] || user.role}</strong> role.
+                </p>
+                <p className="muted">
+                  Prototype placeholder — this module is built in a later phase.
+                </p>
+                <span className="badge loading">Prototype</span>
+              </div>
+            );
+          })()}
         </main>
       </div>
 

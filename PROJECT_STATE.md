@@ -3,8 +3,8 @@
 Single source of truth for the current state of the project. Update this at the end
 of every phase. Keep it short and factual.
 
-**Last updated:** Phase 4 (Login & Roles) — 10 Oct 2026
-**Current phase:** Phase 4 — Login & Roles
+**Last updated:** Phase 5 (Orders & Yarn Store) — 10 Oct 2026
+**Current phase:** Phase 5 — Orders & Yarn Store
 
 ---
 
@@ -48,6 +48,17 @@ See `API_CONTRACT.md` for full request/response details.
 | GET    | `/api/auth/me`              | Current user + role menu         | Implemented (not runtime-tested here) |
 | POST   | `/api/auth/logout`          | Stateless logout                 | Implemented (not runtime-tested here) |
 | GET    | `/api/auth/_demo/payments`  | Demo 403 enforcement (owner/accountant only) | Implemented (not runtime-tested here) |
+| GET    | `/api/orders`               | List orders (status filter + search) | Implemented (not runtime-tested here) |
+| POST   | `/api/orders`               | Create order (draft) + yarn item | Implemented (not runtime-tested here) |
+| GET    | `/api/orders/_meta/buyers`  | Buyers for the order form        | Implemented (not runtime-tested here) |
+| GET    | `/api/orders/{id}`          | Order detail                     | Implemented (not runtime-tested here) |
+| GET    | `/api/orders/{id}/check-yarn` | Yarn enough / short by X       | Implemented (not runtime-tested here) |
+| POST   | `/api/orders/{id}/confirm`  | Confirm order (→ production)     | Implemented (not runtime-tested here) |
+| GET    | `/api/yarn/stock`           | Live stock + low-stock flag      | Implemented (not runtime-tested here) |
+| POST   | `/api/yarn/receipts`        | Receive yarn (auto stock update) | Implemented (not runtime-tested here) |
+| POST   | `/api/yarn/purchase`        | Raise purchase order             | Implemented (not runtime-tested here) |
+| GET    | `/api/yarn/purchase`        | List purchase orders             | Implemented (not runtime-tested here) |
+| GET    | `/api/yarn/suppliers`       | Suppliers for forms              | Implemented (not runtime-tested here) |
 | POST   | `/api/chatbot/message`      | AI assistant (mini dev, later)   | Defined (contract only) |
 
 ---
@@ -121,6 +132,17 @@ Tables (18): `roles`, `users`, `buyers`, `orders`, `order_items`, `yarn_stock`,
     `App.jsx` guards `/app` (→ `/login`) and `/login` (→ `/app`).
   - API_CONTRACT updated with auth endpoints + role map. README "Demo logins".
   - Backend byte-compiles; frontend validated with Prettier.
+- **Phase 5 — Orders & Yarn Store (code complete, not runtime-tested here):**
+  - Backend: `routers/orders.py` (list/create/detail/check-yarn/confirm + buyers)
+    and `routers/yarn.py` (stock/receipts/purchase/suppliers). All role-guarded via
+    `require_resource`. Config adds `YARN_KG_PER_METER` (0.2) + default reorder
+    level. Yarn receipt updates stock in one transaction and can close a PO.
+  - Frontend: `pages/app/{Orders,YarnStore,Stock,Purchase}.jsx` with validation,
+    loading/empty/error states. AppShell now dispatches menu resources → real pages
+    (others still prototype placeholders).
+  - API_CONTRACT: orders + yarn endpoints documented.
+  - Yarn estimation: required_kg = quantity_meters × 0.2 (configurable), matched by
+    colour against stock.
 
 ---
 

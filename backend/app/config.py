@@ -22,6 +22,14 @@ class Settings(BaseSettings):
     jwt_secret: str = "dev-insecure-change-me"
     jwt_expire_minutes: int = 720  # 12h, convenient for a hackathon demo
 
+    # Yarn estimation: kg of yarn needed per metre of fabric. Used by the
+    # "Check yarn" feature to convert an order (metres) into a yarn requirement
+    # (kg). A simple, configurable factor — refine per fabric later if needed.
+    yarn_kg_per_meter: float = 0.2
+
+    # Low-stock threshold fallback (kg) used when a yarn row has no reorder level.
+    default_reorder_level_kg: float = 100.0
+
     # CORS: comma-separated list of allowed frontend origins.
     cors_origins: str = "http://localhost:5173"
 

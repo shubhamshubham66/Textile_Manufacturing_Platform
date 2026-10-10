@@ -17,6 +17,8 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.database import engine
 from app.routers import auth as auth_router
+from app.routers import orders as orders_router
+from app.routers import yarn as yarn_router
 
 settings = get_settings()
 
@@ -32,6 +34,8 @@ app.add_middleware(
 
 # Routers
 app.include_router(auth_router.router)
+app.include_router(orders_router.router)
+app.include_router(yarn_router.router)
 
 
 # ---- Uniform error shape (matches API_CONTRACT.md) ----
