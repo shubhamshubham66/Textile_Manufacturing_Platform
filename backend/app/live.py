@@ -180,13 +180,31 @@ def _collect(session: Session) -> list[LiveEvent]:
         for obj in list(session.new) + list(session.dirty):
             is_new = obj in session.new
 
-            if isinstance(obj, m.Machine) and not is_new:
+            if isinstance(obj, m.Machine) and is_new:
+                out.append(LiveEvent("machines", TOPIC_ROLES["machines"] + [FLOOR],
+                                     f"New machine added: {obj.name}", "info", notify=True,
+                                     notify_roles=[OWNER]))
+
+            elif isinstance(obj, m.Machine) and not is_new:
                 ch = _changed(obj, "current_status", session)
                 if ch and ch[0] != ch[1]:
                     status = ch[1]
                     level = {"breakdown": "alert", "idle": "warn"}.get(status, "success")
                     word = {"breakdown": "broke down", "idle": "is idle", "running": "is running again"}.get(status, f"is {status}")
                     out.append(LiveEvent("machines", TOPIC_ROLES["machines"], f"{obj.name} {word}", level, notify=True))
+                else:
+                    # Other machine edits (name / costs) — refresh the machine views.
+                    out.append(LiveEvent("machines", TOPIC_ROLES["machines"] + [FLOOR]))
+
+            elif isinstance(obj, m.Buyer):
+                # New or edited buyer — refresh order/payment screens that list them.
+                out.append(LiveEvent("orders", STAFF))
+
+            elif isinstance(obj, m.Supplier):
+                out.append(LiveEvent("payments", TOPIC_ROLES["payments"] + [STORE]))
+
+            elif isinstance(obj, m.Employee):
+                out.append(LiveEvent("wages", TOPIC_ROLES["wages"]))
 
             elif isinstance(obj, m.Order):
                 if is_new:

@@ -27,6 +27,7 @@ from app.routers import quality as quality_router
 from app.routers import reports as reports_router
 from app.routers import signup as signup_router
 from app.routers import live as live_router
+from app.routers import master as master_router
 from app.routers import team as team_router
 from app.routers import wages as wages_router
 from app.routers import yarn as yarn_router
@@ -115,6 +116,7 @@ app.include_router(auth_router.router)
 app.include_router(signup_router.router)
 app.include_router(live_router.router)
 app.include_router(team_router.router)
+app.include_router(master_router.router)
 app.include_router(orders_router.router)
 app.include_router(yarn_router.router)
 app.include_router(production_router.router)

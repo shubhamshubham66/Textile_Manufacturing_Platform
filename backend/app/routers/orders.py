@@ -346,3 +346,84 @@ def confirm_order(
     db.commit()
     db.refresh(order)
     return _order_out(order)
+
+
+# Orders may be edited or cancelled only BEFORE production starts.
+_EDITABLE_STATES = ("draft", "confirmed")
+
+
+class OrderEdit(BaseModel):
+    buyer_id: int
+    fabric_type: str = Field(min_length=1, max_length=80)
+    colour: str = Field(min_length=1, max_length=60)
+    quantity_meters: float = Field(gt=0)
+    unit_price: float = Field(ge=0)
+    deadline: date | None = None
+
+    @field_validator("fabric_type", "colour")
+    @classmethod
+    def _strip(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("must not be blank")
+        return v
+
+
+@router.put("/{order_id}", response_model=OrderOut)
+def edit_order(
+    order_id: int,
+    body: OrderEdit,
+    _=Depends(require_resource("orders")),
+    db: Session = Depends(get_db),
+):
+    """Correct an order before production. Blocked once it is in production or
+    later (409), so a running job's figures can't change under it."""
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status not in _EDITABLE_STATES:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Order is '{order.status}' — it can only be edited before production.",
+        )
+    buyer = db.query(Buyer).filter(Buyer.id == body.buyer_id).first()
+    if buyer is None:
+        raise HTTPException(status_code=400, detail="Unknown buyer")
+
+    order.buyer_id = body.buyer_id
+    order.fabric_type = body.fabric_type
+    order.colour = body.colour
+    order.quantity_meters = body.quantity_meters
+    order.unit_price = body.unit_price
+    order.deadline = body.deadline
+
+    # Keep the yarn requirement item in step with the new colour/quantity.
+    item = db.query(OrderItem).filter(OrderItem.order_id == order.id).first()
+    if item is not None:
+        item.colour = body.colour
+        item.required_qty_kg = _required_kg(body.quantity_meters)
+    db.commit()
+    db.refresh(order)
+    return _order_out(order)
+
+
+@router.post("/{order_id}/cancel", response_model=OrderOut)
+def cancel_order(
+    order_id: int,
+    _=Depends(require_resource("orders")),
+    db: Session = Depends(get_db),
+):
+    """Cancel an order before production (draft/confirmed only). A cancelled
+    order stays on record but drops out of the active pipeline."""
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status not in _EDITABLE_STATES:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Order is '{order.status}' — only draft or confirmed orders can be cancelled.",
+        )
+    order.status = "cancelled"
+    db.commit()
+    db.refresh(order)
+    return _order_out(order)

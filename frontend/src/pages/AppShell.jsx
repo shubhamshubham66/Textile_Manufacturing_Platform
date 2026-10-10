@@ -13,6 +13,7 @@ import Attendance from "./app/Attendance.jsx";
 import Wages from "./app/Wages.jsx";
 import Reports from "./app/Reports.jsx";
 import Dashboard from "./app/Dashboard.jsx";
+import MasterData from "./app/MasterData.jsx";
 import MyOrders from "./app/MyOrders.jsx";
 import Invoices from "./app/Invoices.jsx";
 import Team from "./app/Team.jsx";
@@ -39,6 +40,7 @@ const PAGES = {
   my_orders: MyOrders,
   invoices: Invoices,
   team: Team,
+  master_data: MasterData,
 };
 
 // Role label lookup for display (keys match backend role names).
@@ -88,7 +90,10 @@ function LiveBadge() {
         ? "Connecting…"
         : "Reconnecting…";
   return (
-    <span className={`live-badge is-${status}`} title="Screens update by themselves when anything changes">
+    <span
+      className={`live-badge is-${status}`}
+      title="Screens update by themselves when anything changes"
+    >
       <i aria-hidden />
       <span className="live-badge-text">{text}</span>
     </span>
@@ -100,7 +105,11 @@ function Toasts() {
   return (
     <div className="live-toasts" aria-live="polite">
       {toasts.map((t) => (
-        <button key={t.key} className={`live-toast is-${t.level}`} onClick={() => dismissToast(t.key)}>
+        <button
+          key={t.key}
+          className={`live-toast is-${t.level}`}
+          onClick={() => dismissToast(t.key)}
+        >
           <span aria-hidden>{LEVEL_ICON[t.level] || "ℹ️"}</span> {t.message}
         </button>
       ))}
@@ -223,7 +232,9 @@ function Shell() {
                 }}
               >
                 🔔
-                {live.unread > 0 && <span className="notif-count">{live.unread}</span>}
+                {live.unread > 0 && (
+                  <span className="notif-count">{live.unread}</span>
+                )}
               </button>
               {notifOpen && (
                 <div
@@ -244,7 +255,9 @@ function Shell() {
                           <span>
                             {n.message}
                             <small className="muted">
-                              {n.current ? "Right now" : new Date(n.at).toLocaleTimeString()}
+                              {n.current
+                                ? "Right now"
+                                : new Date(n.at).toLocaleTimeString()}
                             </small>
                           </span>
                         </li>
