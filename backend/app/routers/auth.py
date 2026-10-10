@@ -1,0 +1,116 @@
+"""Authentication + role endpoints.
+
+- POST /api/auth/login   -> validate credentials, return JWT + user + menu
+- GET  /api/auth/me      -> current user, role and role-based menu
+- POST /api/auth/logout  -> stateless; client discards the token
+
+A demo protected endpoint (GET /api/payments/_demo) proves backend role
+enforcement returns 403 for unauthorized roles.
+"""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, EmailStr, field_validator
+from sqlalchemy.orm import Session
+
+from app import rbac
+from app.database import get_db
+from app.deps import get_current_user, require_resource
+from app.models import User
+from app.security import create_access_token, verify_password
+
+router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+# ---- Schemas ----
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+    @field_validator("password")
+    @classmethod
+    def password_not_blank(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Password is required")
+        return v
+
+
+class UserOut(BaseModel):
+    id: int
+    name: str
+    email: str
+    role: str
+    buyer_id: int | None = None
+
+
+class MeOut(BaseModel):
+    user: UserOut
+    menu: list[dict]
+
+
+class LoginResponse(BaseModel):
+    token: str
+    token_type: str = "bearer"
+    user: UserOut
+    menu: list[dict]
+
+
+def _user_out(user: User) -> UserOut:
+    return UserOut(
+        id=user.id,
+        name=user.name,
+        email=user.email,
+        role=user.role.name,
+        buyer_id=user.buyer_id,
+    )
+
+
+@router.post("/login", response_model=LoginResponse)
+def login(body: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == body.email).first()
+    # Same message whether email or password is wrong (don't leak which).
+    if user is None or not verify_password(body.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account is disabled",
+        )
+
+    token = create_access_token(subject=user.id, extra={"role": user.role.name})
+    return LoginResponse(
+        token=token,
+        user=_user_out(user),
+        menu=rbac.menu_for(user.role.name),
+    )
+
+
+@router.get("/me", response_model=MeOut)
+def me(user: User = Depends(get_current_user)):
+    return MeOut(user=_user_out(user), menu=rbac.menu_for(user.role.name))
+
+
+@router.post("/logout")
+def logout(user: User = Depends(get_current_user)):
+    # Stateless JWT: the client discards the token. Endpoint exists so the UI has
+    # a definite action and so we could add server-side token revocation later.
+    return {"message": "Logged out"}
+
+
+# ---- Demo protected endpoint to prove 403 enforcement ----
+@router.get("/_demo/payments")
+def demo_payments(user: User = Depends(require_resource("payments"))):
+    """Only Owner and Accountant may access 'payments'. Others get 403.
+
+    Used to demonstrate that role enforcement is on the backend, not just by
+    hiding menus. Replace with real payment endpoints in the payments phase.
+    """
+    return {
+        "ok": True,
+        "resource": "payments",
+        "accessed_by": {"user": user.name, "role": user.role.name},
+    }

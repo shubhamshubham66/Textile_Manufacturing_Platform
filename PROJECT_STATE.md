@@ -3,8 +3,8 @@
 Single source of truth for the current state of the project. Update this at the end
 of every phase. Keep it short and factual.
 
-**Last updated:** Phase 3 (Landing Page) — 10 Oct 2026
-**Current phase:** Phase 3 — Landing Page (public)
+**Last updated:** Phase 4 (Login & Roles) — 10 Oct 2026
+**Current phase:** Phase 4 — Login & Roles
 
 ---
 
@@ -40,11 +40,15 @@ Decided in Phase 2. **Odoo is not required.**
 
 See `API_CONTRACT.md` for full request/response details.
 
-| Method | Path                   | Purpose                        | Status  |
-| ------ | ---------------------- | ------------------------------ | ------- |
-| GET    | `/api/health`          | Liveness + DB connectivity     | Implemented (not runtime-tested here) |
-| GET    | `/`                    | Service info / links           | Implemented (not runtime-tested here) |
-| POST   | `/api/chatbot/message` | AI assistant (mini dev, later) | Defined (contract only) |
+| Method | Path                        | Purpose                          | Status  |
+| ------ | --------------------------- | -------------------------------- | ------- |
+| GET    | `/api/health`               | Liveness + DB connectivity       | Implemented (not runtime-tested here) |
+| GET    | `/`                         | Service info / links             | Implemented (not runtime-tested here) |
+| POST   | `/api/auth/login`           | Login → JWT + user + menu        | Implemented (not runtime-tested here) |
+| GET    | `/api/auth/me`              | Current user + role menu         | Implemented (not runtime-tested here) |
+| POST   | `/api/auth/logout`          | Stateless logout                 | Implemented (not runtime-tested here) |
+| GET    | `/api/auth/_demo/payments`  | Demo 403 enforcement (owner/accountant only) | Implemented (not runtime-tested here) |
+| POST   | `/api/chatbot/message`      | AI assistant (mini dev, later)   | Defined (contract only) |
 
 ---
 
@@ -71,10 +75,19 @@ Tables (18): `roles`, `users`, `buyers`, `orders`, `order_items`, `yarn_stock`,
 
 ## 5. Auth & Roles
 
-**Not implemented yet** (planned for a later phase). Roles seeded: owner,
-store_manager, floor_supervisor, quality_inspector, accountant, buyer. Demo users
-exist with placeholder password markers (`demo-hash:<pw>`); real hashing comes with
-the auth phase. A buyer login links to a buyer via `users.buyer_id`.
+**Implemented (Phase 4).**
+
+- Passwords hashed with **bcrypt** (passlib). Stateless **JWT** bearer auth
+  (`JWT_SECRET` in `.env`, insecure dev default).
+- Endpoints: `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`, plus a demo
+  protected endpoint `/api/auth/_demo/payments`.
+- **One RBAC config** (`backend/app/rbac.py`) defines role → menu and (derived)
+  resource → allowed roles. Frontend renders menus from `/api/auth/me`; backend
+  enforces with `require_resource(...)` / `require_roles(...)` → **403** when
+  forbidden. No per-role duplicated code.
+- Roles: owner, store_manager, floor_supervisor, quality_inspector, accountant,
+  buyer. Demo users seeded (credentials in README "Demo logins"). Buyer login links
+  to a buyer via `users.buyer_id`.
 
 ---
 
@@ -97,6 +110,17 @@ the auth phase. A buyer login links to a buyer via `users.buyer_id`.
   - All navbar links scroll to real sections (verified ids match). No dead buttons.
   - Chat bubble is a disabled mount point only — mini dev builds the chatbot.
   - JSX/CSS validated with Prettier (parses + formatted).
+- **Phase 4 — Login & Roles (code complete, not runtime-tested here):**
+  - Backend: `security.py` (bcrypt + JWT), `rbac.py` (one role→menu/resource
+    config), `deps.py` (`get_current_user`, `require_roles`, `require_resource`),
+    `routers/auth.py` (login/me/logout + demo 403 endpoint). Uniform error shape in
+    `main.py`. Seed now bcrypt-hashes demo passwords.
+  - Frontend: `pages/Login.jsx` (validation + clear errors + demo-fill),
+    `pages/AppShell.jsx` (sidebar from backend menu, topbar: bell placeholder,
+    profile name+role, Logout), `auth/AuthContext.jsx`, `lib/api.js`. Routing in
+    `App.jsx` guards `/app` (→ `/login`) and `/login` (→ `/app`).
+  - API_CONTRACT updated with auth endpoints + role map. README "Demo logins".
+  - Backend byte-compiles; frontend validated with Prettier.
 
 ---
 
