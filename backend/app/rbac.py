@@ -35,6 +35,7 @@ MENU_CONFIG: dict[str, list[dict]] = {
         {"label": "Orders", "path": "/app/orders", "resource": "orders"},
         {"label": "Reports", "path": "/app/reports", "resource": "reports"},
         {"label": "Payments", "path": "/app/payments", "resource": "payments"},
+        {"label": "Master data", "path": "/app/master", "resource": "master_data"},
         {"label": "Team", "path": "/app/team", "resource": "team"},
     ],
     ROLE_MANAGER: [

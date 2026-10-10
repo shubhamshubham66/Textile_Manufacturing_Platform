@@ -12,6 +12,7 @@ const STATUSES = [
   "ready_to_ship",
   "dispatched",
   "closed",
+  "cancelled",
 ];
 
 const STATUS_CHIP = {
@@ -22,6 +23,7 @@ const STATUS_CHIP = {
   ready_to_ship: "owner-chip-blue",
   dispatched: "owner-chip-green",
   closed: "owner-chip-green",
+  cancelled: "owner-chip-red",
 };
 
 const RESULT_CHIP = {
@@ -66,6 +68,7 @@ export default function Orders() {
 
   const [track, setTrack] = useState(null); // tracker drawer data
   const [trackLoading, setTrackLoading] = useState(false);
+  const [editOrder, setEditOrder] = useState(null); // order being edited
 
   async function loadOrders() {
     if (!isLiveRefresh()) setLoading(true);
@@ -175,6 +178,25 @@ export default function Orders() {
       setTrack({ error: err.message });
     } finally {
       setTrackLoading(false);
+    }
+  }
+
+  async function onCancel(order) {
+    if (
+      !window.confirm(
+        `Cancel ${order.order_no}? It stays on record but leaves the active pipeline.`,
+      )
+    )
+      return;
+    setBusyId(order.id);
+    setError("");
+    try {
+      await apiFetch(`/api/orders/${order.id}/cancel`, { method: "POST" });
+      await loadOrders();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -392,6 +414,24 @@ export default function Orders() {
                           {confirmed ? "Confirmed" : "Confirm"}
                         </button>
                       )}
+                      {(o.status === "draft" || o.status === "confirmed") && (
+                        <>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            disabled={busyId === o.id}
+                            onClick={() => setEditOrder(o)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="link-btn"
+                            disabled={busyId === o.id}
+                            onClick={() => onCancel(o)}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 );
@@ -408,6 +448,135 @@ export default function Orders() {
           onClose={() => setTrack(null)}
         />
       )}
+
+      {editOrder && (
+        <OrderEditDialog
+          order={editOrder}
+          buyers={buyers}
+          onClose={() => setEditOrder(null)}
+          onSaved={() => {
+            setEditOrder(null);
+            loadOrders();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function OrderEditDialog({ order, buyers, onClose, onSaved }) {
+  const [f, setF] = useState({
+    buyer_id: String(order.buyer_id || ""),
+    fabric_type: order.fabric_type || "",
+    colour: order.colour || "",
+    quantity_meters: order.quantity_meters ?? "",
+    unit_price: order.unit_price ?? "",
+    deadline: order.deadline ? String(order.deadline).slice(0, 10) : "",
+  });
+  const [err, setErr] = useState("");
+  const [saving, setSaving] = useState(false);
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!f.buyer_id) return setErr("Select a buyer.");
+    if (!f.fabric_type.trim()) return setErr("Fabric type is required.");
+    if (!f.colour.trim()) return setErr("Colour is required.");
+    if (!(Number(f.quantity_meters) > 0))
+      return setErr("Quantity must be greater than 0.");
+    if (!(Number(f.unit_price) >= 0)) return setErr("Rate must be 0 or more.");
+    setSaving(true);
+    setErr("");
+    try {
+      await apiFetch(`/api/orders/${order.id}`, {
+        method: "PUT",
+        body: {
+          buyer_id: Number(f.buyer_id),
+          fabric_type: f.fabric_type.trim(),
+          colour: f.colour.trim(),
+          quantity_meters: Number(f.quantity_meters),
+          unit_price: Number(f.unit_price),
+          deadline: f.deadline || null,
+        },
+      });
+      onSaved();
+    } catch (e2) {
+      setErr(e2.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="owner-drawer-backdrop" onClick={onClose}>
+      <div
+        className="owner-dialog"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-label="Edit order"
+      >
+        <h3>Edit {order.order_no}</h3>
+        <p className="muted">Allowed before production starts.</p>
+        <form onSubmit={submit} noValidate>
+          {err && <div className="form-error">{err}</div>}
+          <label className="field">
+            <span>Buyer</span>
+            <select value={f.buyer_id} onChange={set("buyer_id")}>
+              <option value="">Select buyer…</option>
+              {buyers.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Fabric type</span>
+            <input value={f.fabric_type} onChange={set("fabric_type")} />
+          </label>
+          <label className="field">
+            <span>Colour</span>
+            <input value={f.colour} onChange={set("colour")} />
+          </label>
+          <label className="field">
+            <span>Quantity (metres)</span>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={f.quantity_meters}
+              onChange={set("quantity_meters")}
+            />
+          </label>
+          <label className="field">
+            <span>Rate (₹/metre)</span>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={f.unit_price}
+              onChange={set("unit_price")}
+            />
+          </label>
+          <label className="field">
+            <span>Deadline (dd/mm/yyyy)</span>
+            <input type="date" value={f.deadline} onChange={set("deadline")} />
+          </label>
+          <div className="form-actions" style={{ gap: "0.5rem" }}>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={onClose}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button className="btn btn-primary btn-sm" disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

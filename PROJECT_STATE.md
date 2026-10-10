@@ -451,3 +451,26 @@ Audit of R1–R7 (owner scene) found four wrong/partial items; fixed:
 - Definitions: `backend/app/services/reports.py` docstring and `docs/OWNER_MONTH_END_HANDCHECK.md`. Tests: `backend/tests/test_owner_reports.py` (acceptance checks 1–7); `backend/tests/verify_month_math.py` (plain arithmetic).
 - Shared file touched (additive): `backend/app/services/production.py` gets `log_hours_in_window` and an optional `window` on `idle_loss_for_machine` (floor screens call it without a window, unchanged).
 
+
+## Task 3 — Master data screens (owner)
+
+- New owner resource **`master_data`** (menu "Master data") + router
+  `backend/app/routers/master.py`: add + edit **buyers, suppliers, machines,
+  employees**, and **correct a yarn receipt**. Owner only (403 for others).
+  - Machine: `power_overhead_cost` must be ≤ `hourly_cost` (the rest is the
+    operator wage).
+  - Receipt correction adjusts stock by (new − old) kg; never below zero.
+- Orders: **edit** (`PUT /api/orders/{id}`) and **cancel**
+  (`POST /api/orders/{id}/cancel`) — allowed only before production
+  (`draft`/`confirmed`), else 409. New order status **`cancelled`**.
+- `live.py`: events for new machine + buyer/supplier/employee/machine edits
+  (refresh the relevant screens; new machine notifies the owner).
+- Frontend: `pages/app/MasterData.jsx` (tabs: Buyers / Suppliers / Machines /
+  Employees / Yarn receipts, each with add/edit dialogs, validation, live
+  refresh). Orders page gains Edit (dialog) + Cancel. `format.js` labels
+  `cancelled`.
+- Tests: `backend/tests/test_master_data.py` (CRUD, 409 duplicates, machine
+  power ≤ hourly, RBAC 403, order edit/cancel-before-production rules, receipt
+  stock adjust).
+- Not runtime-tested in this sandbox (no PyPI/npm); byte-compiles + prettier
+  clean; run `pytest tests` on a networked host.

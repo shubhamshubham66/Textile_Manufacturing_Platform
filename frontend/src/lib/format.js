@@ -72,6 +72,7 @@ const STATUS_LABELS = {
   ready_to_ship: "Ready to ship",
   dispatched: "Dispatched",
   closed: "Closed",
+  cancelled: "Cancelled",
   // payment / invoice
   paid: "Paid",
   part_paid: "Partial",

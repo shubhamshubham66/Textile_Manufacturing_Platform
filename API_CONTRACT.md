@@ -193,6 +193,19 @@ Compare required yarn vs. available stock (same colour).
 Set status to `confirmed` (available for production). `409` if the order is in a
 state that cannot be confirmed. Returns the updated order.
 
+### PUT /api/orders/{id}
+
+Edit an order (owner). Allowed **only before production** (status `draft` or
+`confirmed`), else **409**. Body: `buyer_id, fabric_type, colour,
+quantity_meters, unit_price, deadline`. Keeps the order's yarn-requirement item
+in step with the new colour/quantity. Returns the updated order.
+
+### POST /api/orders/{id}/cancel
+
+Cancel an order (owner). Allowed only for `draft`/`confirmed` (else **409**).
+Sets status to `cancelled`; the order stays on record but leaves the active
+pipeline. Returns the updated order.
+
 ### GET /api/orders/{id}/track
 
 Owner order tracker (owner only). Current stage + progress + late flag + the
@@ -634,6 +647,40 @@ Backend enforcement uses `require_resource("<resource>")` / `require_roles(...)`
 the frontend renders menus from the same config returned by `/api/auth/me`.
 
 ---
+
+## Master data (role: owner — resource `master_data`)
+
+Owner-only (403 for other roles). Add + edit the mill's reference records so
+judges can enter real data live. Each save fires the matching live event.
+
+| Method | Path                              | Purpose                                   |
+| ------ | --------------------------------- | ----------------------------------------- |
+| GET    | `/api/master/buyers`              | List buyers                               |
+| POST   | `/api/master/buyers`              | Add a buyer (409 on duplicate name)       |
+| PUT    | `/api/master/buyers/{id}`         | Edit a buyer                              |
+| GET    | `/api/master/suppliers`           | List suppliers                            |
+| POST   | `/api/master/suppliers`           | Add a supplier (409 on duplicate name)    |
+| PUT    | `/api/master/suppliers/{id}`      | Edit a supplier                           |
+| GET    | `/api/master/machines`            | List machines                             |
+| POST   | `/api/master/machines`            | Add a machine (status starts `idle`)      |
+| PUT    | `/api/master/machines/{id}`       | Edit a machine                            |
+| GET    | `/api/master/employees`           | List employees                            |
+| POST   | `/api/master/employees`           | Add an employee                           |
+| PUT    | `/api/master/employees/{id}`      | Edit an employee                          |
+| GET    | `/api/master/yarn-receipts`       | List yarn receipts (for correction)       |
+| PUT    | `/api/master/yarn-receipts/{id}`  | Correct a receipt; stock adjusts by delta |
+
+Fields:
+- **Buyer**: `name` (req), `contact_person`, `phone`, `email`, `address`,
+  `credit_limit ≥ 0`.
+- **Supplier**: `name` (req), `phone`, `email`, `address`.
+- **Machine**: `name` (req), `type` ∈ spinning|weaving|dyeing, `hourly_cost ≥ 0`,
+  `power_overhead_cost ≥ 0` and **≤ hourly_cost** (400 otherwise — the rest is
+  the operator wage).
+- **Employee**: `name` (req), `role_on_floor`, `daily_wage ≥ 0`, `phone`.
+- **Yarn receipt correction**: `quantity_kg > 0`, `unit_cost ≥ 0`, `order_id`
+  (nullable). The stock row changes by `new_qty − old_qty`; a correction that
+  would push stock below zero is rejected (400).
 
 ## Error format
 
