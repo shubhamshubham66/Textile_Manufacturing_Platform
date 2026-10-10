@@ -26,6 +26,8 @@ const DEMO_ACCOUNTS = [
 ];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Staff login IDs the owner hands out, e.g. MGR-001.
+const ID_RE = /^[A-Za-z0-9][A-Za-z0-9-]{2,19}$/;
 
 export default function Login() {
   const { login } = useAuth();
@@ -37,9 +39,10 @@ export default function Login() {
 
   function validate() {
     const errs = {};
-    if (!email.trim()) errs.email = "Email is required.";
-    else if (!EMAIL_RE.test(email.trim()))
-      errs.email = "Enter a valid email address.";
+    const who = email.trim();
+    if (!who) errs.email = "Enter your Gmail or login ID.";
+    else if (who.includes("@") ? !EMAIL_RE.test(who) : !ID_RE.test(who))
+      errs.email = "Enter a valid Gmail or login ID (e.g. MGR-001).";
     if (!password) errs.password = "Password is required.";
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
@@ -56,7 +59,7 @@ export default function Login() {
       window.location.assign("/app");
       return user;
     } catch (err) {
-      if (err.status === 401) setFormError("Invalid email or password.");
+      if (err.status === 401) setFormError("Invalid Gmail/ID or password.");
       else if (err.status === 403)
         setFormError(err.message || "Account disabled.");
       else
@@ -118,12 +121,14 @@ export default function Login() {
 
         <form onSubmit={onSubmit} noValidate>
           <label className="field">
-            <span>Email</span>
+            <span>Gmail or login ID</span>
             <input
-              type="email"
+              type="text"
               value={email}
               autoComplete="username"
-              placeholder="you@gmail.com"
+              autoCapitalize="none"
+              spellCheck={false}
+              placeholder="you@gmail.com or MGR-001"
               onChange={(e) => setEmail(e.target.value)}
               className={fieldErrors.email ? "invalid" : ""}
             />

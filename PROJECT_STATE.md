@@ -432,3 +432,10 @@ a title, units, tooltips and an aria-label text alternative.
 ## Phase 13c — Signup without role
 - `/signup` now asks only Name, Email, OTP, New + Confirm password. Every new account is a Buyer with its own buyer record (least access). The API ignores any `role` sent, so nobody can make themselves Admin. Staff roles are to be given by the owner.
 
+## Phase 15 — Owner login + Team (create manager)
+- Owner account comes from `OWNER_EMAIL` / `OWNER_PASSWORD` / `OWNER_NAME` env vars (`backend/app/bootstrap.py`): created on start, password re-synced if changed, promoted to owner if that email existed with another role. Password stored as a bcrypt hash only.
+- New role `manager` (menu: Home placeholder for now); `ensure_roles` adds missing roles to an existing database.
+- Users have an optional `login_id` (e.g. MGR-001; column auto-added on old DBs by schema_sync). Login accepts Gmail or login ID.
+- Owner menu has **Team** (`/app/team`): create manager (name, login ID, password + confirm, optional Gmail) and list managers. Dashboard has a "＋ Create manager" button. API: `GET/POST /api/team/managers` (owner only).
+- Tests: `backend/tests/test_team.py` (4); 25 backend tests pass.
+

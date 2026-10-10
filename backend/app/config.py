@@ -54,6 +54,13 @@ class Settings(BaseSettings):
     otp_resend_seconds: int = 60
     otp_max_attempts: int = 5
 
+    # The real owner account. On startup, if OWNER_EMAIL and OWNER_PASSWORD are
+    # set, that Gmail becomes an owner login (created, or its password updated).
+    # Set them only in the host's environment, never in code.
+    owner_email: str = ""
+    owner_password: str = ""
+    owner_name: str = "Owner"
+
     app_name: str = "Everest Textile Mills API"
     app_version: str = "0.1.0"
 

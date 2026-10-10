@@ -123,7 +123,20 @@ export default function Dashboard() {
     <div className="module owner-page">
       <div className="owner-toolbar">
         <h2>Dashboard</h2>
-        <MonthPicker value={month} onChange={setMonth} />
+        <div className="owner-toolbar-actions">
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() =>
+              window.dispatchEvent(
+                new CustomEvent("etm:navigate", { detail: { path: "/app/team" } }),
+              )
+            }
+          >
+            ＋ Create manager
+          </button>
+          <MonthPicker value={month} onChange={setMonth} />
+        </div>
       </div>
 
       <div className="card-row">

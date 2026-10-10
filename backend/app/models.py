@@ -52,6 +52,9 @@ class User(Base):
     buyer_id: Mapped[int | None] = mapped_column(ForeignKey("buyers.id"), nullable=True)
     name: Mapped[str] = mapped_column(String(120))
     email: Mapped[str] = mapped_column(String(180), unique=True)
+    # Optional short login ID (e.g. MGR-001) for staff the owner creates; they
+    # can sign in with it instead of an email. Stored upper-case.
+    login_id: Mapped[str | None] = mapped_column(String(40), unique=True, nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
