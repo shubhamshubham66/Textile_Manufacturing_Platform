@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import get_settings
 from app.database import engine
@@ -178,6 +179,28 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "error": {
                 "code": "VALIDATION_ERROR",
                 "message": f"{loc}: {msg}" if loc else msg,
+            }
+        },
+    )
+
+
+@app.exception_handler(SQLAlchemyError)
+async def db_exception_handler(request: Request, exc: SQLAlchemyError):
+    """Any database error (connection drop, timeout, deadlock, unexpected
+    integrity error) that a router did not handle itself surfaces as the uniform
+    error envelope with 503, instead of a bare 500. The full error is logged
+    server-side; the client gets a safe, retryable message.
+
+    The get_db dependency rolls back and closes the request's session, so no
+    half-applied transaction lingers on the pooled connection.
+    """
+    log.error("Unhandled database error on %s %s", request.method, request.url.path, exc_info=exc)
+    return JSONResponse(
+        status_code=503,
+        content={
+            "error": {
+                "code": "DATABASE_ERROR",
+                "message": "The database is temporarily unavailable. Please try again.",
             }
         },
     )
