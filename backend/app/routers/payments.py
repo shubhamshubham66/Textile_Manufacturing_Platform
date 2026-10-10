@@ -44,6 +44,9 @@ class SupplierPaymentRequest(BaseModel):
     supplier_id: int
     amount: float = Field(gt=0)
     method: str = "bank"
+    # Set true to deliberately pay MORE than the current outstanding bill
+    # (an advance). Without it, overpaying a supplier is rejected.
+    is_advance: bool = False
 
     @field_validator("method")
     @classmethod
@@ -60,6 +63,30 @@ def _invoice_paid_total(db: Session, invoice_id: int) -> float:
         .scalar()
     )
     return float(total or 0)
+
+
+def _supplier_outstanding(db: Session, supplier_id: int) -> float:
+    """What we still owe a supplier: Σ(raised/received PO value) − Σ(payments)."""
+    billed = (
+        db.query(
+            func.coalesce(
+                func.sum(PurchaseOrder.quantity_kg * PurchaseOrder.unit_cost), 0
+            )
+        )
+        .filter(
+            PurchaseOrder.supplier_id == supplier_id,
+            PurchaseOrder.status.in_(("raised", "received")),
+        )
+        .scalar()
+        or 0
+    )
+    paid = (
+        db.query(func.coalesce(func.sum(Payment.amount), 0))
+        .filter(Payment.direction == "outgoing", Payment.supplier_id == supplier_id)
+        .scalar()
+        or 0
+    )
+    return round(float(billed) - float(paid), 2)
 
 
 def _refresh_invoice_status(db: Session, invoice: Invoice) -> None:
@@ -183,6 +210,17 @@ def pay_supplier(
     if supplier is None:
         raise HTTPException(status_code=404, detail="Supplier not found")
 
+    outstanding = _supplier_outstanding(db, supplier.id)
+    if not body.is_advance and body.amount - 0.001 > outstanding:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Amount ₹{body.amount:,.2f} exceeds the outstanding bill "
+                f"₹{outstanding:,.2f} for {supplier.name}. "
+                "Tick 'advance payment' to pay more than is owed."
+            ),
+        )
+
     payment = Payment(
         direction="outgoing",
         supplier_id=supplier.id,
@@ -192,7 +230,13 @@ def pay_supplier(
     )
     db.add(payment)
     db.commit()
-    return {"ok": True, "supplier": supplier.name, "amount": body.amount}
+    return {
+        "ok": True,
+        "supplier": supplier.name,
+        "amount": body.amount,
+        "outstanding_after": round(outstanding - body.amount, 2),
+        "is_advance": body.is_advance,
+    }
 
 
 @router.get("/dues")
@@ -200,18 +244,31 @@ def pending_dues(
     _=Depends(require_resource("payments")),
     db: Session = Depends(get_db),
 ):
-    # Buyers owe us: Σ invoice balances per buyer.
+    from datetime import date
+
+    today = date.today()
+
+    # Buyers owe us: per-invoice balance with age (days since invoice date).
     invoices = db.query(Invoice).all()
-    buyer_due: dict[int, dict] = {}
+    buyers_owe = []
     for inv in invoices:
         paid = _invoice_paid_total(db, inv.id)
         bal = float(inv.total) - paid
         if bal > 0.001:
             b = db.query(Buyer).filter(Buyer.id == inv.buyer_id).first()
-            entry = buyer_due.setdefault(
-                inv.buyer_id, {"buyer_name": b.name if b else "", "due": 0.0}
+            inv_date = inv.created_at.date() if inv.created_at else today
+            days = (today - inv_date).days
+            buyers_owe.append(
+                {
+                    "buyer_name": b.name if b else "",
+                    "invoice_no": inv.invoice_no,
+                    "invoice_date": inv_date.isoformat(),
+                    "due": round(bal, 2),
+                    "days_overdue": max(0, days),
+                    "overdue": days > 30,
+                }
             )
-            entry["due"] += bal
+    buyers_owe.sort(key=lambda r: -r["days_overdue"])
 
     # We owe suppliers: Σ(raised/received PO value) − Σ(outgoing payments) per supplier.
     supplier_due = []
@@ -238,18 +295,31 @@ def pending_dues(
         )
         owed = float(billed) - float(paid)
         if owed > 0.001:
-            supplier_due.append(
-                {"supplier_name": s.name, "due": round(owed, 2)}
+            # Oldest open PO date as the bill age reference.
+            oldest = (
+                db.query(func.min(PurchaseOrder.created_at))
+                .filter(
+                    PurchaseOrder.supplier_id == s.id,
+                    PurchaseOrder.status.in_(("raised", "received")),
+                )
+                .scalar()
             )
+            bill_date = oldest.date() if oldest else today
+            days = (today - bill_date).days
+            supplier_due.append(
+                {
+                    "supplier_name": s.name,
+                    "bill_date": bill_date.isoformat(),
+                    "due": round(owed, 2),
+                    "days_overdue": max(0, days),
+                    "overdue": days > 30,
+                }
+            )
+    supplier_due.sort(key=lambda r: -r["days_overdue"])
 
     return {
-        "buyers_owe_us": [
-            {"buyer_name": v["buyer_name"], "due": round(v["due"], 2)}
-            for v in buyer_due.values()
-        ],
+        "buyers_owe_us": buyers_owe,
         "we_owe_suppliers": supplier_due,
-        "total_receivable": round(
-            sum(v["due"] for v in buyer_due.values()), 2
-        ),
+        "total_receivable": round(sum(r["due"] for r in buyers_owe), 2),
         "total_payable": round(sum(d["due"] for d in supplier_due), 2),
     }
