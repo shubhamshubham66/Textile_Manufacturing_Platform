@@ -31,14 +31,15 @@ STORE = rbac.ROLE_STORE_MANAGER
 FLOOR = rbac.ROLE_FLOOR_SUPERVISOR
 QUALITY = rbac.ROLE_QUALITY_INSPECTOR
 ACCOUNTS = rbac.ROLE_ACCOUNTANT
-STAFF = [OWNER, STORE, FLOOR, QUALITY, ACCOUNTS]
+MANAGER = rbac.ROLE_MANAGER
+STAFF = [OWNER, MANAGER, STORE, FLOOR, QUALITY, ACCOUNTS]
 
 # Topic -> roles whose screens should refresh for it.
 TOPIC_ROLES = {
     "machines": [OWNER, FLOOR],
     "production": [OWNER, FLOOR, QUALITY],
     "orders": STAFF,
-    "yarn": [OWNER, STORE],
+    "yarn": [OWNER, MANAGER, STORE],
     "quality": [OWNER, QUALITY, STORE],
     "payments": [OWNER, ACCOUNTS],
     "wages": [OWNER, ACCOUNTS],
@@ -209,7 +210,7 @@ def _collect(session: Session) -> list[LiveEvent]:
             elif isinstance(obj, m.Order):
                 if is_new:
                     out.append(LiveEvent("orders", TOPIC_ROLES["orders"], f"New order {obj.order_no}", "info",
-                                         notify=True, notify_roles=[OWNER, STORE], buyer_id=obj.buyer_id,
+                                         notify=True, notify_roles=[OWNER, MANAGER, STORE], buyer_id=obj.buyer_id,
                                          buyer_message=f"Order {obj.order_no} was placed"))
                 else:
                     ch = _changed(obj, "status", session)

@@ -88,3 +88,16 @@ def get_current_buyer(user: User = Depends(get_current_user)) -> User:
     if user.buyer_id is None:
         raise _forbidden("This buyer login is not linked to a buyer account")
     return user
+
+
+def require_any_resource(*resources: str):
+    """Dependency: allow a role permitted for ANY of the given resources."""
+
+    def _dep(user: User = Depends(get_current_user)) -> User:
+        if not any(rbac.can_access(user.role.name, r) for r in resources):
+            raise _forbidden(
+                f"Role '{user.role.name}' may not access '{resources[0]}'"
+            )
+        return user
+
+    return _dep

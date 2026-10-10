@@ -9,6 +9,7 @@ import Production from "./app/Production.jsx";
 import Quality from "./app/Quality.jsx";
 import Dispatch from "./app/Dispatch.jsx";
 import Payments from "./app/Payments.jsx";
+import OrderDesk from "./app/OrderDesk.jsx";
 import Attendance from "./app/Attendance.jsx";
 import Wages from "./app/Wages.jsx";
 import Reports from "./app/Reports.jsx";
@@ -24,6 +25,7 @@ import { LiveProvider, useLiveStatus } from "../live/LiveContext.jsx";
 // clearly-labelled prototype placeholder (built in later phases).
 const PAGES = {
   orders: Orders,
+  order_desk: OrderDesk,
   yarn: YarnStore,
   stock: Stock,
   purchase: Purchase,

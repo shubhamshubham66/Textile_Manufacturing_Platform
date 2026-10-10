@@ -292,7 +292,7 @@ export default function Dashboard() {
         </div>
         {(counts.all ?? 0) === 0 ? (
           <p className="muted">
-            No orders yet. Orders appear here as the Store manager records them.
+            No orders yet. Orders appear here as the Manager records them.
           </p>
         ) : rows.length === 0 ? (
           <p className="muted">No orders match this filter.</p>

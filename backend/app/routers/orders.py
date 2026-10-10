@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import get_db
-from app.deps import require_resource
+from app.deps import require_any_resource, require_resource
 from app.models import (
     Buyer,
     Machine,
@@ -126,7 +126,7 @@ def _available_kg(db: Session, colour: str, yarn_type: str | None) -> float:
 def list_orders(
     status: str | None = Query(None),
     q: str | None = Query(None, description="search order no / fabric / colour"),
-    _=Depends(require_resource("orders")),
+    _=Depends(require_any_resource("orders", "order_desk")),
     db: Session = Depends(get_db),
 ):
     query = db.query(Order)
@@ -148,7 +148,7 @@ def list_orders(
 @router.post("", response_model=OrderOut, status_code=201)
 def create_order(
     body: OrderCreate,
-    _=Depends(require_resource("orders")),
+    _=Depends(require_resource("order_desk")),
     db: Session = Depends(get_db),
 ):
     buyer = db.query(Buyer).filter(Buyer.id == body.buyer_id).first()
@@ -191,7 +191,7 @@ class BuyerOut(BaseModel):
 
 @router.get("/_meta/buyers", response_model=list[BuyerOut])
 def list_buyers(
-    _=Depends(require_resource("orders")),
+    _=Depends(require_any_resource("orders", "order_desk")),
     db: Session = Depends(get_db),
 ):
     """Buyers for the New order form (owner only)."""
@@ -202,7 +202,7 @@ def list_buyers(
 @router.get("/{order_id}", response_model=OrderOut)
 def get_order(
     order_id: int,
-    _=Depends(require_resource("orders")),
+    _=Depends(require_any_resource("orders", "order_desk")),
     db: Session = Depends(get_db),
 ):
     order = db.query(Order).filter(Order.id == order_id).first()
@@ -225,7 +225,7 @@ STAGE_FLOW = [
 @router.get("/{order_id}/track")
 def track_order(
     order_id: int,
-    _=Depends(require_resource("orders")),
+    _=Depends(require_any_resource("orders", "order_desk")),
     db: Session = Depends(get_db),
 ):
     """Owner order tracker: stage, progress, late/on-track, and the order's rolls
@@ -290,7 +290,7 @@ def track_order(
 @router.get("/{order_id}/check-yarn", response_model=CheckYarnOut)
 def check_yarn(
     order_id: int,
-    _=Depends(require_resource("orders")),
+    _=Depends(require_any_resource("orders", "order_desk")),
     db: Session = Depends(get_db),
 ):
     order = db.query(Order).filter(Order.id == order_id).first()
@@ -331,7 +331,7 @@ def check_yarn(
 @router.post("/{order_id}/confirm", response_model=OrderOut)
 def confirm_order(
     order_id: int,
-    _=Depends(require_resource("orders")),
+    _=Depends(require_resource("order_desk")),
     db: Session = Depends(get_db),
 ):
     order = db.query(Order).filter(Order.id == order_id).first()
@@ -373,7 +373,7 @@ class OrderEdit(BaseModel):
 def edit_order(
     order_id: int,
     body: OrderEdit,
-    _=Depends(require_resource("orders")),
+    _=Depends(require_resource("order_desk")),
     db: Session = Depends(get_db),
 ):
     """Correct an order before production. Blocked once it is in production or
@@ -410,7 +410,7 @@ def edit_order(
 @router.post("/{order_id}/cancel", response_model=OrderOut)
 def cancel_order(
     order_id: int,
-    _=Depends(require_resource("orders")),
+    _=Depends(require_resource("order_desk")),
     db: Session = Depends(get_db),
 ):
     """Cancel an order before production (draft/confirmed only). A cancelled

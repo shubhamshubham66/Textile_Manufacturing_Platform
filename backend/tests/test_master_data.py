@@ -90,12 +90,23 @@ def test_master_forbidden_for_non_owner(c):
 
 
 # ------------------------- order edit / cancel ------------------------- #
+# Orders are written by the Manager; the owner only views them.
+def manager(c):
+    h = owner(c)
+    c.post("/api/team/managers", headers=h, json={
+        "name": "Ravi Kumar", "login_id": "MGR-001",
+        "password": "manager123", "confirm_password": "manager123",
+    })
+    r = c.post("/api/auth/login", json={"email": "MGR-001", "password": "manager123"})
+    return {"Authorization": f"Bearer {r.json()['token']}"}
+
+
 def _order_id(c, h, order_no):
     return next(o["id"] for o in c.get("/api/orders", headers=h).json() if o["order_no"] == order_no)
 
 
 def test_edit_order_before_production(c):
-    h = owner(c)
+    h = manager(c)
     # ORD-2006 is a draft in the seed.
     oid = _order_id(c, h, "ORD-2006")
     o = next(o for o in c.get("/api/orders", headers=h).json() if o["id"] == oid)
@@ -108,7 +119,7 @@ def test_edit_order_before_production(c):
 
 
 def test_cannot_edit_or_cancel_in_production(c):
-    h = owner(c)
+    h = manager(c)
     # ORD-2003 is in_quality (past production) in the seed.
     oid = _order_id(c, h, "ORD-2003")
     o = next(o for o in c.get("/api/orders", headers=h).json() if o["id"] == oid)
@@ -121,7 +132,7 @@ def test_cannot_edit_or_cancel_in_production(c):
 
 
 def test_cancel_draft_order(c):
-    h = owner(c)
+    h = manager(c)
     oid = _order_id(c, h, "ORD-2006")
     assert c.post(f"/api/orders/{oid}/cancel", headers=h).status_code == 200
     o = next(o for o in c.get("/api/orders", headers=h).json() if o["id"] == oid)

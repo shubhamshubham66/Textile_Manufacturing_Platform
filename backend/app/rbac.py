@@ -39,7 +39,9 @@ MENU_CONFIG: dict[str, list[dict]] = {
         {"label": "Team", "path": "/app/team", "resource": "team"},
     ],
     ROLE_MANAGER: [
-        {"label": "Home", "path": "/app/home", "resource": "manager_home"},
+        # The manager creates, checks yarn for, confirms, edits and cancels
+        # orders. The owner only views them (resource "orders", read-only).
+        {"label": "Orders", "path": "/app/order-desk", "resource": "order_desk"},
     ],
     ROLE_STORE_MANAGER: [
         {"label": "Yarn store", "path": "/app/yarn", "resource": "yarn"},
