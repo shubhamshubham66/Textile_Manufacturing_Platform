@@ -18,9 +18,10 @@ setup is needed and the Dify key never leaves the backend.
 4. When the service is live, open `https://<your-service>.onrender.com/api/health`.
    It should show `"status": "ok"` and `"dialect": "postgresql"`.
 
-On first start the API creates all tables and loads the demo data (demo logins in
-`README.md`). Later restarts keep existing data; demo data is only loaded into an
-empty database. To start empty instead, set `SEED_IF_EMPTY=false`.
+On start the API creates all tables and the owner login (`OWNER_EMAIL` /
+`OWNER_PASSWORD`). It does **not** load demo data unless you set
+`SEED_IF_EMPTY=true` (then demo data loads only into a totally empty database;
+demo logins in `README.md`). Restarts never touch existing data.
 
 **Note the service URL.** If Render gave it a suffix (for example
 `everest-textile-api-ab12.onrender.com`), update the `/api` rewrite in
