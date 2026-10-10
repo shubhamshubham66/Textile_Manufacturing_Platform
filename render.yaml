@@ -30,6 +30,13 @@ services:
       # API directly; the default setup proxies /api through Vercel instead.
       - key: CORS_ORIGINS
         sync: false
+      # Real owner login (Gmail + password); created/updated on every start.
+      - key: OWNER_EMAIL
+        sync: false
+      - key: OWNER_PASSWORD
+        sync: false
+      - key: OWNER_NAME
+        sync: false
       # Signup email OTP via Brevo (HTTP API; Render blocks SMTP).
       - key: BREVO_API_KEY
         sync: false

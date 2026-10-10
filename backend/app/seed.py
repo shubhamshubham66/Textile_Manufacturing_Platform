@@ -64,7 +64,7 @@ def seed() -> None:
         # ---- Roles ----
         role_names = [
             "owner", "store_manager", "floor_supervisor",
-            "quality_inspector", "accountant", "buyer",
+            "quality_inspector", "accountant", "buyer", "manager",
         ]
         roles = {n: m.Role(name=n) for n in role_names}
         db.add_all(roles.values())

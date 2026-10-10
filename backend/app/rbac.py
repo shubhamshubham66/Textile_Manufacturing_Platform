@@ -14,6 +14,8 @@ ROLE_FLOOR_SUPERVISOR = "floor_supervisor"
 ROLE_QUALITY_INSPECTOR = "quality_inspector"
 ROLE_ACCOUNTANT = "accountant"
 ROLE_BUYER = "buyer"
+# General manager: created by the owner from the Team page (no self-signup).
+ROLE_MANAGER = "manager"
 
 ALL_ROLES = [
     ROLE_OWNER,
@@ -22,6 +24,7 @@ ALL_ROLES = [
     ROLE_QUALITY_INSPECTOR,
     ROLE_ACCOUNTANT,
     ROLE_BUYER,
+    ROLE_MANAGER,
 ]
 
 # One role -> menu config. `path` is the frontend route; `resource` ties the menu
@@ -32,6 +35,10 @@ MENU_CONFIG: dict[str, list[dict]] = {
         {"label": "Orders", "path": "/app/orders", "resource": "orders"},
         {"label": "Reports", "path": "/app/reports", "resource": "reports"},
         {"label": "Payments", "path": "/app/payments", "resource": "payments"},
+        {"label": "Team", "path": "/app/team", "resource": "team"},
+    ],
+    ROLE_MANAGER: [
+        {"label": "Home", "path": "/app/home", "resource": "manager_home"},
     ],
     ROLE_STORE_MANAGER: [
         {"label": "Yarn store", "path": "/app/yarn", "resource": "yarn"},

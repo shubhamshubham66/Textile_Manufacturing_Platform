@@ -27,6 +27,7 @@ from app.routers import quality as quality_router
 from app.routers import reports as reports_router
 from app.routers import signup as signup_router
 from app.routers import live as live_router
+from app.routers import team as team_router
 from app.routers import wages as wages_router
 from app.routers import yarn as yarn_router
 from chatbot.router import router as chatbot_router
@@ -63,6 +64,17 @@ def prepare_database() -> None:
             log.info("Database is empty: loading demo data")
             seed()
 
+    # New roles (e.g. manager) and the real owner login from OWNER_EMAIL /
+    # OWNER_PASSWORD. Both are no-ops when there is nothing to do.
+    from app.bootstrap import ensure_owner_account, ensure_roles
+
+    db = SessionLocal()
+    try:
+        ensure_roles(db)
+        ensure_owner_account(db)
+    finally:
+        db.close()
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -92,6 +104,7 @@ app.add_middleware(
 app.include_router(auth_router.router)
 app.include_router(signup_router.router)
 app.include_router(live_router.router)
+app.include_router(team_router.router)
 app.include_router(orders_router.router)
 app.include_router(yarn_router.router)
 app.include_router(production_router.router)

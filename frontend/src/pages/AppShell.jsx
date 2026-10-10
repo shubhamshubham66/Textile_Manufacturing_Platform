@@ -15,6 +15,7 @@ import Reports from "./app/Reports.jsx";
 import Dashboard from "./app/Dashboard.jsx";
 import MyOrders from "./app/MyOrders.jsx";
 import Invoices from "./app/Invoices.jsx";
+import Team from "./app/Team.jsx";
 import ChatBubble from "../components/ChatBubble.jsx";
 import { LiveProvider, useLiveStatus } from "../live/LiveContext.jsx";
 
@@ -37,6 +38,7 @@ const PAGES = {
   dashboard: Dashboard,
   my_orders: MyOrders,
   invoices: Invoices,
+  team: Team,
 };
 
 // Role label lookup for display (keys match backend role names).
@@ -47,6 +49,7 @@ const ROLE_LABELS = {
   quality_inspector: "Quality inspector",
   accountant: "Accountant",
   buyer: "Buyer",
+  manager: "Manager",
 };
 
 // The app shell after login. The sidebar is built from the `menu` returned by the
