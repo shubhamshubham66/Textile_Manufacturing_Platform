@@ -31,11 +31,13 @@ const CHAT = [
 
 export default function AiSection() {
   return (
-    <section id="ai" className="lp-section lp-section-tint">
+    <section id="ai" className="lp-section">
       <div className="lp-inner lp-ai">
         <div>
           <div className="lp-head lp-head-left">
-            <h2>Ask the mill a question</h2>
+            <h2 className="lp-title">
+              Ask the <span className="lp-outline">mill</span>
+            </h2>
             <p>An assistant that knows your stock, machines and orders.</p>
           </div>
           <ol className="lp-ai-steps">

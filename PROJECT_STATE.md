@@ -330,3 +330,10 @@ results, one completed dispatch + invoice + partial payment, employees + attenda
 - Hero has a live-looking floor board with a ticking ₹ idle-loss counter (respects reduced motion).
 - Sections: About (before → after), How it works (5 steps with roles), Features (idle-loss USP), AI help (opens chat bubble), Footer with demo logins.
 - Mobile: hamburger menu, logo + Login always visible; checked at 1366px and 390px with no horizontal overflow.
+
+## Phase 13 — Landing page in ERP-site style
+- Re-styled the public landing in a blue ERP-site format (Outfit font, outlined heading words, wave hero, blue stat band).
+- Hero: laptop + phone mockups showing our own floor board and buyer portal; staggered stat cards (live ₹ idle-loss counter).
+- Sections: Keys (3 notched boxes) → Top features (9-card grid) → Why Everest ERP (illustration + 12 gold-ring reasons) → Key benefits around a 6-stage process diagram → AI help → Footer.
+- All content is for Everest Textile Mills only; illustrations are our own CSS/SVG, no third-party images.
+- Checked at 1366px and 390px: no horizontal overflow, nav anchors and chat button work.

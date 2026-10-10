@@ -3,6 +3,7 @@ import Hero from "../components/Hero.jsx";
 import About from "../components/About.jsx";
 import HowItWorks from "../components/HowItWorks.jsx";
 import Features from "../components/Features.jsx";
+import WhySection from "../components/WhySection.jsx";
 import AiSection from "../components/AiSection.jsx";
 import Footer from "../components/Footer.jsx";
 import ChatBubble from "../components/ChatBubble.jsx";
@@ -17,8 +18,9 @@ export default function Landing() {
       <main>
         <Hero />
         <About />
-        <HowItWorks />
         <Features />
+        <WhySection />
+        <HowItWorks />
         <AiSection />
       </main>
       <Footer />

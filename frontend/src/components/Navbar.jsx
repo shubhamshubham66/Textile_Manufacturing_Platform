@@ -6,10 +6,10 @@ import { BrandMark } from "./landing/Icons.jsx";
 // is the primary button). On mobile the links collapse into a menu while the
 // logo and Login stay visible.
 const LINKS = [
-  { id: "home", label: "Home" },
-  { id: "about", label: "About" },
-  { id: "how", label: "How it works" },
+  { id: "about", label: "Strengths" },
   { id: "features", label: "Features" },
+  { id: "why", label: "Why us" },
+  { id: "how", label: "Process" },
   { id: "ai", label: "AI help" },
 ];
 
@@ -46,15 +46,9 @@ export default function Navbar() {
               {l.label}
             </a>
           ))}
-          <a href="/login" className="lp-btn lp-btn-quiet lp-only-mobile">
-            Try the demo
-          </a>
         </nav>
 
         <div className="lp-nav-actions">
-          <a href="/login" className="lp-btn lp-btn-quiet lp-only-desktop">
-            Demo
-          </a>
           <a href="/login" className="lp-btn lp-btn-primary">
             Login
           </a>
