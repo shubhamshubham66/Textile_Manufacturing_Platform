@@ -34,7 +34,8 @@ ACCOUNTS = rbac.ROLE_ACCOUNTANT
 MANAGER = rbac.ROLE_MANAGER
 PROD = rbac.ROLE_PRODUCTION_MANAGER
 SALES = rbac.ROLE_SALES_MANAGER
-STAFF = [OWNER, MANAGER, PROD, SALES, STORE, FLOOR, QUALITY, ACCOUNTS]
+ACCT_MGR = rbac.ROLE_ACCOUNTS_MANAGER
+STAFF = [OWNER, MANAGER, PROD, SALES, STORE, FLOOR, QUALITY, ACCOUNTS, ACCT_MGR]
 
 # Topic -> roles whose screens should refresh for it. The production manager
 # (PROD) watches the floor; the sales & dispatch manager (SALES) watches orders,
@@ -45,13 +46,13 @@ TOPIC_ROLES = {
     "orders": STAFF,
     "yarn": [OWNER, MANAGER, PROD, STORE],
     "quality": [OWNER, MANAGER, PROD, SALES, QUALITY, STORE],
-    "payments": [OWNER, MANAGER, SALES, ACCOUNTS],
-    "wages": [OWNER, MANAGER, PROD, ACCOUNTS],
+    "payments": [OWNER, MANAGER, SALES, ACCOUNTS, ACCT_MGR],
+    "wages": [OWNER, MANAGER, PROD, ACCOUNTS, ACCT_MGR],
     # Supermanager instructions to department managers.
-    "tasks": [MANAGER, PROD, SALES, STORE, FLOOR, QUALITY, ACCOUNTS],
+    "tasks": [MANAGER, PROD, SALES, STORE, FLOOR, QUALITY, ACCOUNTS, ACCT_MGR],
     # Purchase requests, purchase orders, receiving.
     "purchase": [OWNER, MANAGER, PROD, STORE],
-    "notifications": [MANAGER, PROD, SALES, STORE, FLOOR, QUALITY, ACCOUNTS],
+    "notifications": [MANAGER, PROD, SALES, STORE, FLOOR, QUALITY, ACCOUNTS, ACCT_MGR],
 }
 
 ORDER_STAGE_LABEL = {

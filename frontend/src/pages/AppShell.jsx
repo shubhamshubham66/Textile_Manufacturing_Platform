@@ -89,6 +89,16 @@ import {
   SalesReports,
   SalesActivity,
 } from "./app/sales/SalesOps.jsx";
+import AccountsDashboard from "./app/accounts/AccountsDashboard.jsx";
+import {
+  AccountsInvoices,
+  AccountsOvertime,
+  AccountsProductionExpenses,
+  AccountsExpenses,
+  AccountsReports,
+  AccountsNotifications,
+  AccountsActivity,
+} from "./app/accounts/AccountsPages.jsx";
 import ChatBubble from "../components/ChatBubble.jsx";
 import { LiveProvider, useLiveStatus } from "../live/LiveContext.jsx";
 
@@ -162,6 +172,16 @@ const PAGES = {
   sd_notifications: SalesNotifications,
   sd_reports: SalesReports,
   sd_activity: SalesActivity,
+  // Accounts & Finance Manager screens (buyer/supplier payments, attendance and
+  // wages reuse the existing payments/attendance/wages pages via shared keys).
+  am_dashboard: AccountsDashboard,
+  am_invoices: AccountsInvoices,
+  am_overtime: AccountsOvertime,
+  am_prod_expenses: AccountsProductionExpenses,
+  am_expenses: AccountsExpenses,
+  am_reports: AccountsReports,
+  am_notifications: AccountsNotifications,
+  am_activity: AccountsActivity,
 };
 
 // Role label lookup for display (keys match backend role names).
@@ -175,6 +195,7 @@ const ROLE_LABELS = {
   manager: "Supermanager",
   production_manager: "Production manager",
   sales_manager: "Sales & Dispatch manager",
+  accounts_manager: "Accounts & Finance manager",
 };
 
 // The app shell after login. The sidebar is built from the `menu` returned by the

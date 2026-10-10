@@ -655,3 +655,58 @@ changed beyond additive columns.
 - Backend byte-compiles; RBAC/department wiring verified by a standalone script;
   all JSX prettier-clean. Not runtime-tested in the sandbox (no PyPI/npm); run
   `pytest tests/test_sales_manager.py` on a networked host.
+
+## Task — Accounts & Finance Manager dashboard
+
+New role **`accounts_manager`** ("Accounts & Finance manager") with a 12-screen
+panel. Reuses the existing, proven finance backend (payments/wages/attendance/
+reports) rather than duplicating it; adds its own `am_*` screens for the
+dashboard, invoices, overtime, expenses, reports, notifications and activity.
+No other dashboard/auth/stack changed beyond additive Payment columns.
+
+**Backend**
+- `rbac.py`: `ROLE_ACCOUNTS_MANAGER` + 12 menu items. Buyer Payments, Supplier
+  Bills & Payments → existing `payments` resource; Worker Attendance →
+  `attendance`; Salary & Wage Management → `wages` (so the existing endpoints
+  work unchanged, with their duplicate/overpayment guards). New isolated
+  `am_dashboard/am_invoices/am_overtime/am_prod_expenses/am_expenses/am_reports/
+  am_notifications/am_activity` resources.
+- `departments.py`: accounts department run by `accounts_manager`.
+- `models.py`: additive `Payment` columns `category`, `note`, `reference`,
+  `recorded_by_user_id` (schema_sync adds them to existing DBs) — used to record
+  "other expenses" as outgoing payments so the P&L stays consistent.
+- `services/accounts_manager.py`: dashboard cards (total sales, receivables,
+  payables, monthly expenses, wages, profit/loss) + ageing receivables/payables,
+  reusing `services/reports.py` so figures tie out with the owner's P&L.
+- `routers/accounts_manager.py` (`/api/accounts/*`): dashboard; sales invoices
+  (with dispatch link + PDF); overtime (derived from verified attendance >8h);
+  production expenses (cost per order, read-only from reports); other expenses
+  (`POST /expenses` records an outgoing payment in a txn + audit log +
+  duplicate-reference guard; >=₹50k notifies the Supermanager); financial
+  reports (`?period=day|month|year` → income/expense/cash-flow/P&L); notifications
+  + read; activity. All guarded by `require_resource("am_*")`.
+- `live.py`: `accounts_manager` added to payments/wages/notifications/tasks/orders
+  topics. `sales_manager.py`: dispatch-invoice and delivery notifications now
+  also go to the accounts_manager (payment follow-up).
+- `main.py`: registered `accounts_manager_router`. `bootstrap.ensure_demo_managers`
+  + `seed.py`: demo login `accounts-manager@everest.test` / `accounts123`.
+
+**Frontend** (reuses the shared super kit; Buyer/Supplier Payments, Attendance,
+Wages screens are the EXISTING Payments/Attendance/Wages pages via shared keys)
+- `pages/app/accounts/AccountsDashboard.jsx` — the six cards (Total Sales,
+  Pending Buyer Payments, Supplier Payments Due, Monthly Expenses, Worker Wages,
+  Monthly Profit/Loss) + ageing receivables/payables + month-net band.
+- `AccountsPages.jsx` — Sales Invoices, Overtime, Production Expenses, Other
+  Expenses (record form + duplicate guard), Financial Reports (day/month/year),
+  Notifications, Activity Logs.
+- `AppShell.jsx` + `icons.jsx`: 8 `am_*` pages/icons + role label wired.
+
+**Tests / verification**
+- `backend/tests/test_accounts_manager.py`: RBAC isolation (am_* 403 for others),
+  shared payment/wage endpoints usable, 12-item menu, six dashboard cards,
+  invoices, production-expense totals, expense record + duplicate-reference 409,
+  major-expense notification, day/month/year reports, cannot-confirm-orders /
+  cannot-dispatch / cannot-inspect-QC.
+- Backend byte-compiles; RBAC/department wiring verified by a standalone script;
+  all JSX prettier-clean. Not runtime-tested in the sandbox (no PyPI/npm); run
+  `pytest tests/test_accounts_manager.py` on a networked host.

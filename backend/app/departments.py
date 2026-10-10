@@ -27,7 +27,7 @@ DEPT_ROLE = {
     "qc": rbac.ROLE_QUALITY_INSPECTOR,
     "store": rbac.ROLE_STORE_MANAGER,
     "dispatch": rbac.ROLE_SALES_MANAGER,
-    "accounts": rbac.ROLE_ACCOUNTANT,
+    "accounts": rbac.ROLE_ACCOUNTS_MANAGER,
 }
 
 # Role -> department used when a user has none set (e.g. seeded logins).
@@ -41,6 +41,7 @@ ROLE_DEFAULT_DEPT = {
     rbac.ROLE_FLOOR_SUPERVISOR: "production",
     rbac.ROLE_QUALITY_INSPECTOR: "qc",
     rbac.ROLE_ACCOUNTANT: "accounts",
+    rbac.ROLE_ACCOUNTS_MANAGER: "accounts",
     rbac.ROLE_SALES_MANAGER: "dispatch",
 }
 

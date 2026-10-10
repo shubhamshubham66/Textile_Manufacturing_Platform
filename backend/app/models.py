@@ -371,6 +371,12 @@ class Payment(Base):
     amount: Mapped[float] = mapped_column(Numeric(12, 2))
     method: Mapped[str] = mapped_column(String(20), default="bank")  # cash|bank|upi
     paid_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    # Accounts & Finance: free-text category/note + reference for expenses and
+    # non-supplier outgoings. Added via schema_sync on existing databases.
+    category: Mapped[str | None] = mapped_column(String(40), nullable=True)  # production|rent|utility|other…
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reference: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    recorded_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Void (owner only). A voided payment is kept for the audit trail but is
     # excluded from every total (invoice paid, supplier outstanding, P&L, dues).
     voided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

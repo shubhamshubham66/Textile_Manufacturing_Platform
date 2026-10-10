@@ -44,6 +44,7 @@ def ensure_demo_managers(db: Session) -> list[str]:
     demos = [
         ("production_manager", "Vikram Singh", "production@everest.test", "production123", "production"),
         ("sales_manager", "Neha Kapoor", "sales@everest.test", "sales123", "dispatch"),
+        ("accounts_manager", "Anjali Verma", "accounts-manager@everest.test", "accounts123", "accounts"),
     ]
     added: list[str] = []
     for role_name, name, email, password, department in demos:

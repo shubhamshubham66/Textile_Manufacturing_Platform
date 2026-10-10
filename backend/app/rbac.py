@@ -26,6 +26,10 @@ ROLE_PRODUCTION_MANAGER = "production_manager"
 # deliveries and hands off to Accounts for payment. Cannot confirm orders,
 # approve QC, or edit financial records.
 ROLE_SALES_MANAGER = "sales_manager"
+# Accounts & Finance manager: owns invoices, buyer/supplier payments, wages,
+# expenses and financial reports. Reuses the existing payments/attendance/wages
+# endpoints plus its own am_* screens. High-value approvals stay with the owner.
+ROLE_ACCOUNTS_MANAGER = "accounts_manager"
 
 ALL_ROLES = [
     ROLE_OWNER,
@@ -37,6 +41,7 @@ ALL_ROLES = [
     ROLE_MANAGER,
     ROLE_PRODUCTION_MANAGER,
     ROLE_SALES_MANAGER,
+    ROLE_ACCOUNTS_MANAGER,
 ]
 
 # One role -> menu config. `path` is the frontend route; `resource` ties the menu
@@ -103,6 +108,24 @@ MENU_CONFIG: dict[str, list[dict]] = {
         {"label": "Notifications", "path": "/app/sd-notifications", "resource": "sd_notifications"},
         {"label": "Reports", "path": "/app/sd-reports", "resource": "sd_reports"},
         {"label": "Activity Logs", "path": "/app/sd-activity", "resource": "sd_activity"},
+    ],
+    # Accounts & Finance manager: 12-screen panel. Reuses the existing
+    # payments/attendance/wages resources (so the proven payment & wage
+    # endpoints work unchanged) and adds its own am_* screens for the
+    # dashboard, expenses, reports, notifications and activity log.
+    ROLE_ACCOUNTS_MANAGER: [
+        {"label": "Dashboard", "path": "/app/am-dashboard", "resource": "am_dashboard"},
+        {"label": "Sales Invoices", "path": "/app/am-invoices", "resource": "am_invoices"},
+        {"label": "Buyer Payments", "path": "/app/am-buyer-payments", "resource": "payments"},
+        {"label": "Supplier Bills & Payments", "path": "/app/am-supplier-payments", "resource": "payments"},
+        {"label": "Worker Attendance", "path": "/app/am-attendance", "resource": "attendance"},
+        {"label": "Overtime Records", "path": "/app/am-overtime", "resource": "am_overtime"},
+        {"label": "Salary & Wage Management", "path": "/app/am-wages", "resource": "wages"},
+        {"label": "Production Expenses", "path": "/app/am-prod-expenses", "resource": "am_prod_expenses"},
+        {"label": "Other Expenses", "path": "/app/am-expenses", "resource": "am_expenses"},
+        {"label": "Financial Reports", "path": "/app/am-reports", "resource": "am_reports"},
+        {"label": "Notifications", "path": "/app/am-notifications", "resource": "am_notifications"},
+        {"label": "Activity Logs", "path": "/app/am-activity", "resource": "am_activity"},
     ],
     # Purchase & raw material desk (+ dispatch, which the store also runs).
     ROLE_STORE_MANAGER: [

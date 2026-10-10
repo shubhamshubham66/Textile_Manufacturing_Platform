@@ -74,6 +74,17 @@ const P = {
     "M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
   sd_reports: "M4 20V10M10 20V4M16 20v-7M22 20H2",
   sd_activity: "M12 8v4l3 2M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5",
+  // Accounts & Finance manager screens.
+  am_dashboard: "M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z",
+  am_invoices:
+    "M6 2l-2 4v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6l-2-4zM4 6h16M9 12h6M9 16h6",
+  am_overtime: "M12 8v4l3 2M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5",
+  am_prod_expenses: "M3 21V9l6 4V9l6 4V5h6v16zM7 17h2M12 17h2M17 17h2",
+  am_expenses: "M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+  am_reports: "M4 20V10M10 20V4M16 20v-7M22 20H2",
+  am_notifications:
+    "M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
+  am_activity: "M12 8v4l3 2M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5",
 };
 
 export function MenuIcon({ resource }) {

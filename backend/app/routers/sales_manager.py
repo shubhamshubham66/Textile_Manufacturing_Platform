@@ -313,6 +313,8 @@ def create_dispatch(
             + (f" · vehicle {d.vehicle_no}" if d.vehicle_no else ""), me)
     _notify(db, rbac.ROLE_ACCOUNTANT, f"Invoice {result['invoice_no']} raised ({o.order_no})",
             f"Dispatch {d.dispatch_no} · total ₹{result['total']:,.0f}", me)
+    _notify(db, rbac.ROLE_ACCOUNTS_MANAGER, f"Invoice {result['invoice_no']} raised ({o.order_no})",
+            f"Dispatch {d.dispatch_no} · total ₹{result['total']:,.0f} · follow up buyer payment", me)
     _log(db, me, "dispatch", "created",
          f"{d.dispatch_no} ({d.challan_no}) for {o.order_no}: {d.total_rolls} rolls / {sm._f(d.total_meters):,.0f} m")
     db.commit()
@@ -449,8 +451,9 @@ def confirm_delivery(
     buyer = db.get(Buyer, d.buyer_id)
     _notify(db, rbac.ROLE_MANAGER, f"Delivery confirmed: {d.dispatch_no}",
             f"{order.order_no if order else ''} delivered to {buyer.name if buyer else ''}", me, kind="info")
-    _notify(db, rbac.ROLE_ACCOUNTANT, f"Follow up payment for {order.order_no if order else ''}",
-            f"Delivered {d.dispatch_no} · collect buyer payment", me, kind="info")
+    for acct_role in (rbac.ROLE_ACCOUNTANT, rbac.ROLE_ACCOUNTS_MANAGER):
+        _notify(db, acct_role, f"Follow up payment for {order.order_no if order else ''}",
+                f"Delivered {d.dispatch_no} · collect buyer payment", me, kind="info")
     _log(db, me, "dispatch", "delivered",
          f"{d.dispatch_no} delivered" + (f" (received by {body.received_by.strip()})" if body.received_by else ""))
     db.commit()
