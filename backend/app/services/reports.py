@@ -481,7 +481,12 @@ def profit_or_loss(db: Session, start: date | None, end: date | None) -> dict:
     net          = income − supplier_out − wages
     wages_due    = wages accrued for the window but not yet paid (context only)
     """
-    pay_q = _in_dates(db.query(Payment), Payment.paid_at, start, end)
+    pay_q = _in_dates(
+        db.query(Payment).filter(Payment.voided_at.is_(None)),
+        Payment.paid_at,
+        start,
+        end,
+    )
     payments = pay_q.all()
 
     income = sum(float(p.amount) for p in payments if p.direction == "incoming")

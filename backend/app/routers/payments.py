@@ -18,8 +18,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.deps import require_resource
-from app.models import Buyer, Invoice, Payment, PurchaseOrder, Supplier
+from app.deps import require_resource, require_roles
+from app.models import Buyer, Invoice, Payment, PurchaseOrder, Supplier, User
 
 router = APIRouter(prefix="/api/payments", tags=["payments"])
 
@@ -56,6 +56,18 @@ class SupplierPaymentRequest(BaseModel):
         return v
 
 
+class VoidRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=255)
+
+    @field_validator("reason")
+    @classmethod
+    def _r(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 3:
+            raise ValueError("reason must be at least 3 characters")
+        return v
+
+
 def _inr(v: float) -> str:
     """₹ with Indian digit grouping and 2 decimals: 1234567.5 -> ₹12,34,567.50."""
     neg = v < 0
@@ -75,7 +87,11 @@ def _inr(v: float) -> str:
 def _invoice_paid_total(db: Session, invoice_id: int) -> float:
     total = (
         db.query(func.coalesce(func.sum(Payment.amount), 0))
-        .filter(Payment.direction == "incoming", Payment.invoice_id == invoice_id)
+        .filter(
+            Payment.direction == "incoming",
+            Payment.invoice_id == invoice_id,
+            Payment.voided_at.is_(None),
+        )
         .scalar()
     )
     return float(total or 0)
@@ -98,7 +114,11 @@ def _supplier_outstanding(db: Session, supplier_id: int) -> float:
     )
     paid = (
         db.query(func.coalesce(func.sum(Payment.amount), 0))
-        .filter(Payment.direction == "outgoing", Payment.supplier_id == supplier_id)
+        .filter(
+            Payment.direction == "outgoing",
+            Payment.supplier_id == supplier_id,
+            Payment.voided_at.is_(None),
+        )
         .scalar()
         or 0
     )
@@ -160,6 +180,10 @@ def list_payments(
         elif p.supplier_id:
             s = db.query(Supplier).filter(Supplier.id == p.supplier_id).first()
             party = s.name if s else ""
+        voided_by = ""
+        if p.voided_by_user_id:
+            u = db.query(User).filter(User.id == p.voided_by_user_id).first()
+            voided_by = u.name if u else ""
         out.append(
             {
                 "id": p.id,
@@ -169,6 +193,10 @@ def list_payments(
                 "method": p.method,
                 "invoice_id": p.invoice_id,
                 "paid_at": p.paid_at,
+                "voided": p.voided_at is not None,
+                "void_reason": p.void_reason,
+                "voided_at": p.voided_at,
+                "voided_by": voided_by,
             }
         )
     return out
@@ -258,6 +286,43 @@ def pay_supplier(
     }
 
 
+@router.post("/{payment_id}/void")
+def void_payment(
+    payment_id: int,
+    body: VoidRequest,
+    user: User = Depends(require_roles("owner")),
+    db: Session = Depends(get_db),
+):
+    """Void a payment (owner only). Kept for the audit trail but excluded from
+    every total. Recomputes the invoice status for a buyer payment."""
+    payment = db.query(Payment).filter(Payment.id == payment_id).first()
+    if payment is None:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    if payment.voided_at is not None:
+        raise HTTPException(status_code=409, detail="Payment is already voided")
+
+    payment.voided_at = datetime.now(timezone.utc)
+    payment.void_reason = body.reason
+    payment.voided_by_user_id = user.id
+    db.flush()
+
+    invoice_status = None
+    if payment.direction == "incoming" and payment.invoice_id:
+        invoice = db.query(Invoice).filter(Invoice.id == payment.invoice_id).first()
+        if invoice is not None:
+            _refresh_invoice_status(db, invoice)
+            invoice_status = invoice.status
+
+    db.commit()
+    return {
+        "ok": True,
+        "payment_id": payment.id,
+        "voided": True,
+        "void_reason": payment.void_reason,
+        "invoice_status": invoice_status,
+    }
+
+
 @router.get("/dues")
 def pending_dues(
     _=Depends(require_resource("payments")),
@@ -308,7 +373,11 @@ def pending_dues(
         )
         paid = (
             db.query(func.coalesce(func.sum(Payment.amount), 0))
-            .filter(Payment.direction == "outgoing", Payment.supplier_id == s.id)
+            .filter(
+                Payment.direction == "outgoing",
+                Payment.supplier_id == s.id,
+                Payment.voided_at.is_(None),
+            )
             .scalar()
             or 0
         )

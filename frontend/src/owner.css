@@ -390,3 +390,32 @@
   color: var(--muted, #6b7280);
   margin-left: 0.2rem;
 }
+
+/* Voided payment rows */
+.owner-page .data-table tr.owner-voided td {
+  color: #94a3b8;
+  text-decoration: line-through;
+  background: #f8fafc;
+}
+.owner-page .data-table tr.owner-voided .owner-void-note {
+  text-decoration: none;
+  color: #991b1b;
+  font-size: 0.72rem;
+  margin-top: 0.2rem;
+}
+
+/* Centered dialog (reuses the drawer backdrop) */
+.owner-drawer-backdrop:has(.owner-dialog) {
+  align-items: center;
+  justify-content: center;
+}
+.owner-dialog {
+  width: min(420px, 94vw);
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 1.2rem 1.3rem;
+  box-shadow: 0 20px 50px rgba(2, 6, 23, 0.3);
+}
+.owner-dialog h3 {
+  margin-top: 0;
+}
