@@ -31,6 +31,13 @@ log = logging.getLogger(__name__)
 # Delete order: children before parents so foreign keys never block a delete.
 # Everything the business creates is here; `roles` is deliberately NOT included.
 _WIPE_ORDER = [
+    # Supermanager / purchase / audit tables (no foreign keys into them).
+    m.TaskUpdate,
+    m.Task,
+    m.Notification,
+    m.ActivityLog,
+    m.StockMovement,
+    m.PurchaseRequest,
     m.Payment,
     m.DispatchItem,
     m.Dispatch,
