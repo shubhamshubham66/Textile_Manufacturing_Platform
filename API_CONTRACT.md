@@ -127,27 +127,6 @@ Stateless logout — the client discards its token. Requires a bearer token.
 
 ---
 
-## GET /api/auth/_demo/payments
-
-Demo endpoint proving backend role enforcement. Only `owner` and `accountant`
-(roles permitted for the `payments` resource) succeed; all other roles get **403**.
-Replace with the real payments endpoints in a later phase.
-
-### Response — 200 OK
-
-```json
-{ "ok": true, "resource": "payments", "accessed_by": { "user": "Ramesh Shah", "role": "owner" } }
-```
-
-### Errors
-
-| Status | Code            | When                                   |
-| ------ | --------------- | -------------------------------------- |
-| 401    | UNAUTHENTICATED | No/invalid token.                      |
-| 403    | FORBIDDEN       | Role not permitted for the resource.   |
-
----
-
 ## Orders (role: owner — resource `orders`)
 
 All endpoints require a bearer token and the `owner` role (else 403).

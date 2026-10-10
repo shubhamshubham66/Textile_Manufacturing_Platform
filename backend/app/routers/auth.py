@@ -4,8 +4,8 @@
 - GET  /api/auth/me      -> current user, role and role-based menu
 - POST /api/auth/logout  -> stateless; client discards the token
 
-A demo protected endpoint (GET /api/payments/_demo) proves backend role
-enforcement returns 403 for unauthorized roles.
+Role enforcement (403 for unauthorized roles) lives on the real resource
+routers, e.g. /api/payments/* via require_resource("payments").
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app import rbac
 from app.database import get_db
-from app.deps import get_current_user, require_resource
+from app.deps import get_current_user
 from app.models import User
 from app.security import create_access_token, verify_password
 
@@ -110,18 +110,3 @@ def logout(user: User = Depends(get_current_user)):
     # Stateless JWT: the client discards the token. Endpoint exists so the UI has
     # a definite action and so we could add server-side token revocation later.
     return {"message": "Logged out"}
-
-
-# ---- Demo protected endpoint to prove 403 enforcement ----
-@router.get("/_demo/payments")
-def demo_payments(user: User = Depends(require_resource("payments"))):
-    """Only Owner and Accountant may access 'payments'. Others get 403.
-
-    Used to demonstrate that role enforcement is on the backend, not just by
-    hiding menus. Replace with real payment endpoints in the payments phase.
-    """
-    return {
-        "ok": True,
-        "resource": "payments",
-        "accessed_by": {"user": user.name, "role": user.role.name},
-    }
