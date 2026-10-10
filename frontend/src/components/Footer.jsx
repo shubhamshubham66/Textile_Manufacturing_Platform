@@ -1,23 +1,50 @@
-import { BrandMark } from "./landing/Icons.jsx";
+// Public Landing Page Footer with all platform features, full navbar links, contact and Team 41 credit.
 
-// Footer: contact, demo logins, GitHub.
-const GITHUB_URL = "https://github.com/shubhamshubham66/Textile_Manufacturing_Platform";
+const GITHUB_PROFILE = "https://github.com/shubhamshubham66";
+const GITHUB_REPO = "https://github.com/shubhamshubham66/Textile_Manufacturing_Platform";
+const CONTACT_EMAIL = "kshubham35413@gmail.com";
+const CONTACT_PHONE = "+91 8174871687";
+const CONTACT_PHONE_RAW = "+918174871687";
 
-const ROLES = [
-  ["Owner", "owner@everest.test"],
-  ["Store manager", "store@everest.test"],
-  ["Floor supervisor", "floor@everest.test"],
-  ["Quality inspector", "quality@everest.test"],
-  ["Accountant", "accounts@everest.test"],
-  ["Buyer", "buyer@everest.test"],
+const NAV_LINKS = [
+  { id: "home", label: "Home", type: "section" },
+  { id: "about", label: "About Us", type: "section" },
+  { id: "how", label: "How It Works", type: "section" },
+  { id: "features", label: "Features & Modules", type: "section" },
+  { id: "ai", label: "AI Copilot Help", type: "section" },
+  { id: "demo", label: "Interactive Demo", href: "/login", type: "link" },
+  { id: "login", label: "Login to Workspace", href: "/login", type: "link" },
+];
+
+const PLATFORM_FEATURES = [
+  { label: "Production Floor & Machines", target: "features" },
+  { label: "Idle Machine Loss in ₹ (USP)", target: "features" },
+  { label: "Raw Yarn Stock & Low Alerts", target: "features" },
+  { label: "Roll-by-Roll Quality Inspection", target: "features" },
+  { label: "Dispatch Desk & Challans", target: "features" },
+  { label: "Automated GST Tax Invoices", target: "features" },
+  { label: "One-Click Attendance & Wages", target: "features" },
+  { label: "Real-Time Month Profit & Loss", target: "features" },
+  { label: "Buyer Self-Service Portal", href: "/login" },
+  { label: "Textile Mill AI Assistant", target: "ai" },
 ];
 
 export default function Footer() {
+  function scrollToSection(id, e) {
+    e.preventDefault();
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  }
+
   return (
     <footer id="contact" className="lp-footer">
       <div className="lp-inner lp-footer-grid">
+        {/* Column 1: Brand & Overview */}
         <div className="lp-footer-brand">
-          <a href="#home" className="lp-brand lp-brand-light">
+          <a
+            href="#home"
+            className="lp-brand lp-brand-light"
+            onClick={(e) => scrollToSection("home", e)}
+          >
             <img
               src="/images/everest-logo-light.png"
               alt="Everest Textile Mills"
@@ -25,50 +52,142 @@ export default function Footer() {
             />
             <span className="lp-brand-badge lp-brand-badge-light">Textile Mills</span>
           </a>
-          <p>Yarn, floor, quality, dispatch and the books, in one place.</p>
-          <a href="/login" className="lp-btn lp-btn-haldi">
-            Open the demo
-          </a>
+          <p className="lp-footer-tagline">
+            One unified digital operating system replacing notebooks, paper slips, registers,
+            and phone calls across all fabric factory operations.
+          </p>
+
+          <div className="lp-footer-actions">
+            <a href="/login" className="lp-btn lp-btn-haldi">
+              Open Live Demo →
+            </a>
+            <a href="/login" className="lp-btn lp-btn-outline-light">
+              Sign In
+            </a>
+          </div>
         </div>
 
-        <div>
-          <h4>Demo logins</h4>
-          <ul className="lp-roles">
-            {ROLES.map(([role, email]) => (
-              <li key={email}>
-                <span>{role}</span>
-                <code>{email}</code>
+        {/* Column 2: All Navbar Buttons */}
+        <div className="lp-footer-col">
+          <h4>Navigation</h4>
+          <ul className="lp-footer-links">
+            {NAV_LINKS.map((link) => (
+              <li key={link.id}>
+                {link.type === "section" ? (
+                  <a href={`#${link.id}`} onClick={(e) => scrollToSection(link.id, e)}>
+                    {link.label}
+                  </a>
+                ) : (
+                  <a href={link.href}>{link.label}</a>
+                )}
               </li>
             ))}
           </ul>
-          <p className="lp-footer-small">
-            Password is the first word of the email + 123, e.g. owner123. Or use
-            one-click login on the login page.
-          </p>
         </div>
 
-        <div>
-          <h4>Contact</h4>
+        {/* Column 3: Platform Features & Modules */}
+        <div className="lp-footer-col">
+          <h4>Platform Features</h4>
           <ul className="lp-footer-links">
-            <li>
-              <a href="mailto:hello@everest-textile.test">hello@everest-textile.test</a>
-            </li>
-            <li>
-              <a href="tel:+911234567890">+91 12345 67890</a>
-            </li>
+            {PLATFORM_FEATURES.map((feat) => (
+              <li key={feat.label}>
+                {feat.target ? (
+                  <a
+                    href={`#${feat.target}`}
+                    onClick={(e) => scrollToSection(feat.target, e)}
+                  >
+                    {feat.label}
+                  </a>
+                ) : (
+                  <a href={feat.href}>{feat.label}</a>
+                )}
+              </li>
+            ))}
           </ul>
-          <h4>Project</h4>
-          <ul className="lp-footer-links">
+        </div>
+
+        {/* Column 4: Contact & Developer Info */}
+        <div className="lp-footer-col">
+          <h4>Contact & Developer</h4>
+          <ul className="lp-footer-contact-list">
             <li>
-              <a href={GITHUB_URL} target="_blank" rel="noreferrer">
-                GitHub repository
-              </a>
+              <span className="lp-contact-icon" aria-hidden>
+                👤
+              </span>
+              <div>
+                <span className="lp-contact-label">Developer</span>
+                <strong className="lp-contact-val">shubhamshubham66</strong>
+              </div>
+            </li>
+            <li>
+              <span className="lp-contact-icon" aria-hidden>
+                ✉️
+              </span>
+              <div>
+                <span className="lp-contact-label">Email</span>
+                <a href={`mailto:${CONTACT_EMAIL}`} className="lp-contact-link">
+                  {CONTACT_EMAIL}
+                </a>
+              </div>
+            </li>
+            <li>
+              <span className="lp-contact-icon" aria-hidden>
+                📞
+              </span>
+              <div>
+                <span className="lp-contact-label">Contact / Phone</span>
+                <a href={`tel:${CONTACT_PHONE_RAW}`} className="lp-contact-link">
+                  {CONTACT_PHONE}
+                </a>
+              </div>
+            </li>
+            <li>
+              <span className="lp-contact-icon" aria-hidden>
+                🐙
+              </span>
+              <div>
+                <span className="lp-contact-label">GitHub Profile</span>
+                <a
+                  href={GITHUB_PROFILE}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="lp-contact-link"
+                >
+                  github.com/shubhamshubham66
+                </a>
+              </div>
+            </li>
+            <li>
+              <span className="lp-contact-icon" aria-hidden>
+                📂
+              </span>
+              <div>
+                <span className="lp-contact-label">Source Repository</span>
+                <a
+                  href={GITHUB_REPO}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="lp-contact-link"
+                >
+                  Textile_Manufacturing_Platform
+                </a>
+              </div>
             </li>
           </ul>
         </div>
       </div>
+
+      {/* Footer Bottom Strip */}
       <div className="lp-inner lp-footer-bottom">
-        © {new Date().getFullYear()} Everest Textile Mills · hackathon demo with sample data
+        <div className="lp-footer-copy">
+          © {new Date().getFullYear()} Everest Textile Mills · All rights reserved.
+        </div>
+
+        <div className="lp-footer-team-credit">
+          <span className="lp-team-badge">
+            <span className="lp-team-heart">❤️</span> Made by <strong>Team Number 41</strong>
+          </span>
+        </div>
       </div>
     </footer>
   );
