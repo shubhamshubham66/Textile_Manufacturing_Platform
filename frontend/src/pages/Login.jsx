@@ -104,9 +104,15 @@ export default function Login() {
   return (
     <div className="auth-wrap">
       <div className="auth-card">
-        <a href="/" className="brand auth-brand">
-          <span className="brand-mark">ET</span>
-          <span className="brand-text">Everest Textile Mills</span>
+        <a href="/" className="brand auth-brand" style={{ display: "inline-flex", alignItems: "center", gap: "10px", textDecoration: "none", marginBottom: "16px" }}>
+          <img
+            src="/images/everest-logo.png"
+            alt="Everest"
+            style={{ height: "34px", width: "auto", objectFit: "contain" }}
+          />
+          <span className="brand-text" style={{ fontSize: "12px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.06em", color: "#1b2a6b", background: "#e8ebf6", padding: "3px 8px", borderRadius: "999px" }}>
+            Textile Mills
+          </span>
         </a>
         <h1 className="auth-title">Sign in</h1>
         <p className="muted">

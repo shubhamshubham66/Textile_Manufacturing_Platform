@@ -370,8 +370,12 @@ function Shell() {
       {/* Sidebar */}
       <aside className={`shell-side ${sidebarOpen ? "open" : ""}`}>
         <div className="shell-brand">
-          <span className="brand-mark">ET</span>
-          <span className="brand-text">Everest</span>
+          <img
+            src="/images/everest-logo.png"
+            alt="Everest"
+            className="shell-brand-logo"
+            style={{ height: "28px", width: "auto", objectFit: "contain" }}
+          />
         </div>
         <nav className="shell-menu">
           {menu.map((item) => (

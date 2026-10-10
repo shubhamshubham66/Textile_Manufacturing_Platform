@@ -18,10 +18,12 @@ export default function Footer() {
       <div className="lp-inner lp-footer-grid">
         <div className="lp-footer-brand">
           <a href="#home" className="lp-brand lp-brand-light">
-            <BrandMark />
-            <span>
-              Everest <em>Textile Mills</em>
-            </span>
+            <img
+              src="/images/everest-logo-light.png"
+              alt="Everest Textile Mills"
+              className="lp-brand-logo-img"
+            />
+            <span className="lp-brand-badge lp-brand-badge-light">Textile Mills</span>
           </a>
           <p>Yarn, floor, quality, dispatch and the books, in one place.</p>
           <a href="/login" className="lp-btn lp-btn-haldi">
