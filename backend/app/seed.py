@@ -228,6 +228,17 @@ def seed() -> None:
                         required_qty_kg=220, allocated_qty_kg=220),
         ])
 
+        # ---- Assign current orders + stage to running machines ----
+        # (so the floor view shows which order is on which machine + progress)
+        machines[0].current_order_id = orders[3].id  # Spin-01 -> ORD-2004
+        machines[0].current_stage = "spinning"
+        machines[3].current_order_id = orders[2].id  # Weave-01 -> ORD-2003
+        machines[3].current_stage = "weaving"
+        machines[4].current_order_id = orders[3].id  # Weave-02 -> ORD-2004
+        machines[4].current_stage = "weaving"
+        machines[6].current_order_id = orders[2].id  # Dye-01 -> ORD-2003
+        machines[6].current_stage = "dyeing"
+
         # ---- Production logs ----
         db.add_all([
             m.ProductionLog(machine_id=machines[3].id, order_id=orders[2].id,

@@ -186,6 +186,11 @@ class Machine(Base):
     current_status: Mapped[str] = mapped_column(String(20), default="idle")  # running|idle|breakdown
     hourly_cost: Mapped[float] = mapped_column(Numeric(10, 2), default=0)  # INR/hr
     status_since: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    # Currently assigned order + stage (null when the machine is unassigned).
+    current_order_id: Mapped[int | None] = mapped_column(
+        ForeignKey("orders.id"), nullable=True
+    )
+    current_stage: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     status_logs: Mapped[list["MachineStatusLog"]] = relationship(back_populates="machine")
     rolls: Mapped[list["Roll"]] = relationship(back_populates="machine")

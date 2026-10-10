@@ -4,6 +4,8 @@ import Orders from "./app/Orders.jsx";
 import YarnStore from "./app/YarnStore.jsx";
 import Stock from "./app/Stock.jsx";
 import Purchase from "./app/Purchase.jsx";
+import Machines from "./app/Machines.jsx";
+import Production from "./app/Production.jsx";
 
 // Resource key -> built module page. Resources not listed here fall back to a
 // clearly-labelled prototype placeholder (built in later phases).
@@ -12,6 +14,8 @@ const PAGES = {
   yarn: YarnStore,
   stock: Stock,
   purchase: Purchase,
+  machines: Machines,
+  production: Production,
 };
 
 // Role label lookup for display (keys match backend role names).
