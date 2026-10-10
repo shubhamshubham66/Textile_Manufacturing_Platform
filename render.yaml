@@ -24,8 +24,13 @@ services:
         fromDatabase:
           name: everest-textile-db
           property: connectionString
+      # Set this ONCE in the Render dashboard to a long random string and leave
+      # it. Do NOT use generateValue here: Render regenerates it on blueprint
+      # syncs, which silently invalidates every logged-in user's token (login
+      # then fails with "Not authenticated" 401). A fixed secret keeps sessions
+      # valid across deploys.
       - key: JWT_SECRET
-        generateValue: true
+        sync: false
       # Your Vercel URL(s), comma-separated. Only needed if the browser calls the
       # API directly; the default setup proxies /api through Vercel instead.
       - key: CORS_ORIGINS
