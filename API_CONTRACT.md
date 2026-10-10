@@ -148,6 +148,129 @@ Replace with the real payments endpoints in a later phase.
 
 ---
 
+## Orders (role: owner — resource `orders`)
+
+All endpoints require a bearer token and the `owner` role (else 403).
+
+### GET /api/orders
+
+List orders. Optional `?status=<status>` and `?q=<search>` (order no / fabric /
+colour). Returns an array of order objects:
+
+```json
+{
+  "id": 3, "order_no": "ORD-2003", "buyer_id": 3, "buyer_name": "Delhi Garments Co",
+  "fabric_type": "Denim", "colour": "Blue", "quantity_meters": 3000, "unit": "meters",
+  "unit_price": 120, "deadline": "2026-10-24", "status": "in_quality",
+  "created_at": "2026-10-10T..."
+}
+```
+
+### POST /api/orders
+
+Create a new order (status `draft`). Also records a yarn requirement order item
+(`quantity_meters × YARN_KG_PER_METER` kg).
+
+```json
+{ "buyer_id": 1, "fabric_type": "Cotton Shirting", "colour": "White",
+  "quantity_meters": 2000, "unit_price": 95, "deadline": "2026-10-24",
+  "yarn_type": "Cotton 30s" }
+```
+
+| Field             | Type   | Required | Notes                       |
+| ----------------- | ------ | -------- | --------------------------- |
+| `buyer_id`        | int    | yes      | Must exist (else 400).      |
+| `fabric_type`     | string | yes      | Non-blank.                  |
+| `colour`          | string | yes      | Non-blank.                  |
+| `quantity_meters` | number | yes      | > 0.                        |
+| `unit_price`      | number | yes      | ≥ 0 (rate per metre, ₹).    |
+| `deadline`        | date   | no       | ISO date.                   |
+| `yarn_type`       | string | no       | Yarn feeding the order.     |
+
+Returns the created order (201).
+
+### GET /api/orders/_meta/buyers
+
+Buyers for the New order form: `[{ "id": 1, "name": "Mumbai Fashion House" }]`.
+
+### GET /api/orders/{id}
+
+Single order (404 if not found).
+
+### GET /api/orders/{id}/check-yarn
+
+Compare required yarn vs. available stock (same colour).
+
+```json
+{
+  "order_id": 3, "colour": "Blue", "required_kg": 600, "available_kg": 90,
+  "enough": false, "short_by_kg": 510, "suggested_purchase_kg": 510,
+  "message": "Short by 510.00 kg — only 90.00 kg of Blue yarn in stock..."
+}
+```
+
+### POST /api/orders/{id}/confirm
+
+Set status to `confirmed` (available for production). `409` if the order is in a
+state that cannot be confirmed. Returns the updated order.
+
+---
+
+## Yarn store (role: store_manager — resources `yarn` / `stock` / `purchase`)
+
+### GET /api/yarn/stock
+
+Live stock with low-stock flag:
+
+```json
+{ "id": 3, "yarn_type": "Cotton 40s", "colour": "Blue", "quantity_kg": 90,
+  "reorder_level_kg": 150, "unit_cost": 200, "low_stock": true,
+  "updated_at": "2026-10-10T..." }
+```
+
+`low_stock` is true when `quantity_kg ≤ reorder_level_kg` (or the configured
+`DEFAULT_REORDER_LEVEL_KG` when a row has no level).
+
+### POST /api/yarn/receipts
+
+Record a yarn receipt; **stock updates automatically** (matches an existing
+type+colour row or creates one) in a single transaction. If `purchase_order_id`
+is given and that PO is `raised`, it is marked `received`.
+
+```json
+{ "supplier_id": 1, "yarn_type": "Cotton 30s", "colour": "White",
+  "quantity_kg": 500, "unit_cost": 180, "order_id": 1, "purchase_order_id": null }
+```
+
+| Field               | Type   | Required | Notes                          |
+| ------------------- | ------ | -------- | ------------------------------ |
+| `yarn_type`         | string | yes      | Non-blank.                     |
+| `colour`            | string | yes      | Non-blank.                     |
+| `quantity_kg`       | number | yes      | > 0.                           |
+| `unit_cost`         | number | no       | ≥ 0.                           |
+| `supplier_id`       | int    | no       | Must exist if given (400).     |
+| `order_id`          | int    | no       | Linked order; exist if given.  |
+| `purchase_order_id` | int    | no       | Fulfils this PO if `raised`.   |
+
+Returns the updated stock row (201).
+
+### POST /api/yarn/purchase
+
+Raise a purchase order (status `raised`) for a supplier when yarn is short.
+
+```json
+{ "supplier_id": 3, "yarn_type": "Cotton 40s", "colour": "Blue",
+  "quantity_kg": 510, "unit_cost": 200 }
+```
+
+Returns the created PO (201). `GET /api/yarn/purchase` lists POs.
+
+### GET /api/yarn/suppliers
+
+Suppliers for the receive/purchase forms: `[{ "id": 1, "name": "Gujarat Yarn Supply" }]`.
+
+---
+
 ### Role → menu / resource map (one config, enforced server-side)
 
 | Role              | Menu (resource)                                                     |
