@@ -961,14 +961,23 @@
   --st-display: "Bricolage Grotesque", var(--lp-display);
   font-family: "Public Sans", var(--lp-body);
   color: #1b2a6b;
-  padding: 80px 48px 72px;
+  padding: 72px 48px 56px;
+  /* lighter in the middle so the warehouse shows; darker top/bottom for text */
   background-image:
-    linear-gradient(rgba(14, 24, 70, 0.64), rgba(14, 24, 70, 0.64)),
-    url(/images/winding-floor.jpg);
+    linear-gradient(rgba(14, 24, 70, 0.45) 0%, rgba(14, 24, 70, 0.05) 40%, rgba(14, 24, 70, 0.05) 60%, rgba(14, 24, 70, 0.4) 100%),
+    url(/images/warehouse.jpg);
   background-size: cover;
-  background-position: center 35%;
+  background-position: center 40%;
 }
-.lp-stairs-inner { max-width: 1180px; margin: 0 auto; }
+/* heading at the top, cards in the lower half of the photo */
+.lp-stairs-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  min-height: 640px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
 .lp-stairs-head { max-width: 640px; }
 .lp-stairs h2 {
   margin: 0;
@@ -977,63 +986,71 @@
   line-height: 1.05;
   font-weight: 800;
   color: #fff;
+  text-shadow: 0 2px 14px rgba(8, 14, 50, 0.55);
 }
-.lp-stairs-head p { margin: 16px 0 0; font-size: 18px; line-height: 1.5; color: #e3e8f8; }
+.lp-stairs-head p {
+  margin: 16px 0 0;
+  font-size: 19px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: #ffffff;
+  text-shadow: 0 1px 8px rgba(8, 14, 50, 0.6);
+}
 .lp-stairs-steps {
   list-style: none;
-  margin: 56px 0 0;
+  margin: 48px 0 0;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 16px;
-  align-items: end;
+  gap: 14px;
+  align-items: stretch;
 }
 .lp-stair {
+  /* each step sets its own colours below */
+  --bg: #f4eee2;
+  --ink: #2a2f45;
+  --body: #454a5e;
+  --no: #8a6a2f;
+  --pill: rgba(0, 0, 0, 0.07);
   box-sizing: border-box;
-  min-height: calc(320px + var(--i) * 30px);
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  border-radius: 20px;
-  box-shadow: 0 14px 34px rgba(8, 14, 50, 0.28);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  padding: 24px 22px 26px;
+  background: var(--bg);
+  color: var(--ink);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(8, 14, 50, 0.16);
+  padding: 16px 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
-.lp-stair-top { display: flex; justify-content: space-between; align-items: flex-start; color: #1b2a6b; }
-.lp-stair-no { font-family: var(--st-display); font-size: 60px; line-height: 0.9; font-weight: 800; color: #b86e00; }
-.lp-stair h3 { margin: 0; font-family: var(--st-display); font-size: 26px; font-weight: 800; color: #1b2a6b; }
+.lp-stair-top { display: flex; justify-content: space-between; align-items: flex-start; color: var(--ink); }
+.lp-stair-no { font-family: var(--st-display); font-size: 38px; line-height: 0.9; font-weight: 800; color: var(--no); }
+.lp-stair h3 { margin: 0; font-family: var(--st-display); font-size: 20px; font-weight: 800; color: var(--ink); }
 .lp-stair-who {
   align-self: flex-start;
-  background: #e4e8f6;
-  color: #1b2a6b;
-  font-size: 13px;
+  background: var(--pill);
+  color: var(--ink);
+  font-size: 12px;
   font-weight: 600;
-  padding: 4px 10px;
+  padding: 3px 9px;
   border-radius: 999px;
 }
-.lp-stair p { margin: 0; font-size: 15px; line-height: 1.55; color: #4b5478; }
-/* Last step: the truck leaves, so it's the dark one */
-.lp-stair.is-last {
-  background: rgba(27, 42, 107, 0.93);
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 14px 34px rgba(8, 14, 50, 0.35);
-}
-.lp-stair.is-last .lp-stair-top { color: #fff; }
-.lp-stair.is-last .lp-stair-no { color: #f2b24c; }
-.lp-stair.is-last h3 { color: #fff; }
-.lp-stair.is-last .lp-stair-who { background: rgba(255, 255, 255, 0.16); color: #fff; }
-.lp-stair.is-last p { color: #d5dbf2; }
+.lp-stair p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--body); }
+/* Colours like dyed cloth swatches: unbleached cotton, haldi, sage, madder, indigo */
+.lp-stair.is-order { --bg: #efebe4; --no: #8c7a58; }
+.lp-stair.is-yarn  { --bg: #ebdcb2; --ink: #3a3020; --body: #51472f; --no: #8a6d2c; --pill: rgba(58, 48, 32, 0.09); }
+.lp-stair.is-make  { --bg: #d6e0d2; --ink: #243429; --body: #3d4f42; --no: #4f7458; --pill: rgba(36, 52, 41, 0.08); }
+.lp-stair.is-check { --bg: #e8d4cc; --ink: #3f2620; --body: #574039; --no: #9a5a4b; --pill: rgba(63, 38, 32, 0.08); }
+.lp-stair.is-ship  { --bg: #d5dce8; --ink: #1f2a4a; --body: #3b4663; --no: #4d6390; --pill: rgba(31, 42, 74, 0.08); }
 
 @media (max-width: 1080px) {
-  .lp-stairs-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
-  .lp-stair { min-height: 0; }
+  .lp-stairs-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lp-stairs-inner { min-height: 560px; }
 }
 @media (max-width: 640px) {
-  .lp-stairs { padding: 64px 16px 56px; }
+  .lp-stairs { padding: 56px 16px 40px; }
+  .lp-stairs-inner { min-height: 0; }
+  .lp-stairs-head { margin-bottom: 180px; }
   .lp-stairs-head p { font-size: 16.5px; }
   .lp-stairs-steps { grid-template-columns: 1fr; margin-top: 36px; gap: 12px; }
-  .lp-stair-no { font-size: 46px; }
+  .lp-stair-no { font-size: 34px; }
 }
