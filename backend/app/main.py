@@ -7,12 +7,16 @@ production, quality, dispatch, payments, wages, reports) and the chatbot router
 
 from datetime import datetime, timezone
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy import text
 
 from app.config import get_settings
 from app.database import engine
+from app.routers import auth as auth_router
 
 settings = get_settings()
 
@@ -25,6 +29,44 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Routers
+app.include_router(auth_router.router)
+
+
+# ---- Uniform error shape (matches API_CONTRACT.md) ----
+_STATUS_CODE = {
+    400: "VALIDATION_ERROR",
+    401: "UNAUTHENTICATED",
+    403: "FORBIDDEN",
+    404: "NOT_FOUND",
+    409: "CONFLICT",
+}
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    code = _STATUS_CODE.get(exc.status_code, "ERROR")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": {"code": code, "message": str(exc.detail)}},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    first = exc.errors()[0] if exc.errors() else {}
+    msg = first.get("msg", "Invalid request")
+    loc = ".".join(str(p) for p in first.get("loc", []) if p != "body")
+    return JSONResponse(
+        status_code=400,
+        content={
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": f"{loc}: {msg}" if loc else msg,
+            }
+        },
+    )
 
 
 @app.get("/api/health")

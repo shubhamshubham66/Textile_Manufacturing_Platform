@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     dify_api_key: str = ""
     dify_base_url: str = ""
 
+    # Auth / JWT. Override JWT_SECRET in .env for any real deployment.
+    jwt_secret: str = "dev-insecure-change-me"
+    jwt_expire_minutes: int = 720  # 12h, convenient for a hackathon demo
+
     # CORS: comma-separated list of allowed frontend origins.
     cors_origins: str = "http://localhost:5173"
 

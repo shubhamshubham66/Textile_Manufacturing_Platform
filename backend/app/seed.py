@@ -16,8 +16,9 @@ Idempotent: running it clears existing rows first.
 Usage:
     python -m app.seed
 
-NOTE: passwords here are demo-only plain markers ("demo-hash:<pw>"). Real auth
-hashing is added in the auth phase. No real secrets are stored.
+Demo passwords are documented in README under "Demo logins". They are hashed with
+bcrypt before storage (no plaintext in the DB). These are throwaway demo accounts,
+not real secrets.
 """
 
 from __future__ import annotations
@@ -26,11 +27,12 @@ from datetime import date, datetime, timedelta, timezone
 
 from app.database import Base, SessionLocal, engine
 from app import models as m
+from app.security import hash_password
 
 
 def _hash(pw: str) -> str:
-    # Placeholder marker only — replaced by real hashing in the auth phase.
-    return f"demo-hash:{pw}"
+    # Real bcrypt hashing (Phase 4). Demo passwords are listed in the README.
+    return hash_password(pw)
 
 
 def reset_tables() -> None:
