@@ -24,10 +24,10 @@ export default function Hero() {
 
           <div className="lp-phero-cta">
             <a href="/login" className="lp-pbtn lp-pbtn-solid">
-              Login to your account
+              Login
             </a>
-            <a href="#features" className="lp-pbtn lp-pbtn-line" onClick={(e) => scrollTo("features", e)}>
-              See what it does
+            <a href="#how" className="lp-pbtn lp-pbtn-line" onClick={(e) => scrollTo("how", e)}>
+              <span className="lp-pbtn-play" aria-hidden>▶</span> Watch demo
             </a>
           </div>
         </div>
