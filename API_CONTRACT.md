@@ -592,6 +592,39 @@ Owner wages view (owner only):
 ```
 `per_order` uses the same split as cost-per-order, so the two tie out exactly.
 
+### GET /api/reports/orders?start=&end=
+Owner read-only order history for the closing-books dashboard. Returns
+`{ start, end, rows:[...], counts:{all,awaiting,confirmed,ongoing,completed,cancelled} }`.
+Each row: `id, order_no, buyer_name, fabric_type, colour, quantity_meters,
+unit_price, deadline, status, group, created_at, progress_percent, late,
+total_cost, revenue_est, margin_est`. Status→group: draft=awaiting;
+confirmed=confirmed; in_production/in_quality/ready_to_ship=ongoing;
+dispatched/closed=completed; cancelled=cancelled.
+
+### GET /api/reports/orders/{id}/slip?start=&end=
+Owner read-only order slip (JSON): order details, status, progress, late flag,
+rolls (`roll_no, length_meters, machine, result, defect_type`), `dispatch_no`,
+`invoice_no`, and `cost` (yarn, wages, machine, total, revenue_est, margin_est)
+for the month. 404 if the order does not exist.
+
+### GET /api/reports/orders/{id}/slip/pdf?start=&end=
+The same order slip as a one-page PDF (`application/pdf`, inline; reportlab).
+
+### GET /api/reports/bills?start=&end=
+Raw-material side in one place: `bills` (purchase orders: `bill_no, date,
+supplier, yarn_type, colour, amount, status`), `payments` (supplier payments
+made in the month, non-voided), `total_paid` (matches the Month band's supplier
+line), `total_outstanding`.
+
+### GET /api/reports/buyer-payments?start=&end=
+Buyer payments received in the month (non-voided): `payments` (`date, buyer,
+invoice_no, amount, method`), `total_received` (matches the Month band's buyer
+line), `total_outstanding` (receivable across all invoices).
+
+> The three section-G totals (`buyer-payments.total_received`,
+> `bills.total_paid`, `wages.paid_in_month`) equal the Month summary band
+> (`/profit-loss`) exactly.
+
 ### GET /api/reports/dashboard?start=&end=
 Key cards + charts data: `machine_count`, `orders_by_stage` and `low_stock_count` +
 `low_stock` (current snapshot), `idle_loss_rupees` and `idle_loss_by_reason`

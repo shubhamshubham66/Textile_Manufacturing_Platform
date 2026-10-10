@@ -167,6 +167,8 @@ def seed() -> None:
             ("ORD-2005", buyers[4].id, "Polyester Lining", "Black", 1800, "confirmed", 80),
             ("ORD-2006", buyers[0].id, "Viscose Crepe", "Red", 900, "draft", 130),
             ("ORD-2007", buyers[2].id, "Cotton Twill", "Grey", 1600, "in_production", 105),
+            # A cancelled order so the owner's "Cancelled" group has real data.
+            ("ORD-2008", buyers[3].id, "Linen Blend", "Beige", 700, "cancelled", 150),
         ]
         orders = []
         for i, (order_no, buyer_id, fabric, colour, qty, status, price) in enumerate(stages):

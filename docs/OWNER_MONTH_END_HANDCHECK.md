@@ -100,3 +100,38 @@ Output 5,430 m (= production logs), running 40 h, idle 7.5 h, breakdown 4 h,
 idle loss ₹3,400.00 (Spin-02 5 h × 250, Spin-03 4 h × 250, Weave-03 1.5 h × 400,
 Dye-02 1 h × 550). The totals row equals the sum of the rows, and the Dashboard
 idle-loss card shows the same ₹3,400.00.
+
+
+---
+
+## Closing-the-books dashboard (October 2026)
+
+The owner dashboard is now one read-only screen. Order history groups, from the
+8 seeded orders:
+
+| Group | Orders | Count |
+| --- | --- | --- |
+| Awaiting (draft) | ORD-2006 | 1 |
+| Confirmed | ORD-2005 | 1 |
+| Ongoing (in production / quality / ready) | ORD-2003, ORD-2004, ORD-2007 | 3 |
+| Completed (dispatched / closed) | ORD-2001, ORD-2002 | 2 |
+| Cancelled | ORD-2008 (Linen Blend, Beige, 700 m) | 1 |
+
+**Band = Section G (must match exactly):**
+
+| Line | Band (profit-loss) | Section G source | Value |
+| --- | --- | --- | --- |
+| Buyer payments received | `buyer_payments_in` | buyer-payments `total_received` | ₹2,25,960.00 |
+| Raw material bills paid | `supplier_payments_out` | bills `total_paid` | ₹2,00,000.00 |
+| Wages paid | `wages` | wages `paid_in_month` | ₹8,100.00 |
+| **Net (cash basis)** | `profit_or_loss` | — | **+₹17,860.00 (profit)** |
+
+Verdict sentence: "The mill made a profit of Rs 17,860.00 this month."
+
+**Order slip (ORD-2001)** cost summary equals its cost-per-order row: Yarn
+₹72,000.00, Wages ₹3,812.16, Machine ₹2,953.85, Total ₹78,766.01, Revenue
+₹1,99,500.00, Margin ₹1,20,733.99.
+
+> Note: there is no order-level "Rejected" status yet (only "Cancelled"); a
+> reject flow with a reason + actor is a separate change (needs new Order
+> columns). The dashboard shows a "Cancelled" group accordingly.

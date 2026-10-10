@@ -419,3 +419,133 @@
 .owner-dialog h3 {
   margin-top: 0;
 }
+
+/* ---- Owner closing-the-books dashboard ---- */
+.owner-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.owner-updated {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+}
+
+/* Month summary band */
+.owner-band-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .owner-band-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.owner-band-lines {
+  max-width: 520px;
+}
+.owner-verdict {
+  font-size: 1.02rem;
+  font-weight: 700;
+  margin: 0.8rem 0 0.3rem;
+}
+.owner-band-context {
+  margin-top: 0.3rem;
+}
+
+/* Filter chips for order history */
+.owner-chips {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.4rem 0 0.8rem;
+}
+.owner-filter-chip {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  color: var(--ink);
+}
+.owner-filter-chip.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.owner-chip-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+  margin-left: 0.2rem;
+}
+
+.owner-clickable-row {
+  cursor: pointer;
+}
+.owner-clickable-row:hover td {
+  background: #f1f5f9;
+}
+
+/* Sticky table header inside a scrolling card */
+.owner-sticky thead th {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+}
+
+/* Money-in-one-place: three stacked tables */
+.owner-money-grid {
+  display: grid;
+  gap: 1.2rem;
+}
+
+/* Order slip panel */
+.owner-slip {
+  width: min(560px, 96vw);
+}
+.owner-slip-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+.owner-slip-kv {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+.owner-slip-kv td {
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.owner-slip-kv td:first-child {
+  color: var(--muted);
+  width: 42%;
+}
+
+/* Print: show only the slip, cleanly */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  .owner-slip,
+  .owner-slip * {
+    visibility: visible !important;
+  }
+  .owner-slip {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    box-shadow: none;
+    overflow: visible;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
