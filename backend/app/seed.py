@@ -248,7 +248,7 @@ def seed() -> None:
 
         # ---- Machine status logs (idle + breakdown windows for idle-loss) ----
         # Dated late in the month; mix of closed and open windows.
-        base = _dt(10, 8)
+        base = _dt(9, 8)  # closed windows in the past, so figures never drift
         db.add_all([
             m.MachineStatusLog(machine_id=machines[1].id, status="idle",
                                start_time=base, end_time=base + timedelta(hours=3),
@@ -273,6 +273,20 @@ def seed() -> None:
             m.MachineStatusLog(machine_id=machines[6].id, status="running",
                                start_time=base, end_time=base + timedelta(hours=5),
                                reason="ORD-2003"),
+            # Running windows behind every production log, so machine cost
+            # (running hours x power+overhead rate) is real for each order.
+            m.MachineStatusLog(machine_id=machines[3].id, status="running",
+                               start_time=_dt(5, 8), end_time=_dt(5, 18), reason="ORD-2001"),
+            m.MachineStatusLog(machine_id=machines[4].id, status="running",
+                               start_time=_dt(6, 8), end_time=_dt(6, 16), reason="ORD-2002"),
+            m.MachineStatusLog(machine_id=machines[4].id, status="running",
+                               start_time=base, end_time=base + timedelta(hours=4),
+                               reason="ORD-2004"),
+            m.MachineStatusLog(machine_id=machines[0].id, status="running",
+                               start_time=_dt(8, 9), end_time=_dt(8, 12), reason="ORD-2007"),
+            m.MachineStatusLog(machine_id=machines[0].id, status="running",
+                               start_time=base, end_time=base + timedelta(hours=4),
+                               reason="ORD-2004"),
         ])
 
         # Assign current orders to running machines (floor view).
@@ -292,15 +306,15 @@ def seed() -> None:
             m.ProductionLog(machine_id=machines[4].id, order_id=orders[3].id,
                             stage="weaving", output_meters=450, log_date=_d(10)),
             m.ProductionLog(machine_id=machines[6].id, order_id=orders[2].id,
-                            stage="dyeing", output_meters=500, log_date=_d(11)),
+                            stage="dyeing", output_meters=500, log_date=_d(10)),
             m.ProductionLog(machine_id=machines[0].id, order_id=orders[3].id,
-                            stage="spinning", output_meters=380, log_date=_d(11)),
+                            stage="spinning", output_meters=380, log_date=_d(10)),
             m.ProductionLog(machine_id=machines[3].id, order_id=orders[0].id,
                             stage="weaving", output_meters=2000, log_date=_d(5)),
             m.ProductionLog(machine_id=machines[4].id, order_id=orders[1].id,
                             stage="weaving", output_meters=1200, log_date=_d(6)),
             m.ProductionLog(machine_id=machines[0].id, order_id=orders[6].id,
-                            stage="spinning", output_meters=300, log_date=_d(12)),
+                            stage="spinning", output_meters=300, log_date=_d(8)),
         ])
 
         # ---- Rolls across orders/machines, mixed quality ----
@@ -342,7 +356,7 @@ def seed() -> None:
                 db.add(m.QualityInspection(
                     roll_id=r.id, inspector_user_id=inspector.id,
                     result=r.status, defect_type=defect_for.get(r.status, "none"),
-                    notes="Auto-seeded inspection", inspected_at=_dt(11, 14),
+                    notes="Auto-seeded inspection", inspected_at=_dt(10, 7),
                 ))
 
         # ---- Dispatch + invoices + payments ----
@@ -352,7 +366,7 @@ def seed() -> None:
         dispatch = m.Dispatch(order_id=orders[1].id, buyer_id=orders[1].buyer_id,
                               dispatch_no="DSP-3002", total_rolls=len(dispatched_rolls),
                               total_meters=total_m2, status="shipped",
-                              dispatched_at=_dt(14))
+                              dispatched_at=_dt(9, 15))
         db.add(dispatch)
         db.flush()
         for r in dispatched_rolls:
@@ -365,7 +379,7 @@ def seed() -> None:
         inv2 = m.Invoice(order_id=orders[1].id, dispatch_id=dispatch.id,
                          buyer_id=orders[1].buyer_id, invoice_no="INV-4002",
                          subtotal=sub2, tax=tax2, total=sub2 + tax2,
-                         status="part_paid", created_at=_dt(14))
+                         status="part_paid", created_at=_dt(9, 16))
         db.add(inv2)
 
         # INV-4001 for ORD-2001 (closed): 2000 m × 95 = 1,90,000 + 5% = 1,99,500,
@@ -390,7 +404,7 @@ def seed() -> None:
                       method="bank", paid_at=_dt(9)),
             m.Payment(direction="incoming", buyer_id=orders[1].buyer_id,
                       invoice_id=inv2.id, amount=round((sub2 + tax2) * 0.6, 2),
-                      method="bank", paid_at=_dt(15)),
+                      method="bank", paid_at=_dt(10, 9)),
             m.Payment(direction="outgoing", supplier_id=suppliers[0].id,
                       amount=180000, method="bank", paid_at=_dt(6)),
             m.Payment(direction="outgoing", supplier_id=suppliers[1].id,
@@ -412,29 +426,28 @@ def seed() -> None:
         db.flush()
 
         for emp in employees:
-            for day in (6, 7, 8, 9, 10):
+            for day in (5, 6, 7, 8, 9):
                 db.add(m.Attendance(
                     employee_id=emp.id, work_date=_d(day), shift="morning",
                     status="present" if day != 8 else "half_day",
                     hours_worked=8 if day != 8 else 4,
                 ))
 
-        # One wage record per employee for the week 06–12 Oct, 4.5 days each.
+        # One wage record per employee for 05–09 Oct, 4.5 days each (8 Oct is a
+        # half day). Three are paid on 10 Oct, Anita's is still due.
         #   Imran : 550 × 4.5 = 2,475   (paid)
         #   Kavita: 600 × 4.5 = 2,700   (paid)
-        #   Suresh: 650 × 4.5 = 2,925   (paid)   -> paid total 8,100... see note
-        #   Anita : 500 × 4.5 = 2,250   (pending)
-        # Total accrued = 10,350. To reach the documented month net we additionally
-        # mark enough paid; here paid = Imran+Kavita+Suresh+partial. For a clean
-        # hand-check we pay the first three in full (8,100) and leave Anita unpaid.
+        #   Suresh: 650 × 4.5 = 2,925   (paid)
+        #   Anita : 500 × 4.5 = 2,250   (due)
+        # Accrued 10,350; paid in October 8,100 (this is what Month net uses).
         wage_rows = []
         for emp, paid in zip(employees, (True, True, True, False)):
             amt = round(float(emp.daily_wage) * 4.5, 2)
             wage_rows.append(m.Wage(
-                employee_id=emp.id, period_start=_d(6), period_end=_d(12),
+                employee_id=emp.id, period_start=_d(5), period_end=_d(9),
                 days_present=4.5, amount=amt,
                 status="paid" if paid else "pending",
-                paid_at=_dt(13) if paid else None,
+                paid_at=_dt(10, 9) if paid else None,
             ))
         db.add_all(wage_rows)
 

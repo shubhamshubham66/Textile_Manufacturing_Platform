@@ -534,43 +534,55 @@ When omitted they default to the **current calendar month**. Every response echo
 the resolved `start` / `end`. All return **403** for non-owner roles.
 
 ### GET /api/reports/cost-per-order?start=&end=
-`{ "start", "end", "rows": [ ... ] }` where each row is:
-`yarn_cost + wage_cost + machine_cost = total_cost`, plus `revenue_est` and
-`margin_est`.
-- **Yarn** = Σ receipts linked to the order (kg × rate); if none linked, the
-  order's required-kg × average purchase rate for that yarn (no more ₹0 for
-  orders that consumed yarn).
-- **Wages** = total month wages × the order's share of production output (metres).
-- **Machine** = Σ machines' `power_overhead_cost` (power+overhead, **excludes
-  operator wages**) × the same output share, so wages are never double-counted.
+`{ "start", "end", "rows": [ ... ] }`, one row per order with activity in the
+window (metres made, linked yarn received, or an invoice); an empty month
+returns `rows: []`. Each row: `output_meters`, `yarn_cost`, `yarn_basis`
+(`"linked"` | `"estimate"`), `wage_cost`, `machine_cost`, `total_cost`
+(= yarn + wages + machine), `revenue_est`, `margin_est`.
+- **Yarn** = receipts linked to the order received in the window (kg × rate).
+  With no linked receipt at all: an estimate from metres made this month
+  (required kg × share made × average purchase rate, or metres × 0.2 kg/m ×
+  average rate for the colour).
+- **Wages** = wages accrued in the window split by metres made; the rounding
+  remainder goes to the largest share so the rows add up to the total exactly.
+- **Machine** = per machine, running hours in the window × `power_overhead_cost`
+  (power + overhead, **excludes operator wages**), split across the orders it
+  made metres for. Wages are never counted twice.
 
 ### GET /api/reports/machines?start=&end=
 `{ "start", "end", "machines": [ ... ], "totals": { ... } }`. Each machine row:
 `total_output_meters`, `running_hours`, `idle_hours`, `breakdown_hours`,
-`idle_loss_rupees`, `top_idle_reason`. `totals` sums the numeric columns.
+`idle_loss_rupees`, `top_idle_reason`. Hours count only the part of each status
+window inside the month (open windows up to now). `totals` sums the numeric
+columns.
 
 ### GET /api/reports/profit-loss?start=&end=
 Month cash-basis net:
 ```json
 { "start": "2026-10-01", "end": "2026-10-31",
-  "buyer_payments_in": 225960, "supplier_payments_out": 200000, "wages": 10350,
-  "profit_or_loss": 15610, "is_profit": true }
+  "buyer_payments_in": 225960, "supplier_payments_out": 200000,
+  "wages": 8100, "wages_accrued": 10350, "wages_due": 2250,
+  "profit_or_loss": 17860, "is_profit": true }
 ```
-`profit = payments_in − supplier_out − wages` (all within the window).
+`profit = buyer payments received − raw material bills paid − wages PAID`, all
+inside the window. `wages_due` (worked in the window, not yet paid) is context
+only and is not in the net.
 
 ### GET /api/reports/wages?start=&end=
 Owner wages view (owner only):
 ```json
 { "start", "end", "total_wages": 10350, "total_paid": 8100, "total_unpaid": 2250,
+  "paid_in_month": 8100,
   "per_employee": [ { "employee", "role_on_floor", "days_present", "daily_wage",
                       "amount", "status", "period_start", "period_end" } ],
   "per_order": [ { "order_no", "output_meters", "wages_allocated" } ] }
 ```
-`per_order` uses the same output-share basis as cost-per-order, so the two tie out.
+`per_order` uses the same split as cost-per-order, so the two tie out exactly.
 
 ### GET /api/reports/dashboard?start=&end=
-Key cards + charts data: `machine_count`, `orders_by_stage`, `low_stock_count` +
-`low_stock`, `idle_loss_rupees`, `idle_loss_by_reason` (`[{reason, loss_rupees}]`),
+Key cards + charts data: `machine_count`, `orders_by_stage` and `low_stock_count` +
+`low_stock` (current snapshot), `idle_loss_rupees` and `idle_loss_by_reason`
+(`[{reason, loss_rupees}]`) for the window (same numbers as the Machine report),
 and `profit_loss` (the same object as `/profit-loss`, so the Dashboard card and
 the Reports P&L always match).
 

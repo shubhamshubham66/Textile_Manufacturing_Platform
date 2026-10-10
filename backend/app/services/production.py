@@ -40,6 +40,26 @@ def log_duration_hours(log: MachineStatusLog, until: datetime | None = None) -> 
     return max(0.0, seconds / 3600.0)
 
 
+def log_hours_in_window(
+    log: MachineStatusLog,
+    window: tuple[datetime, datetime] | None,
+    until: datetime | None = None,
+) -> float:
+    """Hours of a status-log window that fall inside `window` (start, end).
+
+    With window=None this is the same as log_duration_hours. An open window
+    runs up to `until` (default: now), so time in the future is never counted.
+    """
+    if window is None:
+        return log_duration_hours(log, until=until)
+    now = until or _now()
+    start = _as_aware(log.start_time)
+    end = _as_aware(log.end_time) if log.end_time else now
+    lo = max(start, _as_aware(window[0]))
+    hi = min(end, _as_aware(window[1]), now)
+    return max(0.0, (hi - lo).total_seconds() / 3600.0)
+
+
 def order_progress_percent(db: Session, order: Order) -> float:
     """Percent complete = produced metres / ordered metres (capped at 100)."""
     produced = (
@@ -66,11 +86,17 @@ def order_display_progress(db: Session, order: Order) -> float:
 
 
 def idle_loss_for_machine(
-    db: Session, machine_id: int, hourly_cost: float, now: datetime | None = None
+    db: Session,
+    machine_id: int,
+    hourly_cost: float,
+    now: datetime | None = None,
+    window: tuple[datetime, datetime] | None = None,
 ) -> dict:
     """Idle+breakdown hours and rupee loss for a single machine.
 
-    loss = Σ(window hours) × hourly_cost over idle/breakdown logs.
+    loss = Σ(window hours) × hourly_cost over idle/breakdown logs. With a
+    `window` (owner month reports) only the hours inside it count; without one
+    (floor screens) every log counts, as before.
     """
     now = now or _now()
     logs = (
@@ -84,7 +110,7 @@ def idle_loss_for_machine(
     idle_hours = 0.0
     breakdown_hours = 0.0
     for log in logs:
-        hrs = log_duration_hours(log, until=now)
+        hrs = log_hours_in_window(log, window, until=now)
         if log.status == "idle":
             idle_hours += hrs
         else:

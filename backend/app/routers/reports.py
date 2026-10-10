@@ -7,7 +7,7 @@ shows "this month".
 
   GET /api/reports/cost-per-order   yarn + wages + machine cost per order
   GET /api/reports/machines         output, running/idle/breakdown h, idle loss
-  GET /api/reports/profit-loss      month cash-basis net (in − bills − wages)
+  GET /api/reports/profit-loss      month cash-basis net (in − bills − wages paid)
   GET /api/reports/wages            owner wages view (total, per employee, order)
   GET /api/reports/dashboard        cards + orders-by-stage + idle loss by reason
 """
@@ -25,10 +25,10 @@ from app.config import get_settings
 from app.database import get_db
 from app.deps import require_resource
 from app.models import Machine, Order, YarnStock
-from app.services.production import idle_loss_for_machine
 from app.services.reports import (
     cost_per_order,
     idle_loss_by_reason,
+    idle_loss_total,
     machine_report,
     profit_or_loss,
     wages_report,
@@ -132,13 +132,9 @@ def dashboard(
                  "quantity_kg": float(st.quantity_kg)}
             )
 
-    # Idle loss (current open+recent windows).
+    # Idle loss inside the selected month (same numbers as the Machine report).
     machines = db.query(Machine).all()
-    total_idle_loss = 0.0
-    for mc in machines:
-        total_idle_loss += idle_loss_for_machine(
-            db, mc.id, float(mc.hourly_cost or 0)
-        )["loss_rupees"]
+    total_idle_loss = idle_loss_total(db, s, e)
 
     # Month cash-basis net (matches Reports > Profit / loss exactly).
     pl = profit_or_loss(db, s, e)

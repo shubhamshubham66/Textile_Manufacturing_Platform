@@ -56,6 +56,22 @@ class SupplierPaymentRequest(BaseModel):
         return v
 
 
+def _inr(v: float) -> str:
+    """₹ with Indian digit grouping and 2 decimals: 1234567.5 -> ₹12,34,567.50."""
+    neg = v < 0
+    whole, frac = f"{abs(v):.2f}".split(".")
+    if len(whole) > 3:
+        head, tail = whole[:-3], whole[-3:]
+        groups = []
+        while len(head) > 2:
+            groups.insert(0, head[-2:])
+            head = head[:-2]
+        if head:
+            groups.insert(0, head)
+        whole = ",".join(groups + [tail])
+    return f"{'−' if neg else ''}₹{whole}.{frac}"
+
+
 def _invoice_paid_total(db: Session, invoice_id: int) -> float:
     total = (
         db.query(func.coalesce(func.sum(Payment.amount), 0))
@@ -175,7 +191,10 @@ def record_buyer_payment(
     if body.amount - 0.001 > balance:
         raise HTTPException(
             status_code=400,
-            detail=f"Amount {body.amount} exceeds outstanding balance {round(balance, 2)}",
+            detail=(
+                f"Amount {_inr(body.amount)} exceeds the outstanding balance "
+                f"{_inr(balance)} on {invoice.invoice_no}."
+            ),
         )
 
     payment = Payment(
@@ -215,8 +234,8 @@ def pay_supplier(
         raise HTTPException(
             status_code=400,
             detail=(
-                f"Amount ₹{body.amount:,.2f} exceeds the outstanding bill "
-                f"₹{outstanding:,.2f} for {supplier.name}. "
+                f"Amount {_inr(body.amount)} exceeds the outstanding bill "
+                f"{_inr(outstanding)} for {supplier.name}. "
                 "Tick 'advance payment' to pay more than is owed."
             ),
         )

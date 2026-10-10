@@ -99,7 +99,7 @@ export default function Dashboard() {
   const waterfallSteps = [
     { label: "Payments in", value: pl.buyer_payments_in, kind: "in" },
     { label: "Material bills", value: pl.supplier_payments_out, kind: "out" },
-    { label: "Wages", value: pl.wages, kind: "out" },
+    { label: "Wages paid", value: pl.wages, kind: "out" },
     {
       label: pl.is_profit ? "Net profit" : "Net loss",
       value: pl.profit_or_loss,
@@ -227,6 +227,12 @@ export default function Dashboard() {
             </strong>
           </div>
         </div>
+        {pl.wages_due > 0 && (
+          <p className="muted" style={{ marginTop: "0.6rem" }}>
+            Not in the cash net: wages due for work this month, not yet paid,{" "}
+            <strong className="owner-num">{inr(pl.wages_due)}</strong>.
+          </p>
+        )}
       </section>
     </div>
   );

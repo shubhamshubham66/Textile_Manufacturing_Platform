@@ -439,3 +439,15 @@ a title, units, tooltips and an aria-label text alternative.
 - Owner menu has **Team** (`/app/team`): create manager (name, login ID, password + confirm, optional Gmail) and list managers. Dashboard has a "＋ Create manager" button. API: `GET/POST /api/team/managers` (owner only).
 - Tests: `backend/tests/test_team.py` (4); 25 backend tests pass.
 
+## Phase 16 — Owner month-end audit and fixes
+Audit of R1–R7 (owner scene) found four wrong/partial items; fixed:
+- **R1 / R3 / R5 month window:** cost per order, machine hours, idle loss (report, Dashboard card and by-reason chart) now count only what falls inside the selected month. Before, an empty month (Sep 2026) showed ₹1,58,800 of yarn cost and ₹3,400 idle loss.
+- **R1 machine cost:** was Σ machine ₹/hr × output share (an hourly rate used as a total). Now running hours in the month × power+overhead ₹/hr, split by the machine's metres per order.
+- **R1 yarn:** linked receipts received in the month; orders with no linked receipt get a marked estimate (was "—"/₹0 for ORD-2007).
+- **R5 month net:** used wages accrued (₹10,350) while labelled "wages paid". Now wages PAID in the month (₹8,100); wages due shown separately. October net ₹17,860.
+- **R7 seed:** no future-dated records (production 11–12 Oct, payment 15 Oct, wages paid 13 Oct moved to ≤ 10 Oct); running windows behind every production log; status windows closed in the past so figures don't drift.
+- Wages split across orders rounds to paise with the remainder on the largest share, so per-order wages add up exactly to the total.
+- UI: "est" marker on estimated yarn, wages-due line on Dashboard and Profit / loss, sticky table headers on Reports.
+- Definitions: `backend/app/services/reports.py` docstring and `docs/OWNER_MONTH_END_HANDCHECK.md`. Tests: `backend/tests/test_owner_reports.py` (acceptance checks 1–7); `backend/tests/verify_month_math.py` (plain arithmetic).
+- Shared file touched (additive): `backend/app/services/production.py` gets `log_hours_in_window` and an optional `window` on `idle_loss_for_machine` (floor screens call it without a window, unchanged).
+
