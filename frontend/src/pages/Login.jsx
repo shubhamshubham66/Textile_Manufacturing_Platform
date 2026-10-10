@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthContext.jsx";
 
 // Demo accounts shown on the login screen for quick judging. Passwords here are
@@ -87,6 +87,15 @@ export default function Login() {
       setSubmitting(false);
     }
   }
+
+  // "Try as owner / buyer" links from the landing page: /login?demo=owner logs
+  // straight in with that demo account.
+  useEffect(() => {
+    const want = new URLSearchParams(window.location.search).get("demo");
+    const account = DEMO_ACCOUNTS.find((a) => a.role.toLowerCase() === want);
+    if (account) quickLogin(account);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const owner = DEMO_ACCOUNTS[0];
   const buyer = DEMO_ACCOUNTS[DEMO_ACCOUNTS.length - 1];
