@@ -3,8 +3,8 @@
 Single source of truth for the current state of the project. Update this at the end
 of every phase. Keep it short and factual.
 
-**Last updated:** Phase 10 (Testing & Polish) — 10 Oct 2026
-**Current phase:** Phase 10 — Testing & Polish
+**Last updated:** Phase 11 (Live run, fixes & deploy prep) — 10 Oct 2026
+**Current phase:** Phase 11 — Deploy (Render + Vercel)
 
 ---
 
@@ -92,7 +92,7 @@ See `API_CONTRACT.md` for full request/response details.
 | GET    | `/api/buyer/orders/{id}`    | Track my order (404 if not mine) | Implemented; isolation test written |
 | GET    | `/api/buyer/invoices`       | My invoices (own only)           | Implemented; isolation test written |
 | GET    | `/api/buyer/invoices/{id}/pdf` | My invoice PDF (404 if not mine) | Implemented; isolation test written |
-| POST   | `/api/chatbot/message`      | AI assistant (mini dev, later)   | Defined (contract only) |
+| POST   | `/api/chatbot/message`      | AI assistant proxy → Dify        | Wired; tested live with a stub Dify (public + role-scoped) |
 
 ---
 
@@ -243,16 +243,33 @@ Tables (18): `roles`, `users`, `buyers`, `orders`, `order_items`, `yarn_stock`,
     empty-state popover; flow-sim empty-list guard. No unrelated changes.
   - Polish: one-click **Try as owner / buyer** demo login + full one-click role
     list on the Login page. `docs/TEST_REPORT.md` added.
+- **Phase 11 — Live run, fixes & deploy prep (all executed on a networked host):**
+  - Ran for real on SQLite **and PostgreSQL 17**: HTTP smoke test of every
+    endpoint + full demo flow + RBAC/edge cases **72/72 pass on both**; pytest
+    4/4; flow simulation 19/19; all 17 role pages open in a browser with no errors.
+  - Fixed: login used `EmailStr` → app failed to import (`email-validator`
+    missing) and every `@everest.test` demo login returned 400. Now a plain,
+    trimmed, lowercased string.
+  - Fixed: PostgreSQL in a non-UTC server timezone shifted every timestamp
+    (idle-loss hours wrong). Sessions are pinned to UTC.
+  - Fixed: buyer portal / chatbot showed 0% for orders already past production
+    (now 100% from `in_quality` onward). Negative money shows as `−₹1,58,890`;
+    stage labels readable.
+  - Startup creates tables and loads demo data **only if the DB is empty**
+    (`AUTO_CREATE_TABLES`, `SEED_IF_EMPTY`); restarts keep data.
+    `postgres://` / `postgresql://` URLs normalised for psycopg2.
+  - Chatbot wired: `chatbot_router` included; `ChatBubble` renders the real
+    `ChatWidget`. Without Dify keys the route returns a clean 503.
+  - Deploy config: `render.yaml` (API + free Postgres), `frontend/vercel.json`
+    (`/api` → Render, SPA fallback), `DEPLOY.md`.
 
 ---
 
 ## 7. Pending Tasks
 
-- **Run live on a networked host** (the only remaining gate — everything is
-  code-complete + DB-logic/static verified): install deps, `init_db`, `seed`, start
-  both servers, run `pytest`, and do the browser/HTTP demo pass.
-- Wire the chatbot (2 shared-file lines — see `chatbot/README.md`) + create the
-  Dify app with the provided prompt/KB and keys.
+- Deploy: Render Blueprint, then Vercel (see `DEPLOY.md`). Update the `/api`
+  rewrite in `frontend/vercel.json` if Render's service URL has a suffix.
+- Create the Dify app (prompt + KB in `chatbot/`) and set `DIFY_API_KEY` on Render.
 - Optional: move session store / machine-cost allocation to stricter models if
   desired (documented assumptions).
 
@@ -260,12 +277,10 @@ Tables (18): `roles`, `users`, `buyers`, `orders`, `order_items`, `yarn_stock`,
 
 ## 8. Known Bugs
 
-- **Live app not runnable in this sandbox** (`INTEGRATIONS_ONLY`): PyPI/npm/Postgres
-  unreachable, so real HTTP + browser + PDF + Dify were **not** executed here.
-  Verified instead by DB-logic simulation (19/19), compilation, and lint. Must be
-  confirmed on a networked host.
-- No open logic bugs found in Phase 10. The notifications-bell dead button was
-  fixed.
+- No open bugs from the Phase 11 live run. Not yet tested against the real Dify
+  service (needs the Dify app + key).
+- Demo story: seeded month shows a loss (−₹1.59 lakh: ₹1.8 lakh supplier payments
+  vs ₹31k received). Adjust seed figures if a profit view is wanted for judging.
 
 ---
 
@@ -288,8 +303,9 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 
 ## 10. Deployment
 
-Not decided. Local for development/demo. Backend 8000, frontend 5173; frontend
-proxies `/api` to the backend.
+Render (FastAPI + free PostgreSQL via `render.yaml`) and Vercel (frontend, root
+`frontend/`, `vercel.json` proxies `/api` to Render). Steps in `DEPLOY.md`.
+Locally: backend 8000, frontend 5173; Vite proxies `/api` to the backend.
 
 ---
 

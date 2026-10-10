@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     # CORS: comma-separated list of allowed frontend origins.
     cors_origins: str = "http://localhost:5173"
 
+    # Startup: create tables, and fill demo data when the database is empty.
+    # Lets a fresh Render/Postgres deploy work with no shell access. Set
+    # SEED_IF_EMPTY=false to start with an empty database instead.
+    auto_create_tables: bool = True
+    seed_if_empty: bool = True
+
     app_name: str = "Everest Textile Mills API"
     app_version: str = "0.1.0"
 
@@ -45,6 +51,20 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @property
+    def sqlalchemy_database_url(self) -> str:
+        """DATABASE_URL in the form SQLAlchemy expects.
+
+        Hosts such as Render, Neon and Heroku hand out `postgres://...` or
+        `postgresql://...`; pin the psycopg2 driver explicitly.
+        """
+        url = (self.database_url or "").strip() or "sqlite:///./textile.db"
+        if url.startswith("postgres://"):
+            url = "postgresql+psycopg2://" + url[len("postgres://"):]
+        elif url.startswith("postgresql://"):
+            url = "postgresql+psycopg2://" + url[len("postgresql://"):]
+        return url
 
     @property
     def cors_origin_list(self) -> list[str]:
