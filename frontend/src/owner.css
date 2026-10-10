@@ -549,3 +549,139 @@
     display: none !important;
   }
 }
+
+/* ---- Owner Payments: month money view ---------------------------------- */
+.owner-money-filters {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.owner-money-filters select {
+  min-width: 210px;
+}
+.owner-money-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+@media (max-width: 760px) {
+  .owner-money-cards {
+    grid-template-columns: 1fr;
+  }
+}
+.owner-money-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  text-align: left;
+  padding: 0.95rem 1.1rem;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--card-accent, var(--line));
+  border-radius: 12px;
+  background: #fff;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.owner-money-card.is-raw { --card-accent: #b7791f; }
+.owner-money-card.is-wages { --card-accent: #5a67d8; }
+.owner-money-card.is-buyers { --card-accent: #2f855a; }
+.owner-money-card:hover {
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+}
+.owner-money-card.is-active {
+  border-color: var(--card-accent);
+  box-shadow: 0 0 0 1px var(--card-accent) inset;
+}
+.owner-money-card:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.owner-money-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.owner-money-value {
+  font-size: 1.45rem;
+  font-variant-numeric: tabular-nums;
+}
+.owner-money-sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.owner-money-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2.5rem;
+}
+.owner-money-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.owner-money-fact strong {
+  font-size: 1.1rem;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.owner-money-fact.tone-in strong { color: #2f855a; }
+.owner-money-fact.tone-out strong { color: #b45309; }
+.owner-void-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+.owner-money-num {
+  display: inline-grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-right: 0.45rem;
+  border-radius: 50%;
+  background: var(--card-accent);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.owner-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+}
+.owner-pager-btns {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+.owner-pager-btns button {
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.owner-pager-btns button:hover:not(:disabled) {
+  border-color: var(--brand);
+}
+.owner-pager-btns button.is-current {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  font-weight: 700;
+}
+.owner-pager-btns button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

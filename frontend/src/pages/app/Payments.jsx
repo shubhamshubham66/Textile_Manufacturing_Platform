@@ -4,13 +4,19 @@ import { useAuth } from "../../auth/AuthContext.jsx";
 import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 import { inr, ddmmyyyy, statusLabel } from "../../lib/format.js";
 import "../../owner.css";
+import OwnerMoney from "./OwnerMoney.jsx";
 
 // Payments at/above this amount get an "Unusually large" badge (₹10,00,000).
 const LARGE_PAYMENT = 1000000;
 
-// Payments module (owner + accountant): record buyer payment, pay supplier,
-// due tracker (with ageing) and payment history.
+// Payments module. The owner gets a read-only month view (OwnerMoney); the
+// accountant records buyer payments, pays suppliers and sees the due tracker.
 export default function Payments() {
+  const { user } = useAuth();
+  return user?.role === "owner" ? <OwnerMoney /> : <PaymentsDesk />;
+}
+
+function PaymentsDesk() {
   const { user } = useAuth();
   const isOwner = user?.role === "owner";
   const [meta, setMeta] = useState({ invoices: [], suppliers: [] });
