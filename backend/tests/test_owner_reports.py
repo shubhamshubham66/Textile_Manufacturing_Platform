@@ -118,7 +118,7 @@ def test_6_overpayment_rejected(c, owner):
 
 
 def test_7_owner_reports_forbidden_for_other_roles(c):
-    for email, pw in [("accounts@everest.test", "accounts123"), ("floor@everest.test", "floor123"),
+    for email, pw in [("accounts@everest.test", "accounts123"), ("quality@everest.test", "quality123"),
                       ("store@everest.test", "store123"), ("buyer@everest.test", "buyer123")]:
         h = tok(c, email, pw)
         for path in ["cost-per-order", "machines", "profit-loss", "wages", "dashboard"]:

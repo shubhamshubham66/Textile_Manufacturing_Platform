@@ -118,7 +118,7 @@ def test_void_forbidden_for_non_owner(c):
     pay = _find(c, owner_h, "outgoing", 180000.0)
     for email, pw in [
         ("accounts@everest.test", "accounts123"),
-        ("floor@everest.test", "floor123"),
+        ("quality@everest.test", "quality123"),
         ("buyer@everest.test", "buyer123"),
     ]:
         h = tok(c, email, pw)

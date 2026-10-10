@@ -42,6 +42,7 @@ ROLE_DEFAULT_DEPT = {
     rbac.ROLE_ACCOUNTANT: "accounts",
     rbac.ROLE_ACCOUNTS_MANAGER: "accounts",
     rbac.ROLE_SALES_MANAGER: "dispatch",
+    rbac.ROLE_PURCHASE_MANAGER: "purchase",
 }
 
 DEPT_MANAGER_ROLES = set(ROLE_DEFAULT_DEPT)

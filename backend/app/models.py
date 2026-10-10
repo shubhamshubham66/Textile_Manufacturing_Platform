@@ -37,7 +37,8 @@ class Role(Base):
     __tablename__ = "roles"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    # owner | store_manager | floor_supervisor | quality_inspector | accountant | buyer
+    # owner | store_manager | quality_inspector | accountant | buyer | manager |
+    # production_manager | sales_manager | accounts_manager | purchase_manager | worker
     name: Mapped[str] = mapped_column(String(50), unique=True)
 
     users: Mapped[list["User"]] = relationship(back_populates="role")

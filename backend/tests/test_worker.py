@@ -145,13 +145,13 @@ def test_worker_attendance_needs_manager_verification_for_wages(c, wk):
     c.post("/api/worker/attendance/check-in", headers=wk, json={"shift": "morning"})
     # The worker cannot verify their own attendance (no such endpoint for them).
     assert c.get("/api/tasks/attendance", headers=wk).status_code == 403
-    # The seeded floor supervisor manages the production worker; verify via them.
-    floor = login(c, "floor@everest.test", "floor123")
-    att = c.get("/api/tasks/attendance", headers=floor).json()
+    # The production manager manages the production worker; verify via them.
+    prod = login(c, "production@everest.test", "production123")
+    att = c.get("/api/tasks/attendance", headers=prod).json()
     pend = [r for r in att["rows"] if not r["verified"]]
     if pend:
         vid = pend[0]["id"]
-        assert c.post(f"/api/tasks/attendance/{vid}/verify", headers=floor).status_code == 200
+        assert c.post(f"/api/tasks/attendance/{vid}/verify", headers=prod).status_code == 200
 
 
 # ------------------------------ Permission boundary ------------------------------ #

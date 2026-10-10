@@ -29,6 +29,14 @@ ROLE_SALES_MANAGER = "sales_manager"
 # expenses and financial reports. Reuses the existing payments/attendance/wages
 # endpoints plus its own am_* screens. High-value approvals stay with the owner.
 ROLE_ACCOUNTS_MANAGER = "accounts_manager"
+# Purchase & Raw Material manager: owns yarn purchasing, suppliers, incoming
+# raw material, stock levels, purchase requests and low-stock alerts. Receives
+# instructions from the Supermanager and coordinates with store workers. Gets
+# the full purchase/raw-material desk (the existing purchase_* / stock / yarn /
+# suppliers_desk resources) but — unlike the store manager — NOT the dispatch
+# screens. Cannot confirm buyer orders, approve QC, bypass purchase approvals or
+# manage user accounts.
+ROLE_PURCHASE_MANAGER = "purchase_manager"
 # Shop-floor worker login: sees only their own tasks, attendance, overtime and
 # profile. Created by the Supermanager / department manager and linked to an
 # Employee record (users.employee_id).
@@ -44,6 +52,7 @@ ALL_ROLES = [
     ROLE_PRODUCTION_MANAGER,
     ROLE_SALES_MANAGER,
     ROLE_ACCOUNTS_MANAGER,
+    ROLE_PURCHASE_MANAGER,
     ROLE_WORKER,
 ]
 
@@ -94,6 +103,10 @@ MENU_CONFIG: dict[str, list[dict]] = {
         {"label": "Production Reports", "path": "/app/pm-reports", "resource": "pm_reports"},
         {"label": "Notifications", "path": "/app/pm-notifications", "resource": "pm_notifications"},
         {"label": "Activity Logs", "path": "/app/pm-activity", "resource": "pm_activity"},
+        # Verifies its production workers' attendance via the shared screen the
+        # other department managers use (the floor supervisor used to do this,
+        # and it has been removed).
+        {"label": "My tasks", "path": "/app/my-tasks", "resource": "my_tasks"},
     ],
     # Sales & Dispatch manager: 13-screen panel. Its own `sd_*` resources keep
     # permissions isolated from the store's `dispatch` screens.
@@ -157,6 +170,24 @@ MENU_CONFIG: dict[str, list[dict]] = {
         {"label": "Notifications", "path": "/app/purchase-notifications", "resource": "purchase_notifications"},
         {"label": "My tasks", "path": "/app/my-tasks", "resource": "my_tasks"},
         {"label": "Dispatch", "path": "/app/dispatch", "resource": "dispatch"},
+    ],
+    # Purchase & Raw Material manager: a focused purchase/raw-material panel. It
+    # REUSES the existing purchase desk resources (so all /api/purchase/* and
+    # /api/yarn/* endpoints and the existing frontend pages work unchanged), but
+    # — unlike the store manager — it does NOT get the Dispatch screen; purchase
+    # and raw material are its whole job.
+    ROLE_PURCHASE_MANAGER: [
+        {"label": "Dashboard", "path": "/app/purchase-dashboard", "resource": "purchase_dashboard"},
+        {"label": "Supplier Management", "path": "/app/suppliers", "resource": "suppliers_desk"},
+        {"label": "Raw Material Inventory", "path": "/app/stock", "resource": "stock"},
+        {"label": "Purchase Requests", "path": "/app/purchase-requests", "resource": "purchase_requests"},
+        {"label": "Purchase Orders", "path": "/app/purchase", "resource": "purchase"},
+        {"label": "Material Receiving", "path": "/app/yarn", "resource": "yarn"},
+        {"label": "Low-Stock Alerts", "path": "/app/low-stock", "resource": "low_stock"},
+        {"label": "Production Material Requirements", "path": "/app/material-requirements", "resource": "material_requirements"},
+        {"label": "Reports", "path": "/app/purchase-reports", "resource": "purchase_reports"},
+        {"label": "Notifications", "path": "/app/purchase-notifications", "resource": "purchase_notifications"},
+        {"label": "My tasks", "path": "/app/my-tasks", "resource": "my_tasks"},
     ],
     ROLE_QUALITY_INSPECTOR: [
         {"label": "Quality", "path": "/app/quality", "resource": "quality"},
