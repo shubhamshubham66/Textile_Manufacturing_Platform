@@ -3,14 +3,18 @@
 Flow (each step needs the previous one):
   1. POST /api/auth/signup/send-otp    {email}            -> code emailed
   2. POST /api/auth/signup/verify-otp  {email, otp}       -> email_token
-  3. POST /api/auth/signup             {name, email, role, password,
+  3. POST /api/auth/signup             {name, email, password,
                                         confirm_password, email_token}
                                                            -> account created
 
 The OTP is 6 digits, stored only as a bcrypt hash, expires after
 OTP_EXPIRE_MINUTES, allows OTP_MAX_ATTEMPTS wrong tries, and can be re-sent
-after OTP_RESEND_SECONDS. A buyer signup also creates its buyer record, so the
-new buyer sees only their own orders.
+after OTP_RESEND_SECONDS.
+
+Public signup never lets the person pick a role: every new account is a Buyer
+(the least access: only their own orders and invoices) with its own buyer
+record. Staff roles are given by the owner, not self-chosen. Any `role` sent in
+the request is ignored.
 """
 
 from __future__ import annotations
@@ -79,7 +83,6 @@ class VerifyOtpIn(BaseModel):
 class SignupIn(BaseModel):
     name: str
     email: str
-    role: str
     password: str
     confirm_password: str
     email_token: str
@@ -95,13 +98,6 @@ class SignupIn(BaseModel):
         v = " ".join((v or "").split())
         if len(v) < 2 or len(v) > 120:
             raise ValueError("Name must be 2 to 120 characters")
-        return v
-
-    @field_validator("role")
-    @classmethod
-    def role_ok(cls, v: str) -> str:
-        if v not in rbac.ALL_ROLES:
-            raise ValueError("Choose a role from the list")
         return v
 
     @field_validator("password")
@@ -186,17 +182,14 @@ def signup(body: SignupIn, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == body.email).first():
         raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists. Please sign in.")
 
-    role = db.query(Role).filter(Role.name == body.role).first()
+    role = db.query(Role).filter(Role.name == rbac.ROLE_BUYER).first()
     if role is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Choose a role from the list")
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Signup is not available right now.")
 
-    user = User(name=body.name, email=body.email, password_hash=hash_password(body.password), role=role)
-    if body.role == rbac.ROLE_BUYER:
-        # A buyer login must point at a buyer record; that's what limits a buyer
-        # to their own orders and invoices.
-        buyer = Buyer(name=body.name, contact_person=body.name, email=body.email)
-        db.add(buyer)
-        user.buyer = buyer
-    db.add(user)
+    # A buyer login must point at a buyer record; that's what limits a buyer to
+    # their own orders and invoices.
+    buyer = Buyer(name=body.name, contact_person=body.name, email=body.email)
+    user = User(name=body.name, email=body.email, password_hash=hash_password(body.password), role=role, buyer=buyer)
+    db.add_all([buyer, user])
     db.commit()
     return {"message": "Account created. You can now sign in.", "email": user.email, "role": role.name}

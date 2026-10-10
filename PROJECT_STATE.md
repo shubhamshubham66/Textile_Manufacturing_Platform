@@ -429,3 +429,6 @@ a title, units, tooltips and an aria-label text alternative.
 - In-process event bus: fine for the single Uvicorn worker on Render; several workers would need Redis pub/sub.
 - Tests: `backend/tests/test_live.py` (6). Verified with separate owner / floor / quality / buyer browsers on Postgres.
 
+## Phase 13c — Signup without role
+- `/signup` now asks only Name, Email, OTP, New + Confirm password. Every new account is a Buyer with its own buyer record (least access). The API ignores any `role` sent, so nobody can make themselves Admin. Staff roles are to be given by the owner.
+
