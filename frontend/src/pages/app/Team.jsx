@@ -45,7 +45,7 @@ export default function Team() {
   async function onSubmit(e) {
     e.preventDefault();
     const errs = {};
-    if (form.name.trim().length < 2) errs.name = "Enter the manager's full name.";
+    if (form.name.trim().length < 2) errs.name = "Enter the supermanager's full name.";
     if (!ID_RE.test(form.login_id.trim())) errs.login_id = "3–20 letters, numbers or dashes, e.g. MGR-001.";
     const pw = passwordProblem(form.password);
     if (pw) errs.password = pw;
@@ -84,14 +84,14 @@ export default function Team() {
       {error && <div className="form-error">{error}</div>}
       {created && (
         <div className="callout callout-ok">
-          Manager <strong>{created.name}</strong> created. They sign in with login ID{" "}
+          Supermanager <strong>{created.name}</strong> created. They sign in with login ID{" "}
           <strong>{created.login_id}</strong> and the password you set.
         </div>
       )}
 
       <section className="panel">
-        <h3>Create manager</h3>
-        <p className="muted">Give the manager a login ID and password. Share them in person.</p>
+        <h3>Create supermanager</h3>
+        <p className="muted">Give the supermanager a login ID and password. Share them in person.</p>
         <form className="team-form" onSubmit={onSubmit} noValidate>
           <label className="field">
             <span>Full name</span>
@@ -124,12 +124,12 @@ export default function Team() {
             <span>
               Gmail <small className="muted">(optional, lets them sign in with email too)</small>
             </span>
-            <input type="email" value={form.email} onChange={set("email")} placeholder="manager@gmail.com" autoComplete="off" className={errors.email ? "invalid" : ""} />
+            <input type="email" value={form.email} onChange={set("email")} placeholder="supermanager@gmail.com" autoComplete="off" className={errors.email ? "invalid" : ""} />
             {errors.email && <small className="field-error">{errors.email}</small>}
           </label>
           <div className="team-form-wide">
             <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? "Creating…" : "Create manager"}
+              {saving ? "Creating…" : "Create supermanager"}
             </button>
           </div>
         </form>
@@ -137,13 +137,13 @@ export default function Team() {
 
       <section className="panel">
         <div className="toolbar">
-          <h3>Managers</h3>
+          <h3>Supermanagers</h3>
           <span className="muted">{managers.length} total</span>
         </div>
         {loading ? (
           <p className="muted">Loading…</p>
         ) : managers.length === 0 ? (
-          <p className="muted">No managers yet. Create the first one above.</p>
+          <p className="muted">No supermanagers yet. Create the first one above.</p>
         ) : (
           <table className="data-table">
             <thead>

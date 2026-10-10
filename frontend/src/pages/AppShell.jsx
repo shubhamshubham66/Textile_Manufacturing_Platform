@@ -53,7 +53,7 @@ const ROLE_LABELS = {
   quality_inspector: "Quality inspector",
   accountant: "Accountant",
   buyer: "Buyer",
-  manager: "Manager",
+  manager: "Supermanager",
 };
 
 // The app shell after login. The sidebar is built from the `menu` returned by the
