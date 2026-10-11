@@ -30,11 +30,13 @@ from app.models import (
     Notification,
     Order,
     OrderChangeRequest,
+    BuyerPaymentRequest,
     OrderItem,
     Payment,
     Product,
     User,
 )
+from app.services import order_payments as op
 from app.services.production import order_display_progress
 
 router = APIRouter(prefix="/api/buyer", tags=["buyer"])
@@ -99,6 +101,7 @@ def my_orders(
                 "review_label": REVIEW_LABEL.get(o.status),
                 "review_note": o.review_note if o.status in ("clarification", "rejected") else None,
                 "buyer_note": o.buyer_note,
+                "payment": op.summary(db, o),
             }
         )
     return out
@@ -399,16 +402,19 @@ def buyer_dashboard(buyer: User = Depends(get_current_buyer), db: Session = Depe
             "progress_percent": order_display_progress(db, o),
             "expected_delivery": o.deadline.isoformat() if o.deadline else None,
         })
-    # Outstanding payment total (buyer's own invoices).
+    # Outstanding = what is still owed on confirmed orders (paid from confirmation
+    # until delivery), plus what is awaiting the accounts team's confirmation.
     outstanding = 0.0
-    for inv in db.query(Invoice).filter(Invoice.buyer_id == buyer.buyer_id).all():
-        paid = float(
-            db.query(func.coalesce(func.sum(Payment.amount), 0))
-            .filter(Payment.invoice_id == inv.id, Payment.direction == "incoming", Payment.voided_at.is_(None))
-            .scalar() or 0
-        )
-        outstanding += max(0.0, float(inv.total or 0) - paid)
-    return {"cards": cards, "recent_orders": recent_rows, "outstanding_payment": round(outstanding, 2)}
+    to_pay = []
+    for o in orders:
+        if o.status not in op.PAYABLE_STATUSES + ("closed",):
+            continue
+        sm_ = op.summary(db, o)
+        outstanding += sm_["balance"]
+        if sm_["balance"] > 0.5:
+            to_pay.append({"id": o.id, "order_no": o.order_no, **sm_})
+    return {"cards": cards, "recent_orders": recent_rows, "outstanding_payment": round(outstanding, 2),
+            "to_pay": to_pay}
 
 
 # --------------------------------------------------------------------------- #
@@ -596,4 +602,96 @@ def buyer_profile(buyer: User = Depends(get_current_buyer), db: Session = Depend
         "credit_limit": _f(b.credit_limit) if b else 0,
         "total_orders": orders,
         "login_email": buyer.email,
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Pay for a confirmed order (confirmed by the accounts team)
+# --------------------------------------------------------------------------- #
+PAY_METHODS = ("bank", "upi", "cash")
+
+
+class PayIn(BaseModel):
+    amount: float = Field(gt=0)
+    method: str = "bank"
+    reference: str | None = Field(default=None, max_length=80)
+    note: str | None = Field(default=None, max_length=500)
+
+    @field_validator("method")
+    @classmethod
+    def _m(cls, v: str) -> str:
+        if v not in PAY_METHODS:
+            raise ValueError(f"method must be one of {PAY_METHODS}")
+        return v
+
+
+def _request_row(db: Session, r: BuyerPaymentRequest) -> dict:
+    o = db.get(Order, r.order_id)
+    return {
+        "id": r.id,
+        "order_id": r.order_id,
+        "order_no": o.order_no if o else "",
+        "amount": float(r.amount),
+        "method": r.method,
+        "reference": r.reference,
+        "note": r.note,
+        "status": r.status,
+        "reject_reason": r.reject_reason,
+        "submitted_at": r.submitted_at.isoformat() if r.submitted_at else None,
+        "reviewed_at": r.reviewed_at.isoformat() if r.reviewed_at else None,
+    }
+
+
+@router.post("/orders/{order_id}/payments", status_code=201)
+def pay_for_order(order_id: int, body: PayIn, buyer: User = Depends(get_current_buyer),
+                  db: Session = Depends(get_db)):
+    order = db.query(Order).filter(Order.id == order_id, Order.buyer_id == buyer.buyer_id).first()
+    if order is None:
+        raise HTTPException(404, "Order not found")
+    if order.status not in op.PAYABLE_STATUSES:
+        raise HTTPException(409, "You can pay once the mill has confirmed this order.")
+    if body.method != "cash" and not (body.reference or "").strip():
+        raise HTTPException(400, "Enter the UTR / transaction reference of your payment.")
+    s = op.summary(db, order)
+    if s["payable"] <= 0.5:
+        raise HTTPException(409, "Nothing left to pay on this order (or it is awaiting confirmation).")
+    if body.amount - 0.001 > s["payable"]:
+        raise HTTPException(400, f"Amount is more than the ₹{s['payable']:,.2f} left to pay on {order.order_no}.")
+    req = BuyerPaymentRequest(
+        order_id=order.id, buyer_id=order.buyer_id, amount=round(body.amount, 2), method=body.method,
+        reference=(body.reference or "").strip() or None, note=(body.note or "").strip() or None,
+        status="pending", submitted_by_user_id=buyer.id,
+    )
+    db.add(req)
+    b = db.get(Buyer, order.buyer_id)
+    for role in (rbac.ROLE_ACCOUNTS_MANAGER, rbac.ROLE_ACCOUNTANT):
+        db.add(Notification(
+            to_role=role, kind="approval",
+            title=f"Confirm payment: {order.order_no} · ₹{body.amount:,.0f}",
+            body=f"{b.name if b else 'Buyer'} paid by {body.method.upper()}"
+                 + (f" (ref {req.reference})" if req.reference else "") + " — check and confirm.",
+            from_user_name=buyer.name,
+        ))
+    db.commit()
+    db.refresh(req)
+    return {"request": _request_row(db, req), "payment": op.summary(db, order)}
+
+
+@router.get("/payments")
+def my_payments(buyer: User = Depends(get_current_buyer), db: Session = Depends(get_db)):
+    rows = (
+        db.query(BuyerPaymentRequest)
+        .filter(BuyerPaymentRequest.buyer_id == buyer.buyer_id)
+        .order_by(BuyerPaymentRequest.id.desc())
+        .all()
+    )
+    orders = (
+        db.query(Order)
+        .filter(Order.buyer_id == buyer.buyer_id, Order.status.in_(op.PAYABLE_STATUSES + ("closed",)))
+        .order_by(Order.id.desc())
+        .all()
+    )
+    return {
+        "requests": [_request_row(db, r) for r in rows],
+        "orders": [{"id": o.id, "order_no": o.order_no, "status": o.status, **op.summary(db, o)} for o in orders],
     }

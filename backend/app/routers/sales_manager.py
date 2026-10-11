@@ -54,6 +54,7 @@ from app.models import (
     User,
 )
 from app.services import sales_manager as sm
+from app.services import order_payments as op
 from app.services.dispatch import confirm_dispatch
 
 router = APIRouter(prefix="/api/sales", tags=["sales-dispatch-manager"])
@@ -430,6 +431,15 @@ def confirm_delivery(
     d = _get_dispatch(db, dispatch_id)
     if d.delivered_at is not None:
         raise HTTPException(409, "This dispatch is already marked delivered")
+    # Payment must be complete before goods are handed over.
+    inv, due = op.dispatch_invoice_unpaid(db, d.id)
+    if inv is not None and due > 0.5:
+        db.commit()  # keep any advance just allocated
+        raise HTTPException(
+            409,
+            f"Payment pending: ₹{due:,.2f} of {inv.invoice_no} is unpaid. "
+            "Delivery can be confirmed only after Accounts confirms full payment.",
+        )
     d.delivered_at = _now()
     d.status = "shipped"
     if body.note:
@@ -452,8 +462,8 @@ def confirm_delivery(
     _notify(db, rbac.ROLE_MANAGER, f"Delivery confirmed: {d.dispatch_no}",
             f"{order.order_no if order else ''} delivered to {buyer.name if buyer else ''}", me, kind="info")
     for acct_role in (rbac.ROLE_ACCOUNTANT, rbac.ROLE_ACCOUNTS_MANAGER):
-        _notify(db, acct_role, f"Follow up payment for {order.order_no if order else ''}",
-                f"Delivered {d.dispatch_no} · collect buyer payment", me, kind="info")
+        _notify(db, acct_role, f"Delivered: {order.order_no if order else ''}",
+                f"{d.dispatch_no} delivered · payment already settled", me, kind="info")
     _log(db, me, "dispatch", "delivered",
          f"{d.dispatch_no} delivered" + (f" (received by {body.received_by.strip()})" if body.received_by else ""))
     db.commit()

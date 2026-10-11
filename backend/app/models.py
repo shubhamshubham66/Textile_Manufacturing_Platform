@@ -375,6 +375,9 @@ class Payment(Base):
     invoice_id: Mapped[int | None] = mapped_column(
         ForeignKey("invoices.id"), nullable=True
     )
+    # Buyer payments made against an ORDER (paid before its invoice exists).
+    # They are moved onto the order's invoices as soon as those are raised.
+    order_id: Mapped[int | None] = mapped_column(ForeignKey("orders.id"), nullable=True)
     amount: Mapped[float] = mapped_column(Numeric(12, 2))
     method: Mapped[str] = mapped_column(String(20), default="bank")  # cash|bank|upi
     paid_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
@@ -391,6 +394,28 @@ class Payment(Base):
     voided_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id"), nullable=True
     )
+
+
+class BuyerPaymentRequest(Base):
+    """A payment the buyer says they made against a confirmed order. It counts
+    only once the accounts team confirms it (that creates the real Payment)."""
+
+    __tablename__ = "buyer_payment_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"), index=True)
+    buyer_id: Mapped[int] = mapped_column(ForeignKey("buyers.id"), index=True)
+    amount: Mapped[float] = mapped_column(Numeric(12, 2))
+    method: Mapped[str] = mapped_column(String(20), default="bank")  # cash|bank|upi
+    reference: Mapped[str | None] = mapped_column(String(80), nullable=True)  # UTR / cheque no
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending|confirmed|rejected
+    submitted_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    reviewed_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    reject_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    payment_id: Mapped[int | None] = mapped_column(ForeignKey("payments.id"), nullable=True)
 
 
 # --------------------------------------------------------------------------- #

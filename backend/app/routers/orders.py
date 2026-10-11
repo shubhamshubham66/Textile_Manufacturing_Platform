@@ -26,6 +26,7 @@ from app.deps import get_current_user, require_any_resource, require_resource
 from app.models import (
     Buyer,
     Machine,
+    Notification,
     Order,
     OrderItem,
     ProductionLog,
@@ -34,6 +35,7 @@ from app.models import (
     User,
     YarnStock,
 )
+from app.services.order_payments import order_value
 from app.services.production import order_display_progress
 from app.services.tasks import create_order_tasks
 from app.settings_store import get_setting
@@ -447,6 +449,15 @@ def confirm_order(
     order.reviewed_by_user_id = user.id
     order.reviewed_at = datetime.utcnow()
     create_order_tasks(db, order, user.id, yarn.short_by_kg)
+    # The buyer can pay from now on (payment must be complete before delivery).
+    due = order_value(order)
+    for bu in db.query(User).filter(User.buyer_id == order.buyer_id).all():
+        db.add(Notification(
+            to_user_id=bu.id, kind="info",
+            title=f"Order {order.order_no} confirmed — please pay ₹{due:,.0f}",
+            body="Pay from My Orders. Full payment is needed before delivery.",
+            from_user_name=user.name,
+        ))
     db.commit()
     db.refresh(order)
     return _order_out(order)

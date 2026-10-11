@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.models import Dispatch, DispatchItem, Invoice, Order, Roll
+from app.services.order_payments import allocate_to_invoices
 
 settings = get_settings()
 
@@ -110,6 +111,8 @@ def confirm_dispatch(db: Session, order_id: int, roll_ids: list[int]) -> dict:
             status="unpaid",
         )
         db.add(invoice)
+        # Advance payments the buyer already made on this order settle it now.
+        allocate_to_invoices(db, order.id)
 
         # Order is fully dispatched -> mark ready/closed state.
         order.status = "dispatched"

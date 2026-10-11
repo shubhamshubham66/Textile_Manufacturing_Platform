@@ -6,6 +6,9 @@ Owner + accountant (resource "payments"):
   POST /api/payments/supplier          pay a supplier (yarn bills)
   GET  /api/payments/dues              pending dues: buyers owe us, we owe suppliers
   GET  /api/payments/_meta             invoices + suppliers for the forms
+  GET  /api/payments/requests          buyer payments waiting for confirmation
+  POST /api/payments/requests/{id}/confirm   -> becomes a real incoming payment
+  POST /api/payments/requests/{id}/reject    {reason}
 """
 
 from __future__ import annotations
@@ -19,11 +22,16 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.services import order_payments as op
 from app.deps import get_current_user, require_resource, require_roles
+from app import rbac
 from app.models import (
     Buyer,
+    BuyerPaymentRequest,
     IdempotencyKey,
     Invoice,
+    Notification,
+    Order,
     Payment,
     PurchaseOrder,
     Supplier,
@@ -282,6 +290,7 @@ def record_buyer_payment(
         direction="incoming",
         buyer_id=invoice.buyer_id,
         invoice_id=invoice.id,
+        order_id=invoice.order_id,
         amount=body.amount,
         method=body.method,
         paid_at=datetime.now(timezone.utc),
@@ -485,3 +494,123 @@ def pending_dues(
         "total_receivable": round(sum(r["due"] for r in buyers_owe), 2),
         "total_payable": round(sum(d["due"] for d in supplier_due), 2),
     }
+
+
+# ------------------- buyer payments awaiting confirmation ------------------- #
+class RejectRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=255)
+
+
+def _req_out(db: Session, r: BuyerPaymentRequest) -> dict:
+    o = db.get(Order, r.order_id)
+    b = db.get(Buyer, r.buyer_id)
+    s = op.summary(db, o) if o else {}
+    return {
+        "id": r.id,
+        "order_id": r.order_id,
+        "order_no": o.order_no if o else "",
+        "order_status": o.status if o else "",
+        "buyer_name": b.name if b else "",
+        "amount": float(r.amount),
+        "method": r.method,
+        "reference": r.reference,
+        "note": r.note,
+        "status": r.status,
+        "reject_reason": r.reject_reason,
+        "submitted_at": r.submitted_at,
+        "reviewed_at": r.reviewed_at,
+        "order_total": s.get("total"),
+        "order_paid": s.get("paid"),
+        "order_balance": s.get("balance"),
+    }
+
+
+def _get_pending(db: Session, request_id: int) -> BuyerPaymentRequest:
+    r = db.get(BuyerPaymentRequest, request_id)
+    if r is None:
+        raise HTTPException(status_code=404, detail="Payment request not found")
+    if r.status != "pending":
+        raise HTTPException(status_code=409, detail=f"This payment is already {r.status}")
+    return r
+
+
+def _tell_buyer(db: Session, r: BuyerPaymentRequest, title: str, body: str, me: User) -> None:
+    if r.submitted_by_user_id:
+        db.add(Notification(to_user_id=r.submitted_by_user_id, kind="info", title=title[:200],
+                            body=body, from_user_name=me.name))
+
+
+@router.get("/requests")
+def payment_requests(
+    status: str = "pending",
+    _=Depends(require_resource("payments")),
+    db: Session = Depends(get_db),
+):
+    q = db.query(BuyerPaymentRequest)
+    if status != "all":
+        q = q.filter(BuyerPaymentRequest.status == status)
+    rows = q.order_by(BuyerPaymentRequest.id.desc()).limit(200).all()
+    return [_req_out(db, r) for r in rows]
+
+
+@router.post("/requests/{request_id}/confirm")
+def confirm_request(
+    request_id: int,
+    me: User = Depends(get_current_user),
+    _=Depends(require_resource("payments")),
+    db: Session = Depends(get_db),
+):
+    r = _get_pending(db, request_id)
+    order = db.get(Order, r.order_id)
+    s = op.summary(db, order)
+    if float(r.amount) - 0.001 > s["balance"]:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Amount {_inr(float(r.amount))} is more than the {_inr(s['balance'])} still due on {order.order_no}. Reject it instead.",
+        )
+    now = datetime.now(timezone.utc)
+    payment = Payment(
+        direction="incoming", buyer_id=r.buyer_id, order_id=r.order_id, amount=r.amount,
+        method=r.method, reference=r.reference, note=r.note, paid_at=now,
+        recorded_by_user_id=me.id,
+    )
+    db.add(payment)
+    db.flush()
+    r.status = "confirmed"
+    r.reviewed_by_user_id = me.id
+    r.reviewed_at = now
+    r.payment_id = payment.id
+    op.allocate_to_invoices(db, order.id)
+    after = op.summary(db, order)
+    done = after["status"] == "paid"
+    _tell_buyer(db, r, f"Payment confirmed: {_inr(float(r.amount))} for {order.order_no}",
+                "Order fully paid." if done else f"Balance left: {_inr(after['balance'])}.", me)
+    for role in (rbac.ROLE_SALES_MANAGER, rbac.ROLE_MANAGER):
+        db.add(Notification(
+            to_role=role, kind="info",
+            title=f"{order.order_no}: {'fully paid' if done else 'payment received'}",
+            body=f"{_inr(float(r.amount))} confirmed by accounts · balance {_inr(after['balance'])}",
+            from_user_name=me.name,
+        ))
+    db.commit()
+    return {"ok": True, "request": _req_out(db, r), "order_payment": after}
+
+
+@router.post("/requests/{request_id}/reject")
+def reject_request(
+    request_id: int,
+    body: RejectRequest,
+    me: User = Depends(get_current_user),
+    _=Depends(require_resource("payments")),
+    db: Session = Depends(get_db),
+):
+    r = _get_pending(db, request_id)
+    order = db.get(Order, r.order_id)
+    r.status = "rejected"
+    r.reject_reason = body.reason.strip()
+    r.reviewed_by_user_id = me.id
+    r.reviewed_at = datetime.now(timezone.utc)
+    _tell_buyer(db, r, f"Payment not confirmed: {_inr(float(r.amount))} for {order.order_no if order else ''}",
+                f"Reason: {r.reject_reason}. Please check and pay again.", me)
+    db.commit()
+    return {"ok": True, "request": _req_out(db, r)}

@@ -301,6 +301,22 @@ def _collect(session: Session) -> list[LiveEvent]:
             elif isinstance(obj, (m.ProductionLog, m.MachineStatusLog)):
                 out.append(LiveEvent("production", TOPIC_ROLES["production"]))
 
+            elif isinstance(obj, m.BuyerPaymentRequest):
+                if is_new:
+                    out.append(LiveEvent("payments", TOPIC_ROLES["payments"],
+                                         f"Buyer payment to confirm: {_rupees(obj.amount)}", "info",
+                                         notify=True, notify_roles=[ACCOUNTS, ACCT_MGR], buyer_id=obj.buyer_id))
+                else:
+                    ch = _changed(obj, "status", session)
+                    if ch and ch[0] != ch[1] and ch[1] == "rejected":
+                        out.append(LiveEvent("payments", TOPIC_ROLES["payments"], buyer_id=obj.buyer_id,
+                                             buyer_message=f"Your payment of {_rupees(obj.amount)} was not confirmed"))
+                    else:
+                        out.append(LiveEvent("payments", TOPIC_ROLES["payments"], buyer_id=obj.buyer_id))
+
+            elif isinstance(obj, m.Payment) and is_new and obj.category == "advance_split":
+                out.append(LiveEvent("payments", TOPIC_ROLES["payments"], buyer_id=obj.buyer_id))
+
             elif isinstance(obj, m.Payment) and is_new:
                 if obj.direction == "incoming":
                     buyer = session.get(m.Buyer, obj.buyer_id) if obj.buyer_id else None
