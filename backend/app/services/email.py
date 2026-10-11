@@ -70,3 +70,19 @@ def send_signup_otp(to: str, code: str, minutes: int) -> None:
         "</div>"
     )
     send_email(to, subject, text, html)
+
+
+def send_reset_otp(to: str, code: str, minutes: int) -> None:
+    subject = f"{code} is your Everest Textile Mills password reset code"
+    text = (
+        f"Your Everest Textile Mills password reset code is {code}.\n"
+        f"It expires in {minutes} minutes. If you didn't ask to reset your password, ignore this email."
+    )
+    html = (
+        "<div style=\"font-family:Arial,sans-serif;font-size:15px;color:#1b2a6b\">"
+        "<p>Your Everest Textile Mills password reset code is:</p>"
+        f"<p style=\"font-size:28px;font-weight:700;letter-spacing:6px\">{code}</p>"
+        f"<p>It expires in {minutes} minutes. If you didn't ask to reset your password, ignore this email.</p>"
+        "</div>"
+    )
+    send_email(to, subject, text, html)

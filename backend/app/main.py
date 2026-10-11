@@ -27,6 +27,7 @@ from app.routers import production as production_router
 from app.routers import quality as quality_router
 from app.routers import reports as reports_router
 from app.routers import signup as signup_router
+from app.routers import forgot as forgot_router
 from app.routers import live as live_router
 from app.routers import master as master_router
 from app.routers import team as team_router
@@ -124,6 +125,7 @@ app.add_middleware(
 # Routers
 app.include_router(auth_router.router)
 app.include_router(signup_router.router)
+app.include_router(forgot_router.router)
 app.include_router(live_router.router)
 app.include_router(team_router.router)
 app.include_router(master_router.router)

@@ -783,6 +783,11 @@ h4 {
   color: #92400e;
   font-size: 0.82rem;
 }
+.auth-forgot {
+  margin: -0.4rem 0 0.9rem;
+  text-align: right;
+  font-size: 0.88rem;
+}
 .auth-switch {
   margin-top: 1rem;
   text-align: center;
