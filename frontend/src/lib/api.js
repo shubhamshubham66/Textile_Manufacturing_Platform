@@ -10,13 +10,42 @@
 
 const TOKEN_KEY = "etm_token";
 
+// The login lives in sessionStorage, which is separate for every browser tab.
+// So you can be the owner in one tab and the Supermanager or a buyer in
+// another, and logging in on one tab never changes who you are on the others.
+// (localStorage is shared by all tabs, which made every tab switch role.)
+function store() {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  const s = store();
+  let t = s?.getItem(TOKEN_KEY) || null;
+  // One-time move of a login saved by the older, shared-storage version.
+  try {
+    const old = localStorage.getItem(TOKEN_KEY);
+    if (old) {
+      localStorage.removeItem(TOKEN_KEY);
+      if (!t) {
+        t = old;
+        s?.setItem(TOKEN_KEY, old);
+      }
+    }
+  } catch {
+    /* storage blocked: stay logged out */
+  }
+  return t;
 }
 
 export function setToken(token) {
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
+  const s = store();
+  if (!s) return;
+  if (token) s.setItem(TOKEN_KEY, token);
+  else s.removeItem(TOKEN_KEY);
 }
 
 // A random key for idempotent writes. Uses crypto.randomUUID when available.
