@@ -50,7 +50,7 @@ export default function Features() {
         </div>
 
         <div className="lp-features">
-          {/* Left: photo of two people going over the numbers, idle-loss card below */}
+          {/* Left: full-height photo, idle-loss card sitting inside it at the bottom */}
           <div className="lp-photo">
             <img
               src="/images/owners-review.jpg"
