@@ -28,6 +28,49 @@ function getSessionId() {
   return id;
 }
 
+// Two little AI eyes on the bubble: they blink, and the pupils look toward
+// the cursor (they stay still for people who ask for reduced motion).
+function BotEyes() {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return undefined;
+    let raf = 0;
+    const onMove = (e) => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const r = el.getBoundingClientRect();
+        const dx = e.clientX - (r.left + r.width / 2);
+        const dy = e.clientY - (r.top + r.height / 2);
+        const d = Math.hypot(dx, dy) || 1;
+        const k = Math.min(1, d / 160);
+        el.style.setProperty("--px", `${((dx / d) * 3 * k).toFixed(2)}px`);
+        el.style.setProperty("--py", `${((dy / d) * 2.5 * k).toFixed(2)}px`);
+      });
+    };
+    window.addEventListener("mousemove", onMove);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+  return (
+    <span className="cw-eyes" ref={ref} aria-hidden>
+      <i className="cw-eye" />
+      <i className="cw-eye" />
+    </span>
+  );
+}
+
+function BubbleFace() {
+  return (
+    <>
+      <BotEyes />
+      <span className="cw-bubble-name">ev-tx</span>
+    </>
+  );
+}
+
 export default function ChatWidget() {
   return DIFY_CHAT_URL ? <DifyChat /> : <ProxyChat />;
 }
@@ -81,7 +124,7 @@ function DifyChat() {
         title="Ask the AI assistant"
         onClick={() => setOpen((v) => !v)}
       >
-        ev-tx
+        <BubbleFace />
       </button>
     </div>
   );
@@ -202,7 +245,7 @@ function ProxyChat() {
         title="Ask the AI assistant"
         onClick={() => setOpen((v) => !v)}
       >
-        ev-tx
+        <BubbleFace />
       </button>
     </div>
   );
