@@ -57,7 +57,7 @@ function DifyChat() {
           hidden={!open}
         >
           <div className="cw-head">
-            <span className="cw-dot" /> Everest Assistant
+            <span className="cw-dot" /> ev-tx
             <button
               className="cw-close"
               aria-label="Close chat"
@@ -81,7 +81,7 @@ function DifyChat() {
         title="Ask the AI assistant"
         onClick={() => setOpen((v) => !v)}
       >
-        💬
+        ev-tx
       </button>
     </div>
   );
@@ -156,7 +156,7 @@ function ProxyChat() {
       {open && (
         <div className="cw-panel" role="dialog" aria-label="AI assistant">
           <div className="cw-head">
-            <span className="cw-dot" /> Everest Assistant
+            <span className="cw-dot" /> ev-tx
             <button
               className="cw-close"
               aria-label="Close chat"
@@ -202,7 +202,7 @@ function ProxyChat() {
         title="Ask the AI assistant"
         onClick={() => setOpen((v) => !v)}
       >
-        💬
+        ev-tx
       </button>
     </div>
   );
