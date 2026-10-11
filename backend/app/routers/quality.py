@@ -98,7 +98,7 @@ def _next_roll_no(db: Session) -> str:
 # --------------------------- endpoints --------------------------- #
 @router.get("/_meta")
 def meta(
-    _=Depends(require_resource("rolls")),
+    _=Depends(require_resource("quality")),
     db: Session = Depends(get_db),
 ):
     orders = db.query(Order).order_by(Order.id.desc()).all()
@@ -116,7 +116,7 @@ def meta(
 @router.post("/rolls", response_model=RollOut, status_code=201)
 def create_roll(
     body: RollCreate,
-    _=Depends(require_resource("rolls")),
+    _=Depends(require_resource("quality")),
     db: Session = Depends(get_db),
 ):
     if db.query(Order).filter(Order.id == body.order_id).first() is None:
@@ -141,7 +141,7 @@ def create_roll(
 def list_rolls(
     status: str | None = Query(None, description="pending|pass|rework|reject|dispatched"),
     order_id: int | None = Query(None),
-    _=Depends(require_resource("rolls")),
+    _=Depends(require_resource("quality")),
     db: Session = Depends(get_db),
 ):
     q = db.query(Roll)
