@@ -135,3 +135,19 @@
   opacity: 0.5;
   cursor: default;
 }
+
+/* Dify chat page inside the panel */
+.cw-panel-dify {
+  width: 380px;
+  height: 580px;
+  max-height: 78vh;
+}
+.cw-panel[hidden] {
+  display: none;
+}
+.cw-frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: #fff;
+}
