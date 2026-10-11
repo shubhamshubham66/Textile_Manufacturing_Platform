@@ -53,8 +53,8 @@ export default function Features() {
           {/* Left: full-height photo, idle-loss card sitting inside it at the bottom */}
           <div className="lp-photo">
             <img
-              src="/images/owners-review.jpg"
-              alt="Two managers going over the day's numbers together"
+              src="/images/floor-tablet.jpg"
+              alt="A loom operator checking the day's numbers on a tablet"
               loading="lazy"
             />
             <article className="lp-usp">
