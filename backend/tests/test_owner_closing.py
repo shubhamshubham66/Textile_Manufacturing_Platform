@@ -117,7 +117,7 @@ def test_slip_pdf_is_pdf(c):
 
 def test_closing_endpoints_forbidden_for_non_owner(c):
     for email, pw in [("accounts@everest.test", "accounts123"), ("store@everest.test", "store123"),
-                      ("floor@everest.test", "floor123"), ("buyer@everest.test", "buyer123")]:
+                      ("quality@everest.test", "quality123"), ("buyer@everest.test", "buyer123")]:
         h = tok(c, email, pw)
         for path in ["orders", "bills", "buyer-payments"]:
             assert c.get(f"/api/reports/{path}?{OCT}", headers=h).status_code == 403

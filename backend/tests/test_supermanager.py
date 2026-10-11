@@ -216,12 +216,12 @@ def test_assign_instruction_manager_updates_progress(c, sm):
     tid = r.json()["id"]
     assert r.json()["shown_status"] == "delayed"  # past deadline and not done
 
-    floor = login(c, "floor@everest.test", "floor123")
-    mine = c.get("/api/tasks/mine", headers=floor).json()
+    prod = login(c, "production@everest.test", "production123")
+    mine = c.get("/api/tasks/mine", headers=prod).json()
     assert tid in [t["id"] for t in mine["tasks"]]
     store = login(c, "store@everest.test", "store123")
     assert c.post(f"/api/tasks/{tid}/progress", headers=store, json={"status": "completed"}).status_code == 404
-    r = c.post(f"/api/tasks/{tid}/progress", headers=floor, json={"status": "completed", "note": "Done, belts replaced"})
+    r = c.post(f"/api/tasks/{tid}/progress", headers=prod, json={"status": "completed", "note": "Done, belts replaced"})
     assert r.status_code == 200 and r.json()["shown_status"] == "completed"
     ups = c.get(f"/api/super/tasks/{tid}/updates", headers=sm).json()
     assert ups[0]["note"] == "Done, belts replaced"

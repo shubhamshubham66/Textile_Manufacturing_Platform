@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { apiFetch } from "../../lib/api.js";
+import { useEffect, useRef, useState } from "react";
+import { apiFetch, newIdempotencyKey } from "../../lib/api.js";
 import { useAuth } from "../../auth/AuthContext.jsx";
 import { isLiveRefresh, useLive } from "../../live/LiveContext.jsx";
 import { inr, ddmmyyyy, statusLabel } from "../../lib/format.js";
@@ -45,6 +45,13 @@ function PaymentsDesk() {
     is_advance: false,
   });
 
+  // Idempotency keys: one per in-progress payment. A retry of the SAME payment
+  // (e.g. a double-click or a network retry) reuses the key so the backend
+  // records the payment only once; after a success we rotate to a fresh key so
+  // the next genuine payment is treated as new.
+  const buyerKey = useRef(newIdempotencyKey());
+  const supKey = useRef(newIdempotencyKey());
+
   async function loadAll() {
     if (!isLiveRefresh()) setLoading(true);
     setError("");
@@ -87,6 +94,7 @@ function PaymentsDesk() {
     try {
       const res = await apiFetch("/api/payments/buyer", {
         method: "POST",
+        idempotencyKey: buyerKey.current,
         body: {
           invoice_id: Number(buyerForm.invoice_id),
           amount: Number(buyerForm.amount),
@@ -98,6 +106,7 @@ function PaymentsDesk() {
         `Payment recorded on ${res.invoice_no}: now ${statusLabel(res.invoice_status)}, balance ${inr(res.balance)}.`,
       );
       setBuyerForm({ invoice_id: "", amount: "", method: "bank" });
+      buyerKey.current = newIdempotencyKey(); // next payment is a new one
       await loadAll();
     } catch (err) {
       flash("err", err.message);
@@ -117,6 +126,7 @@ function PaymentsDesk() {
     try {
       const res = await apiFetch("/api/payments/supplier", {
         method: "POST",
+        idempotencyKey: supKey.current,
         body: {
           supplier_id: Number(supForm.supplier_id),
           amount: Number(supForm.amount),
@@ -134,6 +144,7 @@ function PaymentsDesk() {
         method: "bank",
         is_advance: false,
       });
+      supKey.current = newIdempotencyKey(); // next payment is a new one
       await loadAll();
     } catch (err) {
       flash("err", err.message);

@@ -8,6 +8,12 @@ import "./chat-widget.css";
 //
 // Opens on click, or when any page dispatches: window event "etm:open-chat".
 
+// The published Dify chat app, shown inside the bubble. Override with
+// VITE_DIFY_CHAT_URL; set it to an empty string to use the backend-proxy chat
+// below instead (which adds role-scoped live data).
+const DIFY_CHAT_URL =
+  import.meta.env.VITE_DIFY_CHAT_URL ?? "https://udify.app/chatbot/k7RDaKn0bDbN2TCf";
+
 const SESSION_KEY = "etm_chat_session";
 const TOKEN_KEY = "etm_token"; // same key the app auth uses
 
@@ -22,7 +28,109 @@ function getSessionId() {
   return id;
 }
 
+// Two little AI eyes on the bubble: they blink, and the pupils look toward
+// the cursor (they stay still for people who ask for reduced motion).
+function BotEyes() {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return undefined;
+    let raf = 0;
+    const onMove = (e) => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const r = el.getBoundingClientRect();
+        const dx = e.clientX - (r.left + r.width / 2);
+        const dy = e.clientY - (r.top + r.height / 2);
+        const d = Math.hypot(dx, dy) || 1;
+        const k = Math.min(1, d / 160);
+        el.style.setProperty("--px", `${((dx / d) * 3 * k).toFixed(2)}px`);
+        el.style.setProperty("--py", `${((dy / d) * 2.5 * k).toFixed(2)}px`);
+      });
+    };
+    window.addEventListener("mousemove", onMove);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+  return (
+    <span className="cw-eyes" ref={ref} aria-hidden>
+      <i className="cw-eye" />
+      <i className="cw-eye" />
+    </span>
+  );
+}
+
+function BubbleFace() {
+  return (
+    <>
+      <BotEyes />
+      <span className="cw-bubble-name">ev-tx</span>
+    </>
+  );
+}
+
 export default function ChatWidget() {
+  return DIFY_CHAT_URL ? <DifyChat /> : <ProxyChat />;
+}
+
+// Dify's own chat page in a panel. Mounted on first open and kept mounted
+// (just hidden) so the conversation survives closing the panel.
+function DifyChat() {
+  const [open, setOpen] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const openHandler = () => setOpen(true);
+    window.addEventListener("etm:open-chat", openHandler);
+    return () => window.removeEventListener("etm:open-chat", openHandler);
+  }, []);
+  useEffect(() => {
+    if (open) setLoaded(true);
+  }, [open]);
+
+  return (
+    <div className="cw-mount">
+      {loaded && (
+        <div
+          className="cw-panel cw-panel-dify"
+          role="dialog"
+          aria-label="AI assistant"
+          hidden={!open}
+        >
+          <div className="cw-head">
+            <span className="cw-dot" /> ev-tx
+            <button
+              className="cw-close"
+              aria-label="Close chat"
+              onClick={() => setOpen(false)}
+            >
+              ×
+            </button>
+          </div>
+          <iframe
+            className="cw-frame"
+            src={DIFY_CHAT_URL}
+            title="Everest AI assistant"
+            allow="microphone"
+          />
+        </div>
+      )}
+      <button
+        className="cw-bubble"
+        type="button"
+        aria-label="Open AI assistant"
+        title="Ask the AI assistant"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <BubbleFace />
+      </button>
+    </div>
+  );
+}
+
+function ProxyChat() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
@@ -91,7 +199,7 @@ export default function ChatWidget() {
       {open && (
         <div className="cw-panel" role="dialog" aria-label="AI assistant">
           <div className="cw-head">
-            <span className="cw-dot" /> Everest Assistant
+            <span className="cw-dot" /> ev-tx
             <button
               className="cw-close"
               aria-label="Close chat"
@@ -137,7 +245,7 @@ export default function ChatWidget() {
         title="Ask the AI assistant"
         onClick={() => setOpen((v) => !v)}
       >
-        💬
+        <BubbleFace />
       </button>
     </div>
   );

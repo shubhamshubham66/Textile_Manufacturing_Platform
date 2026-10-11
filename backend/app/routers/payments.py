@@ -12,17 +12,57 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import rbac
 from app.database import get_db
-from app.deps import require_resource, require_roles
-from app.models import Buyer, Invoice, Notification, Order, Payment, PurchaseOrder, Supplier, User
+from app.deps import get_current_user, require_resource, require_roles
+from app.models import (
+    Buyer,
+    IdempotencyKey,
+    Invoice,
+    Notification,
+    Order,
+    Payment,
+    PurchaseOrder,
+    Supplier,
+    User,
+)
 
 router = APIRouter(prefix="/api/payments", tags=["payments"])
+
+
+def _replayed_payment(db: Session, scope: str, key: str | None):
+    """Return the Payment a previous request with this (scope, key) created, or
+    None if this is a fresh key. Used to make payment recording idempotent so a
+    double-click or retry never creates a duplicate payment."""
+    if not key:
+        return None
+    row = (
+        db.query(IdempotencyKey)
+        .filter(IdempotencyKey.scope == scope, IdempotencyKey.key == key)
+        .first()
+    )
+    if row is None or row.result_id is None:
+        return None
+    return db.query(Payment).filter(Payment.id == row.result_id).first()
+
+
+def _remember_key(db: Session, scope: str, key: str | None, user_id: int | None, result_id: int) -> None:
+    """Record that (scope, key) produced `result_id`. Safe under a race: a
+    concurrent duplicate hits the UNIQUE(scope, key) constraint and is ignored
+    (the other request already recorded the same logical payment)."""
+    if not key:
+        return
+    db.add(IdempotencyKey(scope=scope, key=key, user_id=user_id, result_id=result_id))
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
 
 VALID_METHODS = ("cash", "bank", "upi")
 
@@ -206,12 +246,27 @@ def list_payments(
 @router.post("/buyer")
 def record_buyer_payment(
     body: BuyerPaymentRequest,
+    me: User = Depends(get_current_user),
     _=Depends(require_resource("payments")),
     db: Session = Depends(get_db),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ):
     invoice = db.query(Invoice).filter(Invoice.id == body.invoice_id).first()
     if invoice is None:
         raise HTTPException(status_code=404, detail="Invoice not found")
+
+    # Idempotency: if this exact request was already processed (double-click /
+    # retry), return the original result instead of recording a second payment.
+    prior = _replayed_payment(db, "payment:buyer", idempotency_key)
+    if prior is not None:
+        return {
+            "ok": True,
+            "invoice_no": invoice.invoice_no,
+            "invoice_status": invoice.status,
+            "paid_total": round(_invoice_paid_total(db, invoice.id), 2),
+            "balance": round(float(invoice.total) - _invoice_paid_total(db, invoice.id), 2),
+            "idempotent_replay": True,
+        }
 
     already = _invoice_paid_total(db, invoice.id)
     balance = float(invoice.total) - already
@@ -261,6 +316,9 @@ def record_buyer_payment(
             body=f"We've confirmed full payment of {invoice.invoice_no}. Your order will be dispatched shortly.",
             from_user_name="Everest Textiles",
         ))
+    # Record the idempotency key in the SAME transaction so the payment and its
+    # marker commit together (or roll back together).
+    _remember_key(db, "payment:buyer", idempotency_key, me.id, payment.id)
     db.commit()
     db.refresh(invoice)
     return {
@@ -275,12 +333,28 @@ def record_buyer_payment(
 @router.post("/supplier")
 def pay_supplier(
     body: SupplierPaymentRequest,
+    me: User = Depends(get_current_user),
     _=Depends(require_resource("payments")),
     db: Session = Depends(get_db),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ):
     supplier = db.query(Supplier).filter(Supplier.id == body.supplier_id).first()
     if supplier is None:
         raise HTTPException(status_code=404, detail="Supplier not found")
+
+    # Idempotency: a replayed request returns the original payment instead of
+    # paying the supplier twice.
+    prior = _replayed_payment(db, "payment:supplier", idempotency_key)
+    if prior is not None:
+        outstanding_now = _supplier_outstanding(db, supplier.id)
+        return {
+            "ok": True,
+            "supplier": supplier.name,
+            "amount": float(prior.amount),
+            "outstanding_after": round(outstanding_now, 2),
+            "is_advance": body.is_advance,
+            "idempotent_replay": True,
+        }
 
     outstanding = _supplier_outstanding(db, supplier.id)
     if not body.is_advance and body.amount - 0.001 > outstanding:
@@ -301,6 +375,8 @@ def pay_supplier(
         paid_at=datetime.now(timezone.utc),
     )
     db.add(payment)
+    db.flush()
+    _remember_key(db, "payment:supplier", idempotency_key, me.id, payment.id)
     db.commit()
     return {
         "ok": True,

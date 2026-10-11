@@ -16,7 +16,7 @@ from app.database import Base, get_db
 from app.main import app
 from app.routers import signup as signup_router
 
-ROLES = ["owner", "store_manager", "floor_supervisor", "quality_inspector", "accountant", "buyer"]
+ROLES = ["owner", "store_manager", "production_manager", "quality_inspector", "accountant", "buyer"]
 
 
 @pytest.fixture()

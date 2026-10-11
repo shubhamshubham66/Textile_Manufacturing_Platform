@@ -63,9 +63,10 @@ def seed() -> None:
     try:
         # ---- Roles ----
         role_names = [
-            "owner", "store_manager", "floor_supervisor",
+            "owner", "store_manager",
             "quality_inspector", "accountant", "buyer", "manager",
-            "production_manager", "sales_manager", "accounts_manager", "worker",
+            "production_manager", "sales_manager", "accounts_manager",
+            "purchase_manager", "worker",
         ]
         roles = {n: m.Role(name=n) for n in role_names}
         db.add_all(roles.values())
@@ -77,8 +78,6 @@ def seed() -> None:
                    email="owner@everest.test", password_hash=_hash("owner123")),
             m.User(role_id=roles["store_manager"].id, name="Sunita Patel",
                    email="store@everest.test", password_hash=_hash("store123")),
-            m.User(role_id=roles["floor_supervisor"].id, name="Arjun Mehta",
-                   email="floor@everest.test", password_hash=_hash("floor123")),
             m.User(role_id=roles["quality_inspector"].id, name="Priya Nair",
                    email="quality@everest.test", password_hash=_hash("quality123")),
             m.User(role_id=roles["accountant"].id, name="Deepak Rao",
@@ -97,6 +96,12 @@ def seed() -> None:
             m.User(role_id=roles["accounts_manager"].id, name="Anjali Verma",
                    email="accounts-manager@everest.test", password_hash=_hash("accounts123"),
                    department="accounts"),
+            # Purchase & Raw Material manager: owns yarn purchasing, suppliers,
+            # incoming raw material and stock. department="purchase" ties it to
+            # the purchase-department instructions from the Supermanager.
+            m.User(role_id=roles["purchase_manager"].id, name="Rohan Desai",
+                   email="purchase@everest.test", password_hash=_hash("purchase123"),
+                   department="purchase"),
         ]
         db.add_all(staff)
 

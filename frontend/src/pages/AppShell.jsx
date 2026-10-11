@@ -159,7 +159,6 @@ const PAGES = {
   machines: Machines,
   production: Production,
   quality: Quality,
-  rolls: Quality,
   dispatch: Dispatch,
   payments: Payments,
   attendance: Attendance,
@@ -232,7 +231,6 @@ const PAGES = {
 const ROLE_LABELS = {
   owner: "Owner",
   store_manager: "Store manager",
-  floor_supervisor: "Floor supervisor",
   quality_inspector: "Quality inspector",
   accountant: "Accountant",
   buyer: "Buyer",
@@ -240,6 +238,7 @@ const ROLE_LABELS = {
   production_manager: "Production manager",
   sales_manager: "Sales & Dispatch manager",
   accounts_manager: "Accounts & Finance manager",
+  purchase_manager: "Purchase & Raw Material manager",
   worker: "Employee",
 };
 

@@ -72,7 +72,7 @@ PAGES = ["overview", "suppliers", "inventory", "requests", "orders", "receipts",
 def test_pages_open_for_store_and_are_closed_to_others(c, store):
     for p in PAGES:
         assert c.get(f"/api/purchase/{p}", headers=store).status_code == 200, p
-    for who, pw in [("floor@everest.test", "floor123"), ("buyer@everest.test", "buyer123"),
+    for who, pw in [("quality@everest.test", "quality123"), ("buyer@everest.test", "buyer123"),
                     ("accounts@everest.test", "accounts123")]:
         h = login(c, who, pw)
         for p in PAGES:

@@ -41,6 +41,22 @@ const FEATURES = [
   },
 ];
 
+// The idle-loss card tilts a little toward the cursor (skipped for
+// people who ask for reduced motion).
+function tilt(e) {
+  const el = e.currentTarget;
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  const r = el.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width - 0.5;
+  const y = (e.clientY - r.top) / r.height - 0.5;
+  el.style.setProperty("--ry", `${(x * 8).toFixed(2)}deg`);
+  el.style.setProperty("--rx", `${(-y * 8).toFixed(2)}deg`);
+}
+function untilt(e) {
+  e.currentTarget.style.removeProperty("--ry");
+  e.currentTarget.style.removeProperty("--rx");
+}
+
 export default function Features() {
   return (
     <section id="features" className="lp-section">
@@ -50,14 +66,14 @@ export default function Features() {
         </div>
 
         <div className="lp-features">
-          {/* Left: photo of two people going over the numbers, idle-loss card below */}
+          {/* Left: full-height photo, idle-loss card sitting inside it at the bottom */}
           <div className="lp-photo">
             <img
-              src="/images/owners-review.jpg"
-              alt="Two managers going over the day's numbers together"
+              src="/images/floor-tablet.jpg"
+              alt="A loom operator checking the day's numbers on a tablet"
               loading="lazy"
             />
-            <article className="lp-usp">
+            <article className="lp-usp" onMouseMove={tilt} onMouseLeave={untilt}>
               <span className="lp-usp-tag">Only in Everest</span>
               <h3>Idle machine loss, in rupees</h3>
               <p>

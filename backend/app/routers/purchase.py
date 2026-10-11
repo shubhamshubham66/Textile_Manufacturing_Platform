@@ -138,9 +138,13 @@ def _user_name(db: Session, uid: int | None) -> str | None:
 
 def _my_depts(user: User) -> set[str]:
     """Departments whose instructions this store-role login handles. A store
-    manager with no explicit department covers purchase, store and dispatch."""
+    manager with no explicit department covers purchase, store and dispatch.
+    The dedicated Purchase & Raw Material manager covers purchase + store (it
+    does not run dispatch)."""
     if user.role.name == rbac.ROLE_STORE_MANAGER and not user.department:
         return {"purchase", "store", "dispatch"}
+    if user.role.name == rbac.ROLE_PURCHASE_MANAGER:
+        return {"purchase", "store"}
     d = dept_of(user)
     return {d} if d else set()
 
@@ -807,10 +811,10 @@ def share_requirements(body: ShareIn, user: User = Depends(get_current_user),
             "Short: " + "; ".join(f"{r['order_no']} {r['colour']} {r['short_kg']:,.0f} kg" for r in short))
     if body.note:
         text += f" · Note: {body.note.strip()}"
-    for role in (rbac.ROLE_MANAGER, rbac.ROLE_FLOOR_SUPERVISOR):
+    for role in (rbac.ROLE_MANAGER, rbac.ROLE_PRODUCTION_MANAGER):
         _notify(db, "Material availability update", text, "availability", user, to_role=role)
     db.commit()
-    return {"sent_to": ["Supermanager", "Production (floor supervisor)"], "message": text}
+    return {"sent_to": ["Supermanager", "Production manager"], "message": text}
 
 
 # --------------------------------------------------------------------------- #

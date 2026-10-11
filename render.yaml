@@ -14,7 +14,7 @@ services:
     plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    # On start the API creates tables and loads demo data if the DB is empty.
+    # On start the API creates tables. Demo data loads only if SEED_IF_EMPTY=true.
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
