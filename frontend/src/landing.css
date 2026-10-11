@@ -960,14 +960,19 @@
   aspect-ratio: 16 / 10;
   object-fit: cover;
   object-position: center 30%;
-  -webkit-mask-image: linear-gradient(#000 88%, transparent);
-  mask-image: linear-gradient(#000 88%, transparent);
+  border-radius: 0 0 14px 14px;
 }
 .lp-photo .lp-usp {
   width: auto;
-  margin: -36px 0 0;
+  margin: 20px 0 0;
   background: rgba(255, 255, 255, 0.93);
   backdrop-filter: blur(6px);
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+  will-change: transform;
+}
+.lp-photo .lp-usp:hover {
+  box-shadow: 0 26px 56px rgba(2, 6, 23, 0.34);
 }
 
 /* The idle-loss card now sits on the photo as a light (white) card */
@@ -1003,19 +1008,37 @@
   margin: 0 0 12px;
 }
 .lp-formula {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: stretch;
   gap: 10px;
   margin: 28px 0 18px;
+}
+.lp-formula i {
+  align-self: center;
 }
 .lp-formula span {
   background: var(--lp-cotton);
   border: 1px solid var(--lp-line);
   border-radius: 12px;
   padding: 10px 14px;
-  flex: 1;
-  min-width: 92px;
+  min-width: 0;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.lp-formula span:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 22px rgba(2, 6, 23, 0.14);
+}
+@media (max-width: 520px) {
+  .lp-formula {
+    grid-template-columns: 1fr 1fr;
+  }
+  .lp-formula i {
+    display: none;
+  }
+  .lp-formula-total {
+    grid-column: 1 / -1;
+  }
 }
 .lp-formula b {
   display: block;
