@@ -17,9 +17,10 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app import rbac
 from app.database import get_db
 from app.deps import require_resource, require_roles
-from app.models import Buyer, Invoice, Payment, PurchaseOrder, Supplier, User
+from app.models import Buyer, Invoice, Notification, Order, Payment, PurchaseOrder, Supplier, User
 
 router = APIRouter(prefix="/api/payments", tags=["payments"])
 
@@ -235,7 +236,31 @@ def record_buyer_payment(
     )
     db.add(payment)
     db.flush()
+    was_paid = invoice.status == "paid"
     _refresh_invoice_status(db, invoice)
+    # When this confirmed payment completes the invoice, the order becomes
+    # eligible for dispatch — tell Sales & Dispatch and the Supermanager.
+    if invoice.status == "paid" and not was_paid:
+        order = db.query(Order).filter(Order.id == invoice.order_id).first()
+        buyer = db.query(Buyer).filter(Buyer.id == invoice.buyer_id).first()
+        order_no = order.order_no if order else ""
+        for role in (rbac.ROLE_SALES_MANAGER, rbac.ROLE_MANAGER):
+            db.add(Notification(
+                to_role=role, kind="availability",
+                title=f"Payment complete — {order_no} ready to dispatch",
+                body=(
+                    f"Invoice {invoice.invoice_no} for {buyer.name if buyer else 'buyer'} "
+                    f"is fully paid. {order_no} can now be dispatched."
+                ),
+                from_user_name="Accounts",
+            ))
+        # Confirm back to the buyer too.
+        db.add(Notification(
+            to_role=rbac.ROLE_BUYER, kind="info",
+            title=f"Payment received for {order_no}",
+            body=f"We've confirmed full payment of {invoice.invoice_no}. Your order will be dispatched shortly.",
+            from_user_name="Everest Textiles",
+        ))
     db.commit()
     db.refresh(invoice)
     return {

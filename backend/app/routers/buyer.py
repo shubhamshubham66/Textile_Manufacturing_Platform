@@ -70,6 +70,19 @@ def _stage_index(stage: str) -> int:
         return 0
 
 
+def _invoice_paid(db: Session, invoice_id: int) -> float:
+    """Confirmed (non-voided) incoming payments recorded against an invoice."""
+    return round(float(
+        db.query(func.coalesce(func.sum(Payment.amount), 0))
+        .filter(
+            Payment.invoice_id == invoice_id,
+            Payment.direction == "incoming",
+            Payment.voided_at.is_(None),
+        )
+        .scalar() or 0
+    ), 2)
+
+
 @router.get("/orders")
 def my_orders(
     buyer: User = Depends(get_current_buyer),
@@ -257,6 +270,8 @@ def my_invoices(
     out = []
     for inv in invoices:
         order = db.query(Order).filter(Order.id == inv.order_id).first()
+        paid = _invoice_paid(db, inv.id)
+        balance = round(float(inv.total) - paid, 2)
         out.append(
             {
                 "id": inv.id,
@@ -265,11 +280,92 @@ def my_invoices(
                 "subtotal": float(inv.subtotal),
                 "tax": float(inv.tax),
                 "total": float(inv.total),
+                "paid": paid,
+                "balance": max(0.0, balance),
                 "status": inv.status,
+                # The buyer can pay while anything is still outstanding.
+                "payable": balance > 0.01,
                 "created_at": inv.created_at.isoformat(),
             }
         )
     return out
+
+
+class PayNow(BaseModel):
+    amount: float | None = Field(default=None, gt=0)  # defaults to full balance
+    method: str = Field(default="bank")
+
+    @field_validator("method")
+    @classmethod
+    def _m(cls, v: str) -> str:
+        if v not in ("cash", "bank", "upi"):
+            raise ValueError("method must be cash, bank or upi")
+        return v
+
+
+@router.post("/invoices/{invoice_id}/pay")
+def pay_invoice(
+    invoice_id: int,
+    body: PayNow,
+    buyer: User = Depends(get_current_buyer),
+    db: Session = Depends(get_db),
+):
+    """Buyer 'Pay now': record a payment against their own invoice. The
+    accounts team then confirms it; once the invoice is fully paid the order
+    becomes eligible for dispatch. Scoped to the buyer's own invoice (404
+    otherwise)."""
+    inv = (
+        db.query(Invoice)
+        .filter(Invoice.id == invoice_id, Invoice.buyer_id == buyer.buyer_id)
+        .first()
+    )
+    if inv is None:
+        raise HTTPException(404, "Invoice not found")
+
+    paid = _invoice_paid(db, inv.id)
+    balance = round(float(inv.total) - paid, 2)
+    if balance <= 0.01:
+        raise HTTPException(409, "This invoice is already fully paid")
+
+    amount = round(body.amount if body.amount is not None else balance, 2)
+    if amount - 0.01 > balance:
+        raise HTTPException(400, f"Amount Rs {amount:,.2f} exceeds the balance Rs {balance:,.2f}")
+
+    payment = Payment(
+        direction="incoming",
+        buyer_id=buyer.buyer_id,
+        invoice_id=inv.id,
+        amount=amount,
+        method=body.method,
+        paid_at=_now(),
+    )
+    db.add(payment)
+    db.flush()
+
+    # Recompute the invoice status from the live payment total.
+    new_paid = _invoice_paid(db, inv.id)
+    inv.status = "paid" if new_paid + 0.001 >= float(inv.total) else "part_paid" if new_paid > 0 else "unpaid"
+
+    order = db.get(Order, inv.order_id)
+    b = db.get(Buyer, buyer.buyer_id)
+    order_no = order.order_no if order else ""
+    # Notify Accounts to confirm the payment.
+    for acct_role in (rbac.ROLE_ACCOUNTANT, rbac.ROLE_ACCOUNTS_MANAGER):
+        db.add(Notification(
+            to_role=acct_role, kind="approval",
+            title=f"Buyer payment to confirm: {inv.invoice_no}",
+            body=f"{b.name if b else 'Buyer'} paid Rs {amount:,.2f} on {inv.invoice_no} ({order_no}). Please verify.",
+            from_user_name=b.name if b else "Buyer",
+        ))
+    db.commit()
+    return {
+        "ok": True,
+        "invoice_no": inv.invoice_no,
+        "amount": amount,
+        "paid_total": new_paid,
+        "balance": max(0.0, round(float(inv.total) - new_paid, 2)),
+        "status": inv.status,
+    }
 
 
 @router.get("/invoices/{invoice_id}/pdf")

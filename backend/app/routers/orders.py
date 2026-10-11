@@ -23,9 +23,11 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.database import get_db
 from app.deps import get_current_user, require_any_resource, require_resource
+from app import rbac
 from app.models import (
     Buyer,
     Machine,
+    Notification,
     Order,
     OrderItem,
     ProductionLog,
@@ -34,6 +36,7 @@ from app.models import (
     User,
     YarnStock,
 )
+from app.services.dispatch import ensure_order_invoice
 from app.services.production import order_display_progress
 from app.services.tasks import create_order_tasks
 from app.settings_store import get_setting
@@ -447,6 +450,24 @@ def confirm_order(
     order.reviewed_by_user_id = user.id
     order.reviewed_at = datetime.utcnow()
     create_order_tasks(db, order, user.id, yarn.short_by_kg)
+    # Raise the buyer's invoice now so they can pay before the goods ship.
+    # Dispatch is gated on this invoice being 'paid' (see services/dispatch).
+    invoice = ensure_order_invoice(db, order)
+    buyer = db.get(Buyer, order.buyer_id)
+    db.add(
+        Notification(
+            to_user_id=None,
+            to_role=rbac.ROLE_BUYER,
+            kind="info",
+            title=f"Payment due for {order.order_no}",
+            body=(
+                f"Your order {order.order_no} is confirmed. "
+                f"Invoice {invoice.invoice_no} for Rs {float(invoice.total):,.2f} is ready — "
+                "pay now to start dispatch."
+            ),
+            from_user_name="Everest Textiles",
+        )
+    )
     db.commit()
     db.refresh(order)
     return _order_out(order)

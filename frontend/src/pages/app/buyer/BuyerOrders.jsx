@@ -404,6 +404,29 @@ export function BuyerInvoices() {
     "payments",
     "orders",
   ]);
+  const [payingId, setPayingId] = useState(null); // invoice being paid
+  const [msg, setMsg] = useState(null); // {kind, text}
+
+  async function payNow(inv) {
+    setMsg(null);
+    setPayingId(inv.id);
+    try {
+      const res = await apiFetch(`/api/buyer/invoices/${inv.id}/pay`, {
+        method: "POST",
+        body: { method: "bank" }, // full balance by default
+      });
+      setMsg({
+        kind: "ok",
+        text: `Payment of ${rupee(res.amount)} submitted for ${res.invoice_no}. Our accounts team will confirm it shortly.`,
+      });
+      await reload();
+    } catch (e) {
+      setMsg({ kind: "warn", text: e.message });
+    } finally {
+      setPayingId(null);
+    }
+  }
+
   if (loading && !data) return <Loading />;
   if (error && !data) return <ErrorBox error={error} onRetry={reload} />;
   const invoices = data || [];
@@ -411,8 +434,13 @@ export function BuyerInvoices() {
     <div className="module sm-page">
       <PageHead
         title="Invoices & payments"
-        sub="Your invoices and their payment status. Download a PDF for your records."
+        sub="Pay a confirmed order's invoice here. Your order is dispatched once the accounts team confirms full payment."
       />
+      {msg && (
+        <Notice kind={msg.kind} onClose={() => setMsg(null)}>
+          {msg.text}
+        </Notice>
+      )}
       {invoices.length === 0 ? (
         <Empty>No invoices yet.</Empty>
       ) : (
@@ -424,6 +452,7 @@ export function BuyerInvoices() {
                   <th>Invoice</th>
                   <th>Order</th>
                   <th className="num">Total</th>
+                  <th className="num">Balance</th>
                   <th>Status</th>
                   <th>Date</th>
                   <th></th>
@@ -437,6 +466,7 @@ export function BuyerInvoices() {
                     </td>
                     <td>{inv.order_no}</td>
                     <td className="num">{rupee(inv.total)}</td>
+                    <td className="num">{rupee(inv.balance)}</td>
                     <td>
                       <Badge
                         value={
@@ -452,7 +482,16 @@ export function BuyerInvoices() {
                     <td>
                       {inv.created_at ? inv.created_at.slice(0, 10) : "—"}
                     </td>
-                    <td>
+                    <td className="row-actions">
+                      {inv.payable && (
+                        <button
+                          className="btn btn-primary btn-sm"
+                          disabled={payingId === inv.id}
+                          onClick={() => payNow(inv)}
+                        >
+                          {payingId === inv.id ? "Submitting…" : "Pay now"}
+                        </button>
+                      )}
                       <a
                         className="link-btn"
                         href={`/api/buyer/invoices/${inv.id}/pdf`}
@@ -468,7 +507,8 @@ export function BuyerInvoices() {
             </table>
           </div>
           <p className="muted sm-small">
-            Payments are recorded by the mill's accounts team.
+            After you pay, the mill's accounts team confirms the payment and
+            then your order is dispatched.
           </p>
         </section>
       )}
