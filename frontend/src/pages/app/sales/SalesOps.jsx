@@ -1,7 +1,7 @@
 // Invoice Details (read-only), Notifications, Reports and Activity Logs for the
 // Sales & Dispatch Manager.
 import { useState } from "react";
-import { apiFetch } from "../../../lib/api.js";
+import { apiFetch, openPdf } from "../../../lib/api.js";
 import {
   Badge,
   Empty,
@@ -76,14 +76,13 @@ export function SalesInvoices() {
                       />
                     </td>
                     <td>
-                      <a
+                      <button
+                        type="button"
                         className="link-btn"
-                        href={`/api/dispatch/invoice/${inv.id}/pdf`}
-                        target="_blank"
-                        rel="noreferrer"
+                        onClick={() => openPdf(`/api/dispatch/invoice/${inv.id}/pdf`)}
                       >
                         PDF
-                      </a>
+                      </button>
                     </td>
                   </tr>
                 ))}

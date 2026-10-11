@@ -89,3 +89,33 @@ export async function apiFetch(
 
   return data;
 }
+
+// Open a protected PDF in a new tab. A plain <a href> can't send the bearer
+// token (the API answers 401), so fetch it with the token and show the blob.
+// The tab is opened first, inside the click, so popup blockers allow it.
+export async function openPdf(path) {
+  const win = window.open("", "_blank");
+  try {
+    const res = await fetch(path, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    if (!res.ok) {
+      let message = `Could not open the PDF (HTTP ${res.status})`;
+      try {
+        const data = await res.json();
+        message = data?.error?.message || data?.detail || message;
+      } catch {
+        // not JSON
+      }
+      if (res.status === 401) onSessionExpired();
+      throw new Error(message);
+    }
+    const url = URL.createObjectURL(await res.blob());
+    if (win) win.location.href = url;
+    else window.location.assign(url);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (e) {
+    if (win) win.close();
+    window.alert(e.message || "Could not open the PDF.");
+  }
+}
