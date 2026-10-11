@@ -437,6 +437,20 @@ def seed() -> None:
                          subtotal=sub1, tax=tax1, total=sub1 + tax1,
                          status="paid", created_at=_dt(8))
         db.add(inv1)
+
+        # INV-4003 for ORD-2003 (in_quality, awaiting dispatch): under the
+        # pay-before-dispatch flow the invoice is raised at confirmation and the
+        # buyer has already paid in full, so the order is now eligible to ship.
+        # The payment is dated in SEPTEMBER so it stays OUT of the October
+        # cash-basis owner reports (which are hand-checked), while still marking
+        # the invoice 'paid' for the dispatch gate.
+        sub3 = 3000 * 120
+        tax3 = round(sub3 * 0.05, 2)
+        inv3 = m.Invoice(order_id=orders[2].id, dispatch_id=None,
+                         buyer_id=orders[2].buyer_id, invoice_no="INV-4003",
+                         subtotal=sub3, tax=tax3, total=sub3 + tax3,
+                         status="paid", created_at=datetime(MONTH_YEAR, 9, 20, 10, 0, 0, tzinfo=timezone.utc))
+        db.add(inv3)
         db.flush()
 
         # Payments (all in October). Cash-basis month net:
@@ -455,6 +469,12 @@ def seed() -> None:
                       amount=180000, method="bank", paid_at=_dt(6)),
             m.Payment(direction="outgoing", supplier_id=suppliers[1].id,
                       amount=20000, method="bank", paid_at=_dt(7)),
+            # ORD-2003 fully paid in September (before the reporting month), so
+            # the dispatch gate passes without changing October's net.
+            m.Payment(direction="incoming", buyer_id=orders[2].buyer_id,
+                      invoice_id=inv3.id, amount=round(sub3 + tax3, 2),
+                      method="bank",
+                      paid_at=datetime(MONTH_YEAR, 9, 20, 11, 0, 0, tzinfo=timezone.utc)),
         ])
 
         # ---- Employees, attendance, wages (October) ----

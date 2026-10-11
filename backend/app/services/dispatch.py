@@ -38,6 +38,43 @@ def _next_invoice_no(db: Session) -> str:
     return f"INV-{4001 + n}"
 
 
+def ensure_order_invoice(db: Session, order: Order) -> Invoice:
+    """Return the order's invoice, creating a pre-dispatch one on first call.
+
+    Buyers pay against this invoice BEFORE dispatch, so it is raised at order
+    confirmation for the full ordered amount (quantity × unit price + tax). It
+    has no dispatch yet (`dispatch_id` is null). If an invoice already exists
+    for the order (e.g. created earlier at confirmation) it is returned as-is —
+    this is idempotent, so confirming twice never raises a second invoice.
+
+    The caller is responsible for the surrounding transaction/commit.
+    """
+    existing = (
+        db.query(Invoice)
+        .filter(Invoice.order_id == order.id)
+        .order_by(Invoice.id)
+        .first()
+    )
+    if existing is not None:
+        return existing
+
+    subtotal = round(float(order.quantity_meters or 0) * float(order.unit_price or 0), 2)
+    tax = round(subtotal * settings.invoice_tax_rate, 2)
+    invoice = Invoice(
+        order_id=order.id,
+        dispatch_id=None,  # pre-dispatch: paid before goods ship
+        buyer_id=order.buyer_id,
+        invoice_no=_next_invoice_no(db),
+        subtotal=subtotal,
+        tax=tax,
+        total=round(subtotal + tax, 2),
+        status="unpaid",
+    )
+    db.add(invoice)
+    db.flush()
+    return invoice
+
+
 def confirm_dispatch(db: Session, order_id: int, roll_ids: list[int]) -> dict:
     if not roll_ids:
         raise HTTPException(status_code=400, detail="Select at least one roll")
@@ -45,6 +82,30 @@ def confirm_dispatch(db: Session, order_id: int, roll_ids: list[int]) -> dict:
     order = db.query(Order).filter(Order.id == order_id).first()
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
+
+    # Payment gate: goods ship only AFTER the buyer's invoice is fully paid and
+    # confirmed by Accounts. The invoice is raised at order confirmation and
+    # marked 'paid' by the accounts team once the buyer's payment clears.
+    invoice = (
+        db.query(Invoice)
+        .filter(Invoice.order_id == order.id)
+        .order_by(Invoice.id)
+        .first()
+    )
+    if invoice is None:
+        raise HTTPException(
+            status_code=409,
+            detail="No invoice for this order yet — confirm the order first so the buyer can pay.",
+        )
+    if invoice.status != "paid":
+        raise HTTPException(
+            status_code=402,
+            detail=(
+                f"Payment not complete for {order.order_no}: invoice {invoice.invoice_no} "
+                f"is '{invoice.status}'. Dispatch is allowed only after the buyer's payment "
+                "is confirmed by Accounts."
+            ),
+        )
 
     # Lock-free validation: load the rolls and check each one.
     rolls = db.query(Roll).filter(Roll.id.in_(roll_ids)).all()
@@ -72,9 +133,6 @@ def confirm_dispatch(db: Session, order_id: int, roll_ids: list[int]) -> dict:
 
     now = datetime.now(timezone.utc)
     total_meters = sum(float(r.length_meters) for r in rolls)
-    subtotal = round(total_meters * float(order.unit_price), 2)
-    tax = round(subtotal * settings.invoice_tax_rate, 2)
-    total = round(subtotal + tax, 2)
 
     try:
         dispatch = Dispatch(
@@ -99,17 +157,10 @@ def confirm_dispatch(db: Session, order_id: int, roll_ids: list[int]) -> dict:
             )
             r.status = "dispatched"
 
-        invoice = Invoice(
-            order_id=order.id,
-            dispatch_id=dispatch.id,
-            buyer_id=order.buyer_id,
-            invoice_no=_next_invoice_no(db),
-            subtotal=subtotal,
-            tax=tax,
-            total=total,
-            status="unpaid",
-        )
-        db.add(invoice)
+        # Link the already-paid invoice (raised at confirmation) to this
+        # dispatch. We do NOT change the amounts: the buyer has already paid the
+        # confirmed invoice, so its total stays as billed/paid.
+        invoice.dispatch_id = dispatch.id
 
         # Order is fully dispatched -> mark ready/closed state.
         order.status = "dispatched"
@@ -135,7 +186,7 @@ def confirm_dispatch(db: Session, order_id: int, roll_ids: list[int]) -> dict:
         "invoice_no": invoice.invoice_no,
         "total_rolls": dispatch.total_rolls,
         "total_meters": float(dispatch.total_meters),
-        "subtotal": subtotal,
-        "tax": tax,
-        "total": total,
+        "subtotal": float(invoice.subtotal),
+        "tax": float(invoice.tax),
+        "total": float(invoice.total),
     }
