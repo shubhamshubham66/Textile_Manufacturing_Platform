@@ -158,6 +158,14 @@ export default function Login() {
             )}
           </label>
 
+          <p className="auth-forgot">
+            <a
+              href={`/forgot-password${EMAIL_RE.test(email.trim()) ? `?email=${encodeURIComponent(email.trim())}` : ""}`}
+            >
+              Forgot password?
+            </a>
+          </p>
+
           <button
             type="submit"
             className="btn btn-primary btn-block"
