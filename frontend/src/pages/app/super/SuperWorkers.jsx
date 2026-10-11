@@ -11,6 +11,7 @@ export default function SuperWorkers() {
   const qs = new URLSearchParams(Object.entries(filters).filter(([, v]) => v)).toString();
   const { data, error, loading, reload } = useApi(`/api/super/workers${qs ? `?${qs}` : ""}`, ["wages", "tasks"]);
   const [form, setForm] = useState(null);
+  const [loginFor, setLoginFor] = useState(null);
   const [msg, setMsg] = useState(null);
   const setF = (k) => (e) => setFilters({ ...filters, [k]: e.target.value });
 
@@ -74,6 +75,7 @@ export default function SuperWorkers() {
                   <th className="num">Daily wage</th>
                   <th>Attendance this month</th>
                   <th>Tasks</th>
+                  <th>Login</th>
                   <th>Status</th>
                   <th></th>
                 </tr>
@@ -108,12 +110,22 @@ export default function SuperWorkers() {
                       )}
                     </td>
                     <td>
+                      {w.has_login ? (
+                        <small>{w.login_email}</small>
+                      ) : (
+                        <span className="muted">No login</span>
+                      )}
+                    </td>
+                    <td>
                       <Badge value={w.is_active ? "active" : "inactive"} label={w.is_active ? "Active" : "Inactive"} />
                     </td>
                     <td>
                       <div className="sm-actions">
                         <button className="btn btn-ghost btn-sm" onClick={() => setForm({ mode: "edit", w })}>
                           Edit
+                        </button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setLoginFor(w)}>
+                          {w.has_login ? "Reset login" : "Give login"}
                         </button>
                         <button className="link-btn" onClick={() => toggle(w)}>
                           {w.is_active ? "Deactivate" : "Activate"}
@@ -127,9 +139,22 @@ export default function SuperWorkers() {
           </div>
         )}
         <p className="muted sm-small">
-          Workers do not get their own login — their department manager records their attendance and work.
+          Give a worker a login (email + password) so they can see their own tasks, post production updates and check
+          attendance. Without a login, their department manager records their work for them.
         </p>
       </section>
+
+      {loginFor && (
+        <LoginDialog
+          w={loginFor}
+          onClose={() => setLoginFor(null)}
+          onSaved={(text) => {
+            setLoginFor(null);
+            setMsg({ kind: "ok", text });
+            reload();
+          }}
+        />
+      )}
 
       {form && (
         <WorkerForm
@@ -235,6 +260,77 @@ function WorkerForm({ mode, w, departments, managers, onClose, onSaved }) {
           </button>
           <button className="btn btn-primary btn-sm" disabled={busy}>
             {busy ? "Saving…" : mode === "new" ? "Add worker" : "Save changes"}
+          </button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+// Create or reset a worker's sign-in. Uses POST /api/super/workers/{id}/login.
+function LoginDialog({ w, onClose, onSaved }) {
+  const [email, setEmail] = useState(w.login_email || "");
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [errs, setErrs] = useState({});
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e) {
+    e.preventDefault();
+    const x = {};
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) x.email = "Enter a valid email.";
+    if (pw.length < 8 || !/[A-Za-z]/.test(pw) || !/\d/.test(pw)) x.pw = "At least 8 characters, letters and numbers.";
+    if (pw !== pw2) x.pw2 = "Passwords do not match.";
+    setErrs(x);
+    if (Object.keys(x).length) return;
+    setBusy(true);
+    setErr("");
+    try {
+      const r = await apiFetch(`/api/super/workers/${w.id}/login`, {
+        method: "POST",
+        body: { email: email.trim(), password: pw, confirm_password: pw2 },
+      });
+      onSaved(
+        `${w.name} can now sign in with ${r.email}${r.reset ? " (password reset)" : ""}. Share the password with them.`,
+      );
+    } catch (e2) {
+      setErr(e2.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog title={`${w.has_login ? "Reset login" : "Give login"} · ${w.name}`} onClose={onClose}>
+      <ErrorBox error={err} />
+      <form className="form-grid sm-form" onSubmit={submit} noValidate>
+        <Field label="Login email" error={errs.email} wide>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="worker@gmail.com"
+            autoComplete="off"
+            autoFocus
+          />
+        </Field>
+        <Field label="Password" error={errs.pw}>
+          <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" />
+        </Field>
+        <Field label="Confirm password" error={errs.pw2}>
+          <input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} autoComplete="new-password" />
+        </Field>
+        <p className="muted sm-small sm-wide">
+          The worker signs in on the Login page with this email and password and sees their own tasks, production
+          updates and attendance.
+        </p>
+        <div className="sm-row-end sm-wide">
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="btn btn-primary btn-sm" disabled={busy}>
+            {busy ? "Saving…" : w.has_login ? "Reset login" : "Create login"}
           </button>
         </div>
       </form>
