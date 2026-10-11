@@ -2,7 +2,7 @@
 // sales), Track Order, Invoices & Payments, Delivery History, Notifications,
 // My Profile.
 import { useState } from "react";
-import { apiFetch } from "../../../lib/api.js";
+import { apiFetch, openPdf } from "../../../lib/api.js";
 import {
   Badge,
   Dialog,
@@ -492,14 +492,13 @@ export function BuyerInvoices() {
                           {payingId === inv.id ? "Submitting…" : "Pay now"}
                         </button>
                       )}
-                      <a
+                      <button
+                        type="button"
                         className="link-btn"
-                        href={`/api/buyer/invoices/${inv.id}/pdf`}
-                        target="_blank"
-                        rel="noreferrer"
+                        onClick={() => openPdf(`/api/buyer/invoices/${inv.id}/pdf`)}
                       >
                         PDF
-                      </a>
+                      </button>
                     </td>
                   </tr>
                 ))}
