@@ -147,16 +147,22 @@
 }
 
 /* Dify chat page inside the panel */
+/* Sits fully ABOVE the bubble (64px + gap) and always fits the screen, so it
+   never covers the bubble or runs off the top. */
 .cw-panel-dify {
-  width: 380px;
-  height: 580px;
-  max-height: 78vh;
+  bottom: 84px;
+  width: min(380px, calc(100vw - 32px));
+  max-width: none;
+  height: min(600px, calc(100vh - 120px));
+  max-height: none;
 }
 .cw-panel[hidden] {
   display: none;
 }
 .cw-frame {
+  display: block;
   flex: 1;
+  min-height: 0;
   width: 100%;
   border: 0;
   background: #fff;
