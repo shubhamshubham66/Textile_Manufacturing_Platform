@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { getToken } from "../../lib/api.js";
 import "./chat-widget.css";
 
 // Floating AI chat widget. The browser calls ONLY our backend
@@ -15,7 +16,6 @@ const DIFY_CHAT_URL =
   import.meta.env.VITE_DIFY_CHAT_URL ?? "https://udify.app/chatbot/k7RDaKn0bDbN2TCf";
 
 const SESSION_KEY = "etm_chat_session";
-const TOKEN_KEY = "etm_token"; // same key the app auth uses
 
 function getSessionId() {
   let id = localStorage.getItem(SESSION_KEY);
@@ -168,7 +168,7 @@ function ProxyChat() {
 
     try {
       const headers = { "Content-Type": "application/json" };
-      const token = localStorage.getItem(TOKEN_KEY);
+      const token = getToken(); // this tab's login
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
       const res = await fetch("/api/chatbot/message", {
