@@ -167,7 +167,6 @@ MENU_CONFIG: dict[str, list[dict]] = {
     ],
     ROLE_QUALITY_INSPECTOR: [
         {"label": "Quality", "path": "/app/quality", "resource": "quality"},
-        {"label": "Rolls", "path": "/app/rolls", "resource": "rolls"},
         {"label": "My tasks", "path": "/app/my-tasks", "resource": "my_tasks"},
     ],
     ROLE_ACCOUNTANT: [

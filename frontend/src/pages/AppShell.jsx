@@ -159,7 +159,6 @@ const PAGES = {
   machines: Machines,
   production: Production,
   quality: Quality,
-  rolls: Quality,
   dispatch: Dispatch,
   payments: Payments,
   attendance: Attendance,
