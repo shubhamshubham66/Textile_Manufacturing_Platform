@@ -88,6 +88,10 @@ function DifyChat() {
   }, []);
   useEffect(() => {
     if (open) setLoaded(true);
+    if (!open) return undefined;
+    const onKey = (e) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
   return (
@@ -99,16 +103,8 @@ function DifyChat() {
           aria-label="AI assistant"
           hidden={!open}
         >
-          <div className="cw-head">
-            <span className="cw-dot" /> ev-tx
-            <button
-              className="cw-close"
-              aria-label="Close chat"
-              onClick={() => setOpen(false)}
-            >
-              ×
-            </button>
-          </div>
+          {/* No header of our own: Dify's chat shows its own title bar.
+              Close with the ev-tx bubble or the Esc key. */}
           <iframe
             className="cw-frame"
             src={DIFY_CHAT_URL}
@@ -120,8 +116,9 @@ function DifyChat() {
       <button
         className="cw-bubble"
         type="button"
-        aria-label="Open AI assistant"
-        title="Ask the AI assistant"
+        aria-label={open ? "Close AI assistant" : "Open AI assistant"}
+        aria-expanded={open}
+        title={open ? "Close the chat" : "Ask the AI assistant"}
         onClick={() => setOpen((v) => !v)}
       >
         <BubbleFace />

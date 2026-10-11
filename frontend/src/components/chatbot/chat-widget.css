@@ -153,7 +153,9 @@
   bottom: 84px;
   width: min(380px, calc(100vw - 32px));
   max-width: none;
-  height: min(600px, calc(100vh - 120px));
+  /* Top edge stays below the app's top bar (Live / alerts / user name). */
+  height: min(560px, calc(100vh - 190px));
+  min-height: 300px;
   max-height: none;
 }
 .cw-panel[hidden] {
