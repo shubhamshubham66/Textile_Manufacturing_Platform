@@ -3,7 +3,7 @@
 // (Buyer Payments, Supplier Payments, Attendance and Wages reuse the existing
 // Payments / Attendance / Wages pages via shared resources.)
 import { useState } from "react";
-import { apiFetch } from "../../../lib/api.js";
+import { apiFetch, openPdf } from "../../../lib/api.js";
 import {
   Badge,
   Dialog,
@@ -83,14 +83,13 @@ export function AccountsInvoices() {
                       />
                     </td>
                     <td>
-                      <a
+                      <button
+                        type="button"
                         className="link-btn"
-                        href={`/api/dispatch/invoice/${inv.id}/pdf`}
-                        target="_blank"
-                        rel="noreferrer"
+                        onClick={() => openPdf(`/api/dispatch/invoice/${inv.id}/pdf`)}
                       >
                         PDF
-                      </a>
+                      </button>
                     </td>
                   </tr>
                 ))}
